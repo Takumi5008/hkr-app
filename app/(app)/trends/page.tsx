@@ -37,7 +37,11 @@ export default function TrendsPage() {
     return { label, hkr }
   })
 
+  const COMMISSION = 15000
+  const fmt = (n: number) => `¥${n.toLocaleString()}`
+
   const hasData = chartData.some((d) => d.hkr !== null)
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -92,6 +96,7 @@ export default function TrendsPage() {
                 <th className="text-right px-4 py-3 font-medium text-gray-500">HKR</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">解除</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">開通</th>
+                <th className="text-right px-4 py-3 font-medium text-emerald-600">委託費</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500">状態</th>
               </tr>
             </thead>
@@ -116,6 +121,9 @@ export default function TrendsPage() {
                     </td>
                     <td className="px-4 py-3 text-right text-gray-600">{cancel > 0 ? cancel : '-'}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{activation > 0 ? activation : '-'}</td>
+                    <td className="px-4 py-3 text-right font-medium text-emerald-600">
+                      {activation > 0 ? fmt(activation * COMMISSION) : '-'}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       {hkr == null ? <span className="text-gray-300 text-xs">未入力</span>
                         : hkr >= HKR_TARGET ? <span className="text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full">達成</span>
@@ -125,6 +133,27 @@ export default function TrendsPage() {
                 )
               })}
             </tbody>
+            <tfoot>
+              <tr className="bg-emerald-50 border-t-2 border-emerald-200">
+                <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-emerald-700">12ヶ月合計委託費</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">
+                  {months.reduce((total, { year, month }) => {
+                    if (tab === '合算') {
+                      return total + products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
+                    }
+                    return total + (records.find((r) => r.year === year && r.month === month && r.product === tab)?.activation_count ?? 0)
+                  }, 0) > 0
+                    ? fmt(months.reduce((total, { year, month }) => {
+                        if (tab === '合算') {
+                          return total + products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
+                        }
+                        return total + (records.find((r) => r.year === year && r.month === month && r.product === tab)?.activation_count ?? 0)
+                      }, 0) * COMMISSION)
+                    : '-'}
+                </td>
+                <td colSpan={2} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
