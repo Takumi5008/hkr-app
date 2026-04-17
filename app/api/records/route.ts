@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
@@ -11,20 +11,19 @@ export async function GET(req: NextRequest) {
   const year = searchParams.get('year')
   const month = searchParams.get('month')
 
-  // 自分以外のデータはmanager/viewerのみ
   if (String(userId) !== String(session.userId) && session.role === 'member') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const db = getDb()
-  let query = 'SELECT * FROM records WHERE user_id = ?'
+  let sql = 'SELECT * FROM records WHERE user_id = $1'
   const params: (string | number)[] = [userId]
+  let idx = 2
 
-  if (year) { query += ' AND year = ?'; params.push(Number(year)) }
-  if (month) { query += ' AND month = ?'; params.push(Number(month)) }
-  query += ' ORDER BY year DESC, month DESC'
+  if (year) { sql += ` AND year = $${idx++}`; params.push(Number(year)) }
+  if (month) { sql += ` AND month = $${idx++}`; params.push(Number(month)) }
+  sql += ' ORDER BY year DESC, month DESC'
 
-  const records = db.prepare(query).all(...params)
+  const records = await dbQuery(sql, params)
   return NextResponse.json(records)
 }
 
@@ -34,19 +33,19 @@ export async function POST(req: NextRequest) {
 
   const { year, month, product, cancel_count, activation_count } = await req.json()
 
-  const db = getDb()
-  db.prepare(`
+  await dbRun(`
     INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    VALUES ($1, $2, $3, $4, $5, $6, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
     ON CONFLICT(user_id, year, month, product)
-    DO UPDATE SET cancel_count = excluded.cancel_count,
-                  activation_count = excluded.activation_count,
-                  updated_at = datetime('now')
-  `).run(session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0)
+    DO UPDATE SET cancel_count = EXCLUDED.cancel_count,
+                  activation_count = EXCLUDED.activation_count,
+                  updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+  `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0])
 
-  const record = db.prepare(
-    'SELECT * FROM records WHERE user_id = ? AND year = ? AND month = ? AND product = ?'
-  ).get(session.userId, year, month, product)
+  const record = await dbQueryOne(
+    'SELECT * FROM records WHERE user_id = $1 AND year = $2 AND month = $3 AND product = $4',
+    [session.userId, year, month, product]
+  )
 
   return NextResponse.json(record)
 }

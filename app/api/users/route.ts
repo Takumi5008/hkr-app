@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { getDb } from '@/lib/db'
+import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function GET() {
@@ -8,8 +8,7 @@ export async function GET() {
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role === 'member') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const db = getDb()
-  const users = db.prepare('SELECT id, name, email, role, created_at FROM users ORDER BY name').all()
+  const users = await dbQuery('SELECT id, name, email, role, created_at FROM users ORDER BY name')
   return NextResponse.json(users)
 }
 
@@ -23,16 +22,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '名前・メール・パスワードは必須です' }, { status: 400 })
   }
 
-  const db = getDb()
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
+  const existing = await dbQueryOne('SELECT id FROM users WHERE email = $1', [email])
   if (existing) return NextResponse.json({ error: 'このメールアドレスは既に使用されています' }, { status: 409 })
 
   const hash = await bcrypt.hash(password, 10)
-  const result = db.prepare(
-    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)'
-  ).run(name, email, hash, role ?? 'member') as any
+  const result = await dbRun(
+    'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
+    [name, email, hash, role ?? 'member']
+  )
 
-  return NextResponse.json({ id: result.lastInsertRowid, name, email, role: role ?? 'member' })
+  return NextResponse.json({ id: result.id, name, email, role: role ?? 'member' })
 }
 
 export async function PATCH(req: NextRequest) {
@@ -43,7 +42,6 @@ export async function PATCH(req: NextRequest) {
   const { id, role } = await req.json()
   if (id === session.userId) return NextResponse.json({ error: '自分のロールは変更できません' }, { status: 400 })
 
-  const db = getDb()
-  db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id)
+  await dbRun('UPDATE users SET role = $1 WHERE id = $2', [role, id])
   return NextResponse.json({ ok: true })
 }

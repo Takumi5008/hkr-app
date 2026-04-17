@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { getDb } from '@/lib/db'
+import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 
 export async function GET() {
-  const db = getDb()
-  const products = db.prepare('SELECT * FROM products ORDER BY sort_order, id').all()
+  const products = await dbQuery('SELECT * FROM products ORDER BY sort_order, id')
   return NextResponse.json(products)
 }
 
@@ -17,11 +16,14 @@ export async function POST(req: Request) {
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: '商材名を入力してください' }, { status: 400 })
   }
-  const db = getDb()
-  const maxOrder = (db.prepare('SELECT MAX(sort_order) as m FROM products').get() as any)?.m ?? -1
+  const maxRow = await dbQueryOne('SELECT MAX(sort_order) as m FROM products')
+  const maxOrder = maxRow?.m ?? -1
   try {
-    const result = db.prepare('INSERT INTO products (name, sort_order) VALUES (?, ?)').run(name.trim(), maxOrder + 1)
-    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid)
+    const result = await dbRun(
+      'INSERT INTO products (name, sort_order) VALUES ($1, $2) RETURNING id',
+      [name.trim(), maxOrder + 1]
+    )
+    const product = await dbQueryOne('SELECT * FROM products WHERE id = $1', [result.id])
     return NextResponse.json(product)
   } catch {
     return NextResponse.json({ error: 'すでに存在する商材名です' }, { status: 409 })
@@ -37,10 +39,9 @@ export async function PATCH(req: Request) {
   if (!newName || typeof newName !== 'string' || !newName.trim()) {
     return NextResponse.json({ error: '新しい名前を入力してください' }, { status: 400 })
   }
-  const db = getDb()
   try {
-    db.prepare('UPDATE products SET name = ? WHERE name = ?').run(newName.trim(), oldName)
-    db.prepare('UPDATE records SET product = ? WHERE product = ?').run(newName.trim(), oldName)
+    await dbRun('UPDATE products SET name = $1 WHERE name = $2', [newName.trim(), oldName])
+    await dbRun('UPDATE records SET product = $1 WHERE product = $2', [newName.trim(), oldName])
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'すでに存在する名前です' }, { status: 409 })
@@ -53,7 +54,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
   const { name } = await req.json()
-  const db = getDb()
-  db.prepare('DELETE FROM products WHERE name = ?').run(name)
+  await dbRun('DELETE FROM products WHERE name = $1', [name])
   return NextResponse.json({ ok: true })
 }

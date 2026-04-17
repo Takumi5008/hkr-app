@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { getDb } from '@/lib/db'
+import { dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
@@ -12,10 +12,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '新しいパスワードは6文字以上で入力してください' }, { status: 400 })
   }
 
-  const db = getDb()
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.userId) as any
+  const user = await dbQueryOne('SELECT * FROM users WHERE id = $1', [session.userId])
 
-  // 現在パスワードまたは仮パスワードで認証
   const isCurrentValid = await bcrypt.compare(currentPassword, user.password)
   const isTempValid =
     user.temp_password === currentPassword &&
@@ -27,9 +25,10 @@ export async function POST(req: NextRequest) {
   }
 
   const hash = await bcrypt.hash(newPassword, 10)
-  db.prepare(
-    'UPDATE users SET password = ?, temp_password = NULL, temp_password_expires_at = NULL WHERE id = ?'
-  ).run(hash, session.userId)
+  await dbRun(
+    'UPDATE users SET password = $1, temp_password = NULL, temp_password_expires_at = NULL WHERE id = $2',
+    [hash, session.userId]
+  )
 
   return NextResponse.json({ ok: true })
 }

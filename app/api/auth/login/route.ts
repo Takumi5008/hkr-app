@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { getDb } from '@/lib/db'
+import { dbQueryOne } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
@@ -10,17 +10,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メールアドレスとパスワードを入力してください' }, { status: 400 })
   }
 
-  const db = getDb()
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as any
+  const user = await dbQueryOne('SELECT * FROM users WHERE email = $1', [email])
 
   if (!user) {
     return NextResponse.json({ error: 'メールアドレスまたはパスワードが正しくありません' }, { status: 401 })
   }
 
-  // 通常パスワード認証
   const isPasswordValid = await bcrypt.compare(password, user.password)
-
-  // 仮パスワード認証（有効期限チェック付き）
   const isTempValid =
     user.temp_password &&
     user.temp_password === password &&
@@ -38,7 +34,6 @@ export async function POST(req: NextRequest) {
   session.role = user.role
   await session.save()
 
-  // 仮パスワードでログインした場合はパスワード変更を促す
   const requirePasswordChange = isTempValid && !isPasswordValid
   return NextResponse.json({ ok: true, name: user.name, role: user.role, requirePasswordChange })
 }

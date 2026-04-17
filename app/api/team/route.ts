@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
+import { dbQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
@@ -11,14 +11,14 @@ export async function GET(req: NextRequest) {
   const year = Number(searchParams.get('year') || new Date().getFullYear())
   const month = Number(searchParams.get('month') || new Date().getMonth() + 1)
 
-  const db = getDb()
-  const users = db.prepare('SELECT id, name, role FROM users ORDER BY name').all() as any[]
-  const records = db.prepare(
-    'SELECT * FROM records WHERE year = ? AND month = ?'
-  ).all(year, month) as any[]
+  const users = await dbQuery('SELECT id, name, role FROM users ORDER BY name')
+  const records = await dbQuery(
+    'SELECT * FROM records WHERE year = $1 AND month = $2',
+    [year, month]
+  )
 
-  const data = users.map((u) => {
-    const userRecords = records.filter((r) => r.user_id === u.id)
+  const data = users.map((u: any) => {
+    const userRecords = records.filter((r: any) => r.user_id === u.id)
     return { user: u, records: userRecords }
   })
 
