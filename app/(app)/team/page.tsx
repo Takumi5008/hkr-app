@@ -53,11 +53,28 @@ export default function TeamPage() {
   const teamAvg = validHkrs.length > 0 ? Math.round(validHkrs.reduce((a, b) => a + b, 0) / validHkrs.length * 10) / 10 : null
   const colSpanTotal = products.length + 3
 
-  const ranked = [...teamStats]
-    .filter((d) => d.allHkr !== null)
-    .sort((a, b) => b.allHkr! - a.allHkr!)
+  const [rankTab, setRankTab] = useState<string>('合算')
+
+  const getRankedByKey = (key: string) => {
+    if (key === '合算') {
+      return [...teamStats]
+        .filter((d) => d.allHkr !== null)
+        .sort((a, b) => b.allHkr! - a.allHkr!)
+        .map((d) => ({ user: d.user, hkr: d.allHkr! }))
+    }
+    return [...teamStats]
+      .map((d) => {
+        const s = d.summaries.find((s: any) => s.product === key)
+        return { user: d.user, hkr: (s && s.cancel > 0) ? s.hkr : null }
+      })
+      .filter((d) => d.hkr !== null)
+      .sort((a, b) => b.hkr! - a.hkr!)
+      .map((d) => ({ user: d.user, hkr: d.hkr! }))
+  }
+
+  const ranked = getRankedByKey(rankTab)
   const top3 = ranked.slice(0, 3)
-  const bottom3 = ranked.slice(-3).reverse().filter((d) => d.allHkr! < HKR_TARGET)
+  const bottom3 = ranked.slice(-3).reverse().filter((d) => d.hkr < HKR_TARGET)
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -92,62 +109,82 @@ export default function TeamPage() {
       </div>
 
       {/* ランキング */}
-      {!loading && ranked.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {/* トップランキング */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy size={16} className="text-yellow-500" />
-              <h2 className="text-sm font-semibold text-gray-700">トップランキング</h2>
-            </div>
-            <div className="space-y-2">
-              {top3.map((d, i) => {
-                const medals = ['🥇', '🥈', '🥉']
-                const bgColors = ['bg-yellow-50 border-yellow-200', 'bg-gray-50 border-gray-200', 'bg-orange-50 border-orange-200']
-                return (
-                  <div key={d.user.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${bgColors[i]}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{medals[i]}</span>
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold">
-                        {d.user.name.charAt(0)}
-                      </div>
-                      <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
-                    </div>
-                    <span className="text-sm font-bold text-green-600">{d.allHkr}%</span>
-                  </div>
-                )
-              })}
-            </div>
+      {!loading && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy size={16} className="text-yellow-500" />
+            <h2 className="text-sm font-semibold text-gray-700">ランキング</h2>
+          </div>
+          {/* タブ */}
+          <div className="flex gap-1 flex-wrap mb-4">
+            {['合算', ...products].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setRankTab(tab)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  rankTab === tab
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
-          {/* 要注意 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingDown size={16} className="text-red-500" />
-              <h2 className="text-sm font-semibold text-gray-700">要フォロー</h2>
-            </div>
-            {bottom3.length === 0 ? (
-              <p className="text-sm text-green-600 font-medium py-2">全員目標達成！🎉</p>
-            ) : (
-              <div className="space-y-2">
-                {bottom3.map((d) => (
-                  <div key={d.user.id} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-red-50 border-red-200">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle size={14} className="text-red-500 shrink-0" />
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center text-white text-xs font-semibold">
-                        {d.user.name.charAt(0)}
+          {ranked.length === 0 ? (
+            <p className="text-sm text-gray-400 py-2">データがありません</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* トップ */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2 font-medium">🏆 上位</p>
+                <div className="space-y-2">
+                  {top3.map((d, i) => {
+                    const medals = ['🥇', '🥈', '🥉']
+                    const bgColors = ['bg-yellow-50 border-yellow-200', 'bg-gray-50 border-gray-200', 'bg-orange-50 border-orange-200']
+                    return (
+                      <div key={d.user.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${bgColors[i]}`}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{medals[i]}</span>
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold">
+                            {d.user.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                        </div>
+                        <span className="text-sm font-bold text-green-600">{d.hkr}%</span>
                       </div>
-                      <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-bold text-red-600">{d.allHkr}%</span>
-                      <span className="text-xs text-red-400 ml-1">（目標-{Math.round((HKR_TARGET - d.allHkr!) * 10) / 10}%）</span>
-                    </div>
-                  </div>
-                ))}
+                    )
+                  })}
+                </div>
               </div>
-            )}
-          </div>
+              {/* 要フォロー */}
+              <div>
+                <p className="text-xs text-gray-500 mb-2 font-medium flex items-center gap-1"><TrendingDown size={12} className="text-red-400" />要フォロー</p>
+                {bottom3.length === 0 ? (
+                  <p className="text-sm text-green-600 font-medium py-2">全員目標達成！🎉</p>
+                ) : (
+                  <div className="space-y-2">
+                    {bottom3.map((d) => (
+                      <div key={d.user.id} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-red-50 border-red-200">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle size={13} className="text-red-500 shrink-0" />
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center text-white text-xs font-semibold">
+                            {d.user.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-red-600">{d.hkr}%</span>
+                          <span className="text-xs text-red-400 ml-1">（-{Math.round((HKR_TARGET - d.hkr) * 10) / 10}%）</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
