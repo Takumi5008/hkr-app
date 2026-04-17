@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/session'
-import { getDb } from '@/lib/db'
+import { dbQuery } from '@/lib/db'
 import { calcHKR, formatMonth, getTwoMonthsAgo, isMonthlyCheckPeriod } from '@/lib/hkr'
 import HKRCard from '@/components/HKRCard'
 import { Bell, AlertCircle, PenLine } from 'lucide-react'
@@ -18,11 +18,12 @@ export default async function DashboardPage() {
   const twoAgo = getTwoMonthsAgo()
   const showBanner = isMonthlyCheckPeriod()
 
-  const db = getDb()
-  const products = (db.prepare('SELECT name FROM products ORDER BY sort_order, id').all() as any[]).map((p) => p.name)
-  const records = db.prepare(
-    `SELECT * FROM records WHERE user_id = ? AND ((year = ? AND month = ?) OR (year = ? AND month = ?))`
-  ).all(session.userId, currentYear, currentMonth, twoAgo.year, twoAgo.month) as any[]
+  const productRows = await dbQuery('SELECT name FROM products ORDER BY sort_order, id')
+  const products = productRows.map((p: any) => p.name)
+  const records = await dbQuery(
+    `SELECT * FROM records WHERE user_id = $1 AND ((year = $2 AND month = $3) OR (year = $4 AND month = $5))`,
+    [session.userId, currentYear, currentMonth, twoAgo.year, twoAgo.month]
+  )
 
   function getSummaries(year: number, month: number) {
     return products.map((product: string) => {
