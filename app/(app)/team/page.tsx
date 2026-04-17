@@ -42,11 +42,14 @@ export default function TeamPage() {
     })
   }
 
+  const COMMISSION = 15000
+  const fmt = (n: number) => `¥${n.toLocaleString()}`
+
   const teamStats = teamData.map(({ user, records }) => {
     const summaries = getMemberSummary(records)
     const totalCancel = summaries.reduce((s, r) => s + r.cancel, 0)
     const totalActivation = summaries.reduce((s, r) => s + r.activation, 0)
-    return { user, summaries, allHkr: calcHKR(totalActivation, totalCancel) }
+    return { user, summaries, allHkr: calcHKR(totalActivation, totalCancel), totalActivation, totalCancel }
   })
 
   const validHkrs = teamStats.filter((d) => d.allHkr !== null).map((d) => d.allHkr!)
@@ -103,12 +106,25 @@ export default function TeamPage() {
         </select>
       </div>
 
-      <div className="mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 w-fit">
-          <p className="text-xs text-gray-500 mb-1">チーム平均（合算）</p>
-          <p className={`text-3xl font-bold ${teamAvg == null ? 'text-gray-300' : teamAvg >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
+      <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">チーム平均HKR</p>
+          <p className={`text-2xl font-bold ${teamAvg == null ? 'text-gray-300' : teamAvg >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
             {teamAvg != null ? `${teamAvg}%` : '-'}
           </p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs text-gray-500 mb-1">チーム合計開通数</p>
+          <p className="text-2xl font-bold text-indigo-600">
+            {teamStats.reduce((s, d) => s + d.totalActivation, 0)}件
+          </p>
+        </div>
+        <div className="col-span-2 sm:col-span-1 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
+          <p className="text-xs text-emerald-600 mb-1 font-medium">チーム合計委託費</p>
+          <p className="text-2xl font-bold text-emerald-700">
+            {fmt(teamStats.reduce((s, d) => s + d.totalActivation, 0) * COMMISSION)}
+          </p>
+          <p className="text-xs text-emerald-500 mt-0.5">開通数 × ¥{COMMISSION.toLocaleString()}</p>
         </div>
       </div>
 
@@ -159,6 +175,7 @@ export default function TeamPage() {
                         <div className="text-right">
                         <span className="text-sm font-bold text-green-600">{d.hkr}%</span>
                         <p className="text-xs text-gray-400">{d.activation}開通/{d.cancel}解除</p>
+                        <p className="text-xs text-emerald-600 font-medium">{fmt(d.activation * COMMISSION)}</p>
                       </div>
                       </div>
                     )
@@ -184,6 +201,7 @@ export default function TeamPage() {
                         <div className="text-right">
                           <span className="text-sm font-bold text-red-600">{d.hkr}%</span>
                           <p className="text-xs text-gray-400">{d.activation}開通/{d.cancel}解除</p>
+                          <p className="text-xs text-emerald-600 font-medium">{fmt(d.activation * COMMISSION)}</p>
                           <p className="text-xs text-red-400">目標まで-{Math.round((HKR_TARGET - d.hkr) * 10) / 10}%</p>
                         </div>
                       </div>
@@ -200,14 +218,17 @@ export default function TeamPage() {
       <div className="sm:hidden space-y-3">
         {loading ? (
           <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400">読み込み中...</div>
-        ) : teamStats.map(({ user, summaries, allHkr }) => (
+        ) : teamStats.map(({ user, summaries, allHkr, totalActivation }) => (
           <div key={user.id} className={`bg-white rounded-xl border p-4 ${allHkr !== null && allHkr < HKR_TARGET ? 'border-red-200' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold">
                   {user.name.charAt(0)}
                 </div>
-                <span className="font-semibold text-gray-900">{user.name}</span>
+                <div>
+                  <span className="font-semibold text-gray-900">{user.name}</span>
+                  {totalActivation > 0 && <p className="text-xs text-emerald-600 font-medium">{fmt(totalActivation * COMMISSION)}</p>}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-lg font-bold ${allHkr == null ? 'text-gray-300' : allHkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
@@ -276,9 +297,9 @@ export default function TeamPage() {
                       : <div>
                           <span className={`font-bold ${allHkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>{allHkr}%</span>
                           <p className="text-xs text-gray-400">
-                            {summaries.reduce((s: number, r: any) => s + r.activation, 0)}開通/
-                            {summaries.reduce((s: number, r: any) => s + r.cancel, 0)}解除
+                            {totalActivation}開通/{totalCancel}解除
                           </p>
+                          <p className="text-xs text-emerald-600 font-medium">{fmt(totalActivation * COMMISSION)}</p>
                         </div>}
                   </td>
                   <td className="px-4 py-3 text-center">
