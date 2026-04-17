@@ -60,16 +60,20 @@ export default function TeamPage() {
       return [...teamStats]
         .filter((d) => d.allHkr !== null)
         .sort((a, b) => b.allHkr! - a.allHkr!)
-        .map((d) => ({ user: d.user, hkr: d.allHkr! }))
+        .map((d) => {
+          const totalCancel = d.summaries.reduce((s: number, r: any) => s + r.cancel, 0)
+          const totalActivation = d.summaries.reduce((s: number, r: any) => s + r.activation, 0)
+          return { user: d.user, hkr: d.allHkr!, activation: totalActivation, cancel: totalCancel }
+        })
     }
     return [...teamStats]
       .map((d) => {
         const s = d.summaries.find((s: any) => s.product === key)
-        return { user: d.user, hkr: (s && s.cancel > 0) ? s.hkr : null }
+        return { user: d.user, hkr: (s && s.cancel > 0) ? s.hkr : null, activation: s?.activation ?? 0, cancel: s?.cancel ?? 0 }
       })
       .filter((d) => d.hkr !== null)
       .sort((a, b) => b.hkr! - a.hkr!)
-      .map((d) => ({ user: d.user, hkr: d.hkr! }))
+      .map((d) => ({ user: d.user, hkr: d.hkr!, activation: d.activation, cancel: d.cancel }))
   }
 
   const ranked = getRankedByKey(rankTab)
@@ -152,7 +156,10 @@ export default function TeamPage() {
                           </div>
                           <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
                         </div>
+                        <div className="text-right">
                         <span className="text-sm font-bold text-green-600">{d.hkr}%</span>
+                        <p className="text-xs text-gray-400">{d.activation}開通/{d.cancel}解除</p>
+                      </div>
                       </div>
                     )
                   })}
@@ -176,7 +183,8 @@ export default function TeamPage() {
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-bold text-red-600">{d.hkr}%</span>
-                          <span className="text-xs text-red-400 ml-1">（-{Math.round((HKR_TARGET - d.hkr) * 10) / 10}%）</span>
+                          <p className="text-xs text-gray-400">{d.activation}開通/{d.cancel}解除</p>
+                          <p className="text-xs text-red-400">目標まで-{Math.round((HKR_TARGET - d.hkr) * 10) / 10}%</p>
                         </div>
                       </div>
                     ))}
@@ -219,6 +227,7 @@ export default function TeamPage() {
                   <p className={`text-sm font-bold ${s.cancel === 0 ? 'text-gray-300' : s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
                     {s.cancel === 0 ? '未入力' : s.hkr != null ? `${s.hkr}%` : '-'}
                   </p>
+                  {s.cancel > 0 && <p className="text-xs text-gray-400">{s.activation}開通/{s.cancel}解除</p>}
                 </div>
               ))}
             </div>
@@ -254,14 +263,23 @@ export default function TeamPage() {
                   {summaries.map((s) => (
                     <td key={s.product} className="px-4 py-3 text-center">
                       {s.cancel === 0 ? <span className="text-gray-300 text-xs">未入力</span>
-                        : <span className={`font-semibold ${s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
-                            {s.hkr != null ? `${s.hkr}%` : '-'}
-                          </span>}
+                        : <div>
+                            <span className={`font-semibold ${s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
+                              {s.hkr != null ? `${s.hkr}%` : '-'}
+                            </span>
+                            <p className="text-xs text-gray-400">{s.activation}開通/{s.cancel}解除</p>
+                          </div>}
                     </td>
                   ))}
                   <td className="px-4 py-3 text-center">
                     {allHkr == null ? <span className="text-gray-300 text-xs">未入力</span>
-                      : <span className={`font-bold ${allHkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>{allHkr}%</span>}
+                      : <div>
+                          <span className={`font-bold ${allHkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>{allHkr}%</span>
+                          <p className="text-xs text-gray-400">
+                            {summaries.reduce((s: number, r: any) => s + r.activation, 0)}開通/
+                            {summaries.reduce((s: number, r: any) => s + r.cancel, 0)}解除
+                          </p>
+                        </div>}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {allHkr == null ? <span className="text-xs text-gray-300">-</span>
