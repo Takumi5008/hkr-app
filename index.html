@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HKR管理 - 接続中...</title>
+  <style>
+    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #1e1b4b; color: white; flex-direction: column; gap: 16px; }
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { margin: 0; font-size: 14px; color: rgba(255,255,255,0.7); }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>HKR管理アプリに接続中...</p>
+  <p id="msg"></p>
+  <script>
+    fetch('https://raw.githubusercontent.com/Takumi5008/hkr-app/main/current-url.txt?t=' + Date.now())
+      .then(r => r.text())
+      .then(url => {
+        url = url.trim();
+        if (url) {
+          window.location.replace(url);
+        } else {
+          document.getElementById('msg').innerHTML = 'サーバーがオフラインです。';
+        }
+      })
+      .catch(() => {
+        document.getElementById('msg').innerHTML = 'エラーが発生しました。';
+      });
+  </script>
+</body>
+</html>
