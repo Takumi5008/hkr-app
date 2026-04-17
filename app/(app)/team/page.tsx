@@ -271,7 +271,7 @@ export default function TeamPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={colSpanTotal} className="px-4 py-8 text-center text-gray-400">読み込み中...</td></tr>
-              ) : teamStats.map(({ user, summaries, allHkr }) => (
+              ) : teamStats.map(({ user, summaries, allHkr, totalActivation, totalCancel }) => (
                 <tr key={user.id} className={`hover:bg-gray-50 ${allHkr !== null && allHkr < HKR_TARGET ? 'bg-red-50/30' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
