@@ -54,7 +54,7 @@ export default function TeamPage() {
 
   const validHkrs = teamStats.filter((d) => d.allHkr !== null).map((d) => d.allHkr!)
   const teamAvg = validHkrs.length > 0 ? Math.round(validHkrs.reduce((a, b) => a + b, 0) / validHkrs.length * 10) / 10 : null
-  const colSpanTotal = products.length + 3
+  const colSpanTotal = products.length * 3 + 3
 
   const [rankTab, setRankTab] = useState<string>('合算')
 
@@ -261,11 +261,24 @@ export default function TeamPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="text-left px-4 py-3 font-medium text-gray-500" rowSpan={2}>名前</th>
+                {products.map((p) => (
+                  <th key={p} colSpan={3} className="text-center px-2 py-2 font-medium text-gray-600 border-b border-gray-100 border-l border-gray-200">
+                    {p}
+                  </th>
+                ))}
+                <th className="text-center px-4 py-2 font-medium text-gray-500 border-b border-gray-100 border-l border-gray-200" rowSpan={2}>合算</th>
+                <th className="text-center px-4 py-2 font-medium text-gray-500 border-b border-gray-100" rowSpan={2}>状態</th>
+              </tr>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 font-medium text-gray-500">名前</th>
-                {products.map((p) => <th key={p} className="text-center px-4 py-3 font-medium text-gray-500">{p}</th>)}
-                <th className="text-center px-4 py-3 font-medium text-gray-500">合算</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">状態</th>
+                {products.map((p) => (
+                  <>
+                    <th key={`${p}-cancel`} className="text-center px-2 py-2 text-xs font-medium text-gray-400 border-l border-gray-200">解除</th>
+                    <th key={`${p}-activation`} className="text-center px-2 py-2 text-xs font-medium text-gray-400">開通</th>
+                    <th key={`${p}-hkr`} className="text-center px-2 py-2 text-xs font-medium text-gray-400">HKR</th>
+                  </>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -282,15 +295,22 @@ export default function TeamPage() {
                     </div>
                   </td>
                   {summaries.map((s) => (
-                    <td key={s.product} className="px-4 py-3 text-center">
-                      {s.cancel === 0 ? <span className="text-gray-300 text-xs">未入力</span>
-                        : <div>
-                            <span className={`font-semibold ${s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
+                    <>
+                      <td key={`${s.product}-cancel`} className="px-2 py-3 text-center text-sm border-l border-gray-100">
+                        {s.cancel === 0 ? <span className="text-gray-300 text-xs">-</span>
+                          : <span className="text-gray-700">{s.cancel}</span>}
+                      </td>
+                      <td key={`${s.product}-activation`} className="px-2 py-3 text-center text-sm">
+                        {s.activation === 0 ? <span className="text-gray-300 text-xs">-</span>
+                          : <span className="text-indigo-600 font-medium">{s.activation}</span>}
+                      </td>
+                      <td key={`${s.product}-hkr`} className="px-2 py-3 text-center">
+                        {s.cancel === 0 ? <span className="text-gray-300 text-xs">-</span>
+                          : <span className={`font-semibold text-sm ${s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
                               {s.hkr != null ? `${s.hkr}%` : '-'}
-                            </span>
-                            <p className="text-xs text-gray-400">{s.activation}開通/{s.cancel}解除</p>
-                          </div>}
-                    </td>
+                            </span>}
+                      </td>
+                    </>
                   ))}
                   <td className="px-4 py-3 text-center">
                     {allHkr == null ? <span className="text-gray-300 text-xs">未入力</span>
