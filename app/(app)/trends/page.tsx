@@ -42,6 +42,27 @@ export default function TrendsPage() {
 
   const hasData = chartData.some((d) => d.hkr !== null)
 
+  const monthRows = months.map(({ year, month }) => {
+    let cancel = 0, activation = 0
+    if (tab === '合算') {
+      cancel = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.cancel_count ?? 0), 0)
+      activation = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
+    } else {
+      const r = records.find((r) => r.year === year && r.month === month && r.product === tab)
+      cancel = r?.cancel_count ?? 0
+      activation = r?.activation_count ?? 0
+    }
+    return { year, month, cancel, activation, hkr: calcHKR(activation, cancel) }
+  })
+
+  const dataMonths = monthRows.filter((r) => r.cancel > 0)
+  const totalCancel = monthRows.reduce((s, r) => s + r.cancel, 0)
+  const totalActivation = monthRows.reduce((s, r) => s + r.activation, 0)
+  const avgCancel = dataMonths.length > 0 ? Math.round(dataMonths.reduce((s, r) => s + r.cancel, 0) / dataMonths.length * 10) / 10 : null
+  const avgActivation = dataMonths.length > 0 ? Math.round(dataMonths.reduce((s, r) => s + r.activation, 0) / dataMonths.length * 10) / 10 : null
+  const validHkrs = monthRows.filter((r) => r.hkr !== null).map((r) => r.hkr!)
+  const avgHkr = validHkrs.length > 0 ? Math.round(validHkrs.reduce((a, b) => a + b, 0) / validHkrs.length * 10) / 10 : null
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -101,18 +122,8 @@ export default function TrendsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {months.map(({ year, month, label }) => {
-                let cancel = 0, activation = 0
-                if (tab === '合算') {
-                  cancel = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.cancel_count ?? 0), 0)
-                  activation = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
-                } else {
-                  const r = records.find((r) => r.year === year && r.month === month && r.product === tab)
-                  cancel = r?.cancel_count ?? 0
-                  activation = r?.activation_count ?? 0
-                }
-                const hkr = calcHKR(activation, cancel)
-
+              {monthRows.map(({ year, month, cancel, activation, hkr }) => {
+                const label = months.find((m) => m.year === year && m.month === month)?.label ?? ''
                 return (
                   <tr key={`${year}-${month}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-gray-700">{year}年{label}</td>
@@ -134,24 +145,27 @@ export default function TrendsPage() {
               })}
             </tbody>
             <tfoot>
-              <tr className="bg-emerald-50 border-t-2 border-emerald-200">
-                <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-emerald-700">12ヶ月合計委託費</td>
-                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">
-                  {months.reduce((total, { year, month }) => {
-                    if (tab === '合算') {
-                      return total + products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
-                    }
-                    return total + (records.find((r) => r.year === year && r.month === month && r.product === tab)?.activation_count ?? 0)
-                  }, 0) > 0
-                    ? fmt(months.reduce((total, { year, month }) => {
-                        if (tab === '合算') {
-                          return total + products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
-                        }
-                        return total + (records.find((r) => r.year === year && r.month === month && r.product === tab)?.activation_count ?? 0)
-                      }, 0) * COMMISSION)
-                    : '-'}
+              <tr className="bg-blue-50 border-t-2 border-blue-200">
+                <td className="px-4 py-3 text-sm font-semibold text-blue-700">月平均</td>
+                <td className={`px-4 py-3 text-right text-sm font-bold ${avgHkr == null ? 'text-gray-300' : avgHkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
+                  {avgHkr != null ? `${avgHkr}%` : '-'}
                 </td>
-                <td colSpan={2} />
+                <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">{avgCancel ?? '-'}</td>
+                <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">{avgActivation ?? '-'}</td>
+                <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">
+                  {avgActivation != null ? fmt(Math.round(avgActivation) * COMMISSION) : '-'}
+                </td>
+                <td />
+              </tr>
+              <tr className="bg-emerald-50 border-t border-emerald-200">
+                <td className="px-4 py-3 text-sm font-semibold text-emerald-700">12ヶ月合計</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-gray-400">-</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">{totalCancel > 0 ? totalCancel : '-'}</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">{totalActivation > 0 ? totalActivation : '-'}</td>
+                <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">
+                  {totalActivation > 0 ? fmt(totalActivation * COMMISSION) : '-'}
+                </td>
+                <td />
               </tr>
             </tfoot>
           </table>
