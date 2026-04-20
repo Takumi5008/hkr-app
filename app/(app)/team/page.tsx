@@ -50,6 +50,11 @@ export default function TeamPage() {
     const totalCancel = summaries.reduce((s, r) => s + r.cancel, 0)
     const totalActivation = summaries.reduce((s, r) => s + r.activation, 0)
     return { user, summaries, allHkr: calcHKR(totalActivation, totalCancel), totalActivation, totalCancel }
+  }).sort((a, b) => {
+    if (a.allHkr === null && b.allHkr === null) return 0
+    if (a.allHkr === null) return 1
+    if (b.allHkr === null) return -1
+    return b.allHkr - a.allHkr
   })
 
   const validHkrs = teamStats.filter((d) => d.allHkr !== null).map((d) => d.allHkr!)
