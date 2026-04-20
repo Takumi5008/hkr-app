@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { calcHKR, formatMonth, HKR_TARGET } from '@/lib/hkr'
 import { AlertTriangle, Trophy, TrendingDown } from 'lucide-react'
 
@@ -278,11 +278,11 @@ export default function TeamPage() {
               </tr>
               <tr className="bg-gray-50 border-b border-gray-200">
                 {products.map((p) => (
-                  <>
-                    <th key={`${p}-cancel`} className="text-center px-2 py-2 text-xs font-medium text-gray-400 border-l border-gray-200">解除</th>
-                    <th key={`${p}-activation`} className="text-center px-2 py-2 text-xs font-medium text-gray-400">開通</th>
-                    <th key={`${p}-hkr`} className="text-center px-2 py-2 text-xs font-medium text-gray-400">HKR</th>
-                  </>
+                  <Fragment key={p}>
+                    <th className="text-center px-2 py-2 text-xs font-medium text-gray-400 border-l border-gray-200">解除</th>
+                    <th className="text-center px-2 py-2 text-xs font-medium text-gray-400">開通</th>
+                    <th className="text-center px-2 py-2 text-xs font-medium text-gray-400">HKR</th>
+                  </Fragment>
                 ))}
               </tr>
             </thead>
@@ -300,22 +300,22 @@ export default function TeamPage() {
                     </div>
                   </td>
                   {summaries.map((s) => (
-                    <>
-                      <td key={`${s.product}-cancel`} className="px-2 py-3 text-center text-sm border-l border-gray-100">
+                    <Fragment key={s.product}>
+                      <td className="px-2 py-3 text-center text-sm border-l border-gray-100">
                         {s.cancel === 0 ? <span className="text-gray-300 text-xs">-</span>
                           : <span className="text-gray-700">{s.cancel}</span>}
                       </td>
-                      <td key={`${s.product}-activation`} className="px-2 py-3 text-center text-sm">
+                      <td className="px-2 py-3 text-center text-sm">
                         {s.activation === 0 ? <span className="text-gray-300 text-xs">-</span>
                           : <span className="text-indigo-600 font-medium">{s.activation}</span>}
                       </td>
-                      <td key={`${s.product}-hkr`} className="px-2 py-3 text-center">
+                      <td className="px-2 py-3 text-center">
                         {s.cancel === 0 ? <span className="text-gray-300 text-xs">-</span>
                           : <span className={`font-semibold text-sm ${s.hkr != null && s.hkr >= HKR_TARGET ? 'text-green-600' : 'text-red-600'}`}>
                               {s.hkr != null ? `${s.hkr}%` : '-'}
                             </span>}
                       </td>
-                    </>
+                    </Fragment>
                   ))}
                   <td className="px-4 py-3 text-center">
                     {allHkr == null ? <span className="text-gray-300 text-xs">未入力</span>
