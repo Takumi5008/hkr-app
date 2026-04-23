@@ -64,8 +64,9 @@ export default function PerformancePage() {
   const [editingMonth, setEditingMonth] = useState<{ year: number; month: number } | null>(null)
   const [monthForm, setMonthForm] = useState({ totalActivation: '', totalCancel: '', memberCount: '', note: '' })
   const [savingMonth, setSavingMonth] = useState(false)
-  const [selectedFY, setSelectedFY] = useState<number>(0)   // 個人タブ用年度
-  const [selectedYear, setSelectedYear] = useState<number>(0) // 全体タブ用暦年
+  const [selectedFY, setSelectedFY] = useState<number>(0)
+  const [selectedYear, setSelectedYear] = useState<number>(0)
+  const [selectedName, setSelectedName] = useState<string>('')
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function PerformancePage() {
       if (rows.length > 0) {
         const years = rows.map((r) => fiscalYear(r.period_start)).filter(Boolean)
         setSelectedFY(Math.max(...years))
+        setSelectedName(rows[0].name)
       }
     })
     fetch('/api/performance/monthly').then((r) => r.json()).then((rows: MonthlyRecord[]) => {
@@ -104,7 +106,7 @@ export default function PerformancePage() {
   // 全体タブ用暦年一覧（降順）
   const teamYears = [...new Set(monthly.map((r) => r.year))].sort((a, b) => b - a)
 
-  const filteredRecords = records
+  const filteredRecords = selectedName ? records.filter((r) => r.name === selectedName) : records
 
   // 暦年フィルタ後の月次レコード（1〜12月の順）
   const filteredMonthly = (() => {
@@ -288,7 +290,20 @@ export default function PerformancePage() {
         ))}
       </div>
 
-      {/* 年度／暦年選択バー */}
+      {/* 個人タブ：名前選択バー */}
+      {tab === 'personal' && records.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {records.map((r) => (
+            <button key={r.id} onClick={() => setSelectedName(r.name)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
+                ${selectedName === r.name ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
+              {r.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 全体タブ：暦年選択バー */}
       {tab === 'team' && teamYears.length > 0 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {teamYears.map((y) => (
