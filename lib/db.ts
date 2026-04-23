@@ -134,6 +134,15 @@ async function initDb() {
       done_at    TEXT,
       created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
+    CREATE TABLE IF NOT EXISTS member_monthly_stats (
+      id               SERIAL PRIMARY KEY,
+      member_name      TEXT    NOT NULL,
+      year             INTEGER NOT NULL,
+      month            INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+      total_activation INTEGER NOT NULL DEFAULT 0,
+      total_cancel     INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(member_name, year, month)
+    );
     CREATE TABLE IF NOT EXISTS monthly_team_stats (
       id           SERIAL PRIMARY KEY,
       year         INTEGER NOT NULL,

@@ -67,11 +67,22 @@ export default function PerformancePage() {
   const [selectedFY, setSelectedFY] = useState<number>(0)
   const [selectedYear, setSelectedYear] = useState<number>(0)
   const [selectedName, setSelectedName] = useState<string>('')
+  const [selectedPersonalYear, setSelectedPersonalYear] = useState<number>(0)
+  const [memberMonthly, setMemberMonthly] = useState<{member_name:string;year:number;month:number;total_activation:number;total_cancel:number}[]>([])
+  const [editingPersonalMonth, setEditingPersonalMonth] = useState<number | null>(null)
+  const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '' })
+  const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
+
+  useEffect(() => {
+    if (!selectedName || !selectedPersonalYear) return
+    fetch(`/api/performance/member-monthly?name=${encodeURIComponent(selectedName)}&year=${selectedPersonalYear}`)
+      .then((r) => r.json()).then(setMemberMonthly)
+  }, [selectedName, selectedPersonalYear])
 
   useEffect(() => {
     if (role !== 'manager') return
@@ -81,6 +92,7 @@ export default function PerformancePage() {
         const years = rows.map((r) => fiscalYear(r.period_start)).filter(Boolean)
         setSelectedFY(Math.max(...years))
         setSelectedName(rows[0].name)
+        setSelectedPersonalYear(new Date().getFullYear())
       }
     })
     fetch('/api/performance/monthly').then((r) => r.json()).then((rows: MonthlyRecord[]) => {
@@ -108,6 +120,26 @@ export default function PerformancePage() {
 
   const filteredRecords = selectedName ? records.filter((r) => r.name === selectedName) : records
 
+  // 個人タブ：年一覧（2022〜当年）
+  const currentYear = new Date().getFullYear()
+  const personalYears = Array.from({ length: currentYear - 2021 }, (_, i) => currentYear - i)
+
+  // 個人タブ：選択年の月次データ（1〜12月埋め）
+  const filteredMemberMonthly = (() => {
+    const dataMap = new Map(
+      memberMonthly.filter((r) => r.year === selectedPersonalYear).map((r) => [r.month, r])
+    )
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1
+      return dataMap.get(m) ?? { member_name: selectedName, year: selectedPersonalYear, month: m, total_activation: 0, total_cancel: 0 }
+    })
+  })()
+
+  // 個人タブ：選択年の合計
+  const memberYearTotal = memberMonthly
+    .filter((r) => r.year === selectedPersonalYear)
+    .reduce((acc, r) => ({ activation: acc.activation + r.total_activation, cancel: acc.cancel + r.total_cancel }), { activation: 0, cancel: 0 })
+
   // 暦年フィルタ後の月次レコード（1〜12月の順）
   const filteredMonthly = (() => {
     // 選択年の1〜12月をすべて並べ、データがない月は 0 で埋める
@@ -127,6 +159,34 @@ export default function PerformancePage() {
       (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
       { activation: 0, cancel: 0 }
     )
+
+  const openEditPersonalMonth = (month: number, data?: { total_activation: number; total_cancel: number }) => {
+    setEditingPersonalMonth(month)
+    setPersonalMonthForm({
+      totalActivation: data && data.total_activation > 0 ? String(data.total_activation) : '',
+      totalCancel: data && data.total_cancel > 0 ? String(data.total_cancel) : '',
+    })
+  }
+
+  const handleSavePersonalMonth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPersonalMonth || !selectedName || !selectedPersonalYear) return
+    setSavingPersonalMonth(true)
+    const res = await fetch('/api/performance/member-monthly', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        memberName: selectedName,
+        year: selectedPersonalYear,
+        month: editingPersonalMonth,
+        totalActivation: parseInt(personalMonthForm.totalActivation) || 0,
+        totalCancel: parseInt(personalMonthForm.totalCancel) || 0,
+      }),
+    })
+    if (res.ok) setMemberMonthly(await res.json())
+    setSavingPersonalMonth(false)
+    setEditingPersonalMonth(null)
+  }
 
   const openEditMonth = (r: MonthlyRecord) => {
     setEditingMonth({ year: r.year, month: r.month })
@@ -298,6 +358,19 @@ export default function PerformancePage() {
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
                 ${selectedName === r.name ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
               {r.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 個人タブ：年選択バー（名前選択後に表示） */}
+      {tab === 'personal' && selectedName && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {personalYears.map((y) => (
+            <button key={y} onClick={() => setSelectedPersonalYear(y)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
+                ${selectedPersonalYear === y ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
+              {y}年
             </button>
           ))}
         </div>
@@ -492,6 +565,107 @@ export default function PerformancePage() {
                   </div>
                 </div>
               ))}
+
+              {/* 月次データテーブル（名前・年選択後） */}
+              {selectedName && selectedPersonalYear > 0 && (
+                <div className="mt-4">
+                  {/* 年間合計カード */}
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
+                      <p className="text-xs text-gray-400 mb-1">{selectedPersonalYear}年 獲得計</p>
+                      <p className="text-lg font-black text-violet-600">{memberYearTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                    </div>
+                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
+                      <p className="text-xs text-gray-400 mb-1">{selectedPersonalYear}年 解除計</p>
+                      <p className="text-lg font-black text-violet-600">{memberYearTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                    </div>
+                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
+                      <p className="text-xs text-gray-400 mb-1">解除率</p>
+                      <p className="text-lg font-black text-emerald-600">{cancelRate(memberYearTotal.activation, memberYearTotal.cancel)}</p>
+                    </div>
+                  </div>
+
+                  {/* 月別リスト */}
+                  <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                    <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
+                      <span className="text-xs font-semibold text-gray-400 w-8">月</span>
+                      <div className="flex-1 grid grid-cols-3 gap-1 text-right">
+                        <span className="text-xs font-semibold text-gray-400">獲得数</span>
+                        <span className="text-xs font-semibold text-gray-400">解除数</span>
+                        <span className="text-xs font-semibold text-gray-400">解除率</span>
+                      </div>
+                      {role === 'manager' && <div className="w-7 shrink-0" />}
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {filteredMemberMonthly.map((r) => {
+                        const hasData = r.total_activation > 0 || r.total_cancel > 0
+                        const isEditing = editingPersonalMonth === r.month
+                        return (
+                          <div key={r.month}>
+                            <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
+                              <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
+                              <div className="flex-1 grid grid-cols-3 gap-1 text-right">
+                                <span className="text-sm font-bold text-violet-600">
+                                  {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                                </span>
+                                <span className="text-sm font-bold text-violet-600">
+                                  {hasData ? <>{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                                </span>
+                                <span className="text-sm font-semibold text-emerald-600">
+                                  {hasData ? cancelRate(r.total_activation, r.total_cancel) : '-'}
+                                </span>
+                              </div>
+                              {role === 'manager' && !isEditing && (
+                                <button onClick={() => openEditPersonalMonth(r.month, r)}
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition shrink-0">
+                                  <Pencil size={13} />
+                                </button>
+                              )}
+                              {role === 'manager' && isEditing && (
+                                <button onClick={() => setEditingPersonalMonth(null)}
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 transition shrink-0">
+                                  <X size={13} />
+                                </button>
+                              )}
+                            </div>
+
+                            {isEditing && (
+                              <form onSubmit={handleSavePersonalMonth} className="px-4 pb-4 bg-violet-50/40 space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-xs text-gray-500 mb-0.5 block">獲得数</label>
+                                    <input type="number" min={0} value={personalMonthForm.totalActivation}
+                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, totalActivation: e.target.value }))}
+                                      placeholder="0"
+                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500 mb-0.5 block">解除数</label>
+                                    <input type="number" min={0} value={personalMonthForm.totalCancel}
+                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, totalCancel: e.target.value }))}
+                                      placeholder="0"
+                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => setEditingPersonalMonth(null)}
+                                    className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
+                                    キャンセル
+                                  </button>
+                                  <button type="submit" disabled={savingPersonalMonth}
+                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition">
+                                    <Save size={12} />{savingPersonalMonth ? '保存中...' : '保存'}
+                                  </button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </>
