@@ -39,11 +39,26 @@ export default function PerformancePage() {
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
+  const [seeding, setSeeding] = useState(false)
 
   useEffect(() => {
     fetch('/api/performance').then((r) => r.json()).then(setRecords)
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
+
+  const handleSeed = async () => {
+    if (!confirm('初期データ（21名）を一括登録しますか？')) return
+    setSeeding(true)
+    const res = await fetch('/api/performance/seed', { method: 'POST' })
+    const data = await res.json()
+    if (res.ok) {
+      const rows = await fetch('/api/performance').then((r) => r.json())
+      setRecords(rows)
+    } else {
+      alert(data.error ?? 'エラーが発生しました')
+    }
+    setSeeding(false)
+  }
 
   const openAdd = () => {
     setEditId(null)
@@ -230,7 +245,18 @@ export default function PerformancePage() {
       {records.length === 0 ? (
         <div className="text-center py-16 text-gray-300">
           <p className="text-sm font-medium">実績データがありません</p>
-          {role === 'manager' && <p className="text-xs mt-1">「追加」ボタンからメンバーを登録できます</p>}
+          {role === 'manager' && (
+            <div className="mt-4">
+              <p className="text-xs mb-3">「追加」ボタンから個別登録、または一括登録できます</p>
+              <button
+                onClick={handleSeed}
+                disabled={seeding}
+                className="px-5 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50"
+              >
+                {seeding ? '登録中...' : '初期データを一括登録'}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
