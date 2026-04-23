@@ -315,12 +315,12 @@ export default function PerformancePage() {
                       className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">開通目標/月</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">獲得数/月</label>
                     <input type="number" min={0} value={form.activationTarget} onChange={(e) => f(e.target.value, 'activationTarget')}
                       className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 mb-1 block">解除目標/月</label>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">解除数/月</label>
                     <input type="number" min={0} value={form.cancelTarget} onChange={(e) => f(e.target.value, 'cancelTarget')}
                       className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
                   </div>
@@ -331,12 +331,12 @@ export default function PerformancePage() {
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">期間開始</label>
-                    <input type="date" value={form.periodStart} onChange={(e) => f(e.target.value, 'periodStart')}
+                    <input type="month" value={form.periodStart.slice(0, 7)} onChange={(e) => f(e.target.value + '-01', 'periodStart')}
                       className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">期間終了</label>
-                    <input type="date" value={form.periodEnd} onChange={(e) => f(e.target.value, 'periodEnd')}
+                    <input type="month" value={form.periodEnd.slice(0, 7)} onChange={(e) => f(e.target.value + '-01', 'periodEnd')}
                       className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
                   </div>
                   <div>
