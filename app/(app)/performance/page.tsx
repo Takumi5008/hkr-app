@@ -42,32 +42,41 @@ function fiscalYear(dateStr: string): number {
 export default function PerformancePage() {
   const [records, setRecords] = useState<MemberPerformance[]>([])
   const [role, setRole] = useState<string>('member')
+  const [userName, setUserName] = useState<string>('')
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [selectedFY, setSelectedFY] = useState<number>(0)
+  const [tab, setTab] = useState<'personal' | 'team'>('personal')
 
   useEffect(() => {
     fetch('/api/performance').then((r) => r.json()).then((rows: MemberPerformance[]) => {
       setRecords(rows)
-      // 最新年度を初期選択
       if (rows.length > 0) {
         const years = rows.map((r) => fiscalYear(r.period_start)).filter(Boolean)
         setSelectedFY(Math.max(...years))
       }
     })
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => {
+      setRole(d.role ?? 'member')
+      setUserName(d.name ?? '')
+    })
   }, [])
 
   // 利用可能な年度一覧（降順）
   const fiscalYears = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
 
-  // 選択年度でフィルタ（period_start が選択年度の 4/1〜翌3/31 に含まれるもの）
-  const filteredRecords = selectedFY
+  // 年度フィルタ後
+  const fyRecords = selectedFY
     ? records.filter((r) => fiscalYear(r.period_start) === selectedFY)
     : records
+
+  // タブフィルタ（個人：名前の部分一致で自分のレコードを抽出）
+  const filteredRecords = tab === 'personal'
+    ? fyRecords.filter((r) => userName && (userName.includes(r.name) || r.name.includes(userName)))
+    : fyRecords
 
   const handleSeed = async () => {
     if (!confirm('初期データ（21名）を一括登録しますか？')) return
@@ -190,6 +199,20 @@ export default function PerformancePage() {
         <p className="text-sm text-violet-100 mt-0.5">メンバーの累計実績を管理</p>
       </div>
 
+      {/* タブ */}
+      <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+        {(['personal', 'team'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
+              ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            {t === 'personal' ? '個人' : '全体'}
+          </button>
+        ))}
+      </div>
+
       {/* 年度選択バー */}
       {fiscalYears.length > 0 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -208,7 +231,7 @@ export default function PerformancePage() {
         </div>
       )}
 
-      {role === 'manager' && (
+      {role === 'manager' && tab === 'team' && (
         <div className="flex justify-end mb-4">
           <button
             onClick={openAdd}
@@ -321,7 +344,9 @@ export default function PerformancePage() {
         <div className="space-y-3">
           {filteredRecords.length === 0 && (
             <div className="text-center py-12 text-gray-300">
-              <p className="text-sm font-medium">{selectedFY}年度のデータがありません</p>
+              <p className="text-sm font-medium">
+                {tab === 'personal' ? 'あなたの実績データが見つかりません' : `${selectedFY}年度のデータがありません`}
+              </p>
             </div>
           )}
           {filteredRecords.map((r) => (
