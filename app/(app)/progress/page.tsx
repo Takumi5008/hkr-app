@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock } from 'lucide-react'
+import { isHoliday } from '@/lib/holidays'
 
 export default function ProgressPage() {
   const today = new Date()
@@ -82,7 +83,9 @@ export default function ProgressPage() {
   const formatDate = (day: number) => {
     const d = new Date(year, month - 1, day)
     const dow = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
-    return { label: `${month}/${day}（${dow}）`, dow: d.getDay() }
+    const holiday = isHoliday(year, month, day)
+    const isRed = d.getDay() === 0 || holiday
+    return { label: `${month}/${day}（${dow}）`, dow: d.getDay(), isRed }
   }
 
   return (
@@ -156,6 +159,8 @@ export default function ProgressPage() {
             const dow = (firstDay + day - 1) % 7
             const isWork = workDates.includes(day)
             const isToday = isCurrentMonth && day === todayDay
+            const holiday = isHoliday(year, month, day)
+            const isRed = dow === 0 || holiday
             return (
               <button
                 key={day}
@@ -165,9 +170,9 @@ export default function ProgressPage() {
                   ${isWork
                     ? calendarLocked ? 'bg-orange-300 text-white' : 'bg-orange-500 text-white shadow-sm'
                     : calendarLocked ? 'bg-gray-50 text-gray-300 cursor-default' : 'bg-gray-50 hover:bg-orange-50'}
-                  ${!isWork && !calendarLocked && dow === 0 ? 'text-rose-400' : ''}
-                  ${!isWork && !calendarLocked && dow === 6 ? 'text-indigo-400' : ''}
-                  ${!isWork && !calendarLocked && dow !== 0 && dow !== 6 ? 'text-gray-600' : ''}
+                  ${!isWork && !calendarLocked && isRed ? 'text-rose-400' : ''}
+                  ${!isWork && !calendarLocked && dow === 6 && !holiday ? 'text-indigo-400' : ''}
+                  ${!isWork && !calendarLocked && !isRed && dow !== 6 ? 'text-gray-600' : ''}
                   ${isToday && !isWork ? 'ring-2 ring-orange-400' : ''}
                 `}
               >
@@ -223,7 +228,7 @@ export default function ProgressPage() {
           </div>
           <div className="divide-y divide-gray-50">
             {sortedWorkDates.map((day, i) => {
-              const { label, dow } = formatDate(day)
+              const { label, dow, isRed } = formatDate(day)
               const cumTarget = cumulativeTarget(i + 1)
               const isPast = isCurrentMonth ? day < todayDay : true
               const isToday = isCurrentMonth && day === todayDay
@@ -231,7 +236,7 @@ export default function ProgressPage() {
                 <div key={day} className={`flex items-center px-4 py-2.5 ${isToday ? 'bg-orange-50' : ''}`}>
                   <div className="flex-1">
                     <span className={`text-sm font-semibold ${
-                      dow === 0 ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'
+                      isRed ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'
                     }`}>
                       {label}
                     </span>

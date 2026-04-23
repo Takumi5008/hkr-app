@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, X } from 'lucide-react'
+import { isHoliday } from '@/lib/holidays'
 
 type Schedule = {
   id: number
@@ -128,15 +129,17 @@ export default function SchedulePage() {
             const isSelected = dateStr === selectedDate
             const hasSchedule = schedulesForDate(dateStr).length > 0
             const count = schedulesForDate(dateStr).length
+            const holiday = isHoliday(year, month, day)
+            const isRed = dow === 0 || holiday
             return (
               <button
                 key={day}
                 onClick={() => handleDayClick(day)}
                 className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm font-semibold transition-all relative
                   ${isSelected ? 'bg-sky-500 text-white shadow-md' : isToday ? 'ring-2 ring-sky-400 text-sky-600' : ''}
-                  ${!isSelected && dow === 0 ? 'text-rose-500' : ''}
-                  ${!isSelected && dow === 6 ? 'text-sky-500' : ''}
-                  ${!isSelected && !isToday && dow !== 0 && dow !== 6 ? 'text-gray-700' : ''}
+                  ${!isSelected && isRed ? 'text-rose-500' : ''}
+                  ${!isSelected && dow === 6 && !holiday ? 'text-sky-500' : ''}
+                  ${!isSelected && !isToday && !isRed && dow !== 6 ? 'text-gray-700' : ''}
                   ${!isSelected ? 'hover:bg-sky-50' : ''}
                 `}
               >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { isHoliday } from '@/lib/holidays'
 
 const CYCLE: Record<string, string | null> = { undefined: 'full', full: 'am', am: 'pm', pm: null }
 const CELL_STYLE: Record<string, string> = {
@@ -132,6 +133,8 @@ export default function ShiftPage() {
             const type = workMap[day]
             const dow = (firstDay + day - 1) % 7
             const isToday = day === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear()
+            const holiday = isHoliday(year, month, day)
+            const isRed = dow === 0 || holiday
             return (
               <button
                 key={day}
@@ -139,9 +142,9 @@ export default function ShiftPage() {
                 disabled={deadlinePassed}
                 className={`aspect-square rounded-xl text-sm font-semibold transition-all flex flex-col items-center justify-center leading-none
                   ${type ? CELL_STYLE[type] : deadlinePassed ? 'bg-gray-50 text-gray-400' : 'bg-gray-50 hover:bg-indigo-50 active:scale-95'}
-                  ${!type && dow === 0 ? 'text-rose-400' : ''}
-                  ${!type && dow === 6 ? 'text-indigo-400' : ''}
-                  ${!type && dow !== 0 && dow !== 6 ? 'text-gray-700' : ''}
+                  ${!type && isRed ? 'text-rose-400' : ''}
+                  ${!type && dow === 6 && !holiday ? 'text-indigo-400' : ''}
+                  ${!type && !isRed && dow !== 6 ? 'text-gray-700' : ''}
                   ${isToday && !type ? 'ring-2 ring-indigo-400' : ''}
                   ${deadlinePassed ? 'cursor-default' : 'cursor-pointer'}`}
               >

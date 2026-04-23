@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react'
 import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { isHoliday } from '@/lib/holidays'
 
 type Role = 'member' | 'viewer' | 'manager'
 const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー' }
@@ -340,12 +341,14 @@ export default function AdminPage() {
                       {days.map((d) => {
                         const dow = new Date(year, month - 1, d).getDay()
                         const isToday = d === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear()
+                        const holiday = isHoliday(year, month, d)
+                        const isRed = dow === 0 || holiday
                         return (
                           <th key={d} className={`border border-gray-100 px-1 py-2.5 text-center w-8 font-semibold
                             ${isToday ? 'bg-indigo-600 text-white' : 'bg-gray-50'}
-                            ${!isToday && dow === 0 ? 'text-rose-500' : ''}
-                            ${!isToday && dow === 6 ? 'text-indigo-500' : ''}
-                            ${!isToday && dow !== 0 && dow !== 6 ? 'text-gray-600' : ''}`}>{d}</th>
+                            ${!isToday && isRed ? 'text-rose-500' : ''}
+                            ${!isToday && dow === 6 && !holiday ? 'text-indigo-500' : ''}
+                            ${!isToday && !isRed && dow !== 6 ? 'text-gray-600' : ''}`}>{d}</th>
                         )
                       })}
                       <th className="border border-gray-100 px-2 py-2.5 bg-indigo-50 text-center min-w-10 text-indigo-600 font-bold">計</th>
@@ -362,8 +365,9 @@ export default function AdminPage() {
                         </td>
                         {days.map((d) => {
                           const dow = new Date(year, month - 1, d).getDay()
+                          const holiday = isHoliday(year, month, d)
                           return (
-                            <td key={d} className={`border border-gray-100 px-1 py-2 text-center ${dow === 0 ? 'bg-rose-50/40' : ''} ${dow === 6 ? 'bg-indigo-50/40' : ''}`}>
+                            <td key={d} className={`border border-gray-100 px-1 py-2 text-center ${dow === 0 || holiday ? 'bg-rose-50/40' : ''} ${dow === 6 && !holiday ? 'bg-indigo-50/40' : ''}`}>
                               <WorkCell type={getWorkType(member.workDates, d)} />
                             </td>
                           )
@@ -380,9 +384,10 @@ export default function AdminPage() {
                         <td className="border border-gray-100 px-2 py-2" />
                         {days.map((d) => {
                           const dow = new Date(year, month - 1, d).getDay()
+                          const holiday = isHoliday(year, month, d)
                           const total = dayTotal(d)
                           return (
-                            <td key={d} className={`border border-gray-100 px-1 py-2 text-center font-bold ${total > 0 ? 'text-indigo-600' : 'text-gray-300'} ${dow === 0 ? 'bg-rose-50/40' : ''} ${dow === 6 ? 'bg-indigo-50/40' : ''}`}>
+                            <td key={d} className={`border border-gray-100 px-1 py-2 text-center font-bold ${total > 0 ? 'text-indigo-600' : 'text-gray-300'} ${dow === 0 || holiday ? 'bg-rose-50/40' : ''} ${dow === 6 && !holiday ? 'bg-indigo-50/40' : ''}`}>
                               {total > 0 ? total : '·'}
                             </td>
                           )
