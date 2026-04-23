@@ -2,13 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: '/input', label: 'データ入力', icon: PenLine },
+  { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
+  { href: '/shift', label: 'シフト入力', icon: Calendar },
+  { href: '/mtg', label: 'MTG出欠', icon: ClipboardList },
 ]
 
 const managerNavItems = [
@@ -38,8 +40,9 @@ export default function Sidebar({ name, role }: SidebarProps) {
   // ボトムナビは共通4項目のみ（管理者専用メニューはハンバーガーから）
   const bottomNavItems = [
     { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
-    { href: '/input', label: '入力', icon: PenLine },
-    { href: '/trends', label: '推移', icon: TrendingUp },
+    { href: '/input', label: 'HKR', icon: PenLine },
+    { href: '/shift', label: 'シフト', icon: Calendar },
+    { href: '/mtg', label: 'MTG', icon: ClipboardList },
     { href: '/settings', label: '設定', icon: Settings },
   ]
 
@@ -124,8 +127,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
               <span className="text-sm font-black text-white">H</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-white">HKR管理</h1>
-              <p className="text-xs text-indigo-400">開通率トラッカー</p>
+              <h1 className="text-base font-bold text-white">インフラ管理</h1>
+              <p className="text-xs text-indigo-400">HKR・シフト管理</p>
             </div>
           </div>
         </div>
@@ -139,7 +142,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
               <span className="text-xs font-black text-white">H</span>
             </div>
-            <span className="text-base font-bold text-white">HKR管理</span>
+            <span className="text-base font-bold text-white">インフラ管理</span>
           </div>
           <button
             onClick={() => setMobileOpen(true)}
@@ -161,8 +164,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
                   <span className="text-sm font-black text-white">H</span>
                 </div>
                 <div>
-                  <h1 className="text-base font-bold text-white">HKR管理</h1>
-                  <p className="text-xs text-indigo-400">開通率トラッカー</p>
+                  <h1 className="text-base font-bold text-white">インフラ管理</h1>
+                  <p className="text-xs text-indigo-400">HKR・シフト管理</p>
                 </div>
               </div>
               <button onClick={() => setMobileOpen(false)} className="text-indigo-400 hover:text-white">

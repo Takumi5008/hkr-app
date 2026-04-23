@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>インターン実績 × 就活成果 整合性資料</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #f0f4ff;
+      color: #1e293b;
+      padding: 40px 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* ヘッダー */
+    .header {
+      background: linear-gradient(135deg, #1e3a8a, #4338ca);
+      color: white;
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 26px; font-weight: 800; letter-spacing: 0.02em; }
+    .header p { margin-top: 8px; font-size: 14px; opacity: 0.75; }
+
+    /* カード */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e40af;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      width: 4px; height: 18px;
+      background: #3b82f6;
+      border-radius: 2px;
+    }
+
+    /* サマリーグリッド */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .summary-box {
+      border-radius: 10px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .summary-box .tier { font-size: 13px; font-weight: 600; opacity: 0.8; margin-bottom: 6px; }
+    .summary-box .count { font-size: 28px; font-weight: 800; }
+    .summary-box .up { font-size: 13px; margin-top: 4px; font-weight: 600; }
+    .t2 { background: #eff6ff; color: #1d4ed8; }
+    .t3 { background: #f0fdf4; color: #15803d; }
+    .t4 { background: #fefce8; color: #a16207; }
+    .t5 { background: #fdf4ff; color: #7e22ce; }
+
+    /* ハイライトバナー */
+    .highlight {
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e3a8a;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* テーブル */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #e2e8f0;
+      letter-spacing: 0.05em;
+    }
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody td { padding: 10px 14px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-t1 { background: #fef3c7; color: #92400e; }
+    .badge-t2 { background: #dbeafe; color: #1e40af; }
+    .badge-t3 { background: #dcfce7; color: #166534; }
+    .badge-t4 { background: #f3f4f6; color: #374151; }
+    .badge-t5 { background: #f5f3ff; color: #5b21b6; }
+    .up3 { color: #059669; font-weight: 800; font-size: 15px; }
+    .up2 { color: #0284c7; font-weight: 700; }
+    .up1 { color: #7c3aed; font-weight: 600; }
+    .up0 { color: #94a3b8; }
+    .dn  { color: #ef4444; }
+
+    /* 分布バー */
+    .dist-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .dist-label { width: 60px; font-size: 13px; font-weight: 700; color: #475569; }
+    .dist-bar-wrap { flex: 1; height: 26px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
+    .dist-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 700; color: white; transition: width 0.6s ease; }
+    .dist-meta { width: 70px; font-size: 13px; color: #64748b; text-align: right; }
+    .bar-3 { background: linear-gradient(90deg, #059669, #34d399); }
+    .bar-2 { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+    .bar-1 { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+    .bar-0 { background: #cbd5e1; }
+    .bar-d { background: #f87171; }
+
+    /* 比較テーブル */
+    .compare-table { width: 100%; border-collapse: collapse; }
+    .compare-table th {
+      background: #1e3a8a;
+      color: white;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table td { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    .compare-table td:not(:first-child) { text-align: center; }
+    .compare-table .axis { font-weight: 600; color: #475569; }
+    .compare-table .arubaito { color: #94a3b8; }
+    .compare-table .intern { color: #1e40af; font-weight: 700; }
+
+    /* ロールモデル */
+    .model-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .model-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .model-avatar {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #7c3aed);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .model-name { font-weight: 700; font-size: 15px; }
+    .model-path { font-size: 12px; color: #64748b; margin: 3px 0; }
+    .model-quote { font-size: 13px; color: #374151; font-style: italic; }
+
+    /* タイムライン */
+    .timeline { position: relative; padding-left: 24px; }
+    .timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; }
+    .tl-item { position: relative; margin-bottom: 24px; }
+    .tl-dot {
+      position: absolute; left: -24px; top: 2px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #3b82f6;
+    }
+    .tl-month { font-size: 13px; font-weight: 700; color: #3b82f6; margin-bottom: 4px; }
+    .tl-text { font-size: 14px; color: #374151; }
+    .tl-amount { font-size: 16px; font-weight: 800; color: #1e40af; }
+
+    .section-divider { margin: 8px 0 20px; border: none; border-top: 2px dashed #e2e8f0; }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .model-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ヘッダー -->
+  <div class="header">
+    <h1>インターン実績 × 就活成果 整合性資料</h1>
+    <p>学歴ティアを超えた就活成果の可視化</p>
+  </div>
+
+  <!-- サマリー -->
+  <div class="card">
+    <div class="card-title">サマリー：学歴ティア別 就活成果</div>
+    <div class="summary-grid">
+      <div class="summary-box t2">
+        <div class="tier">Tire2 出身</div>
+        <div class="count">1名</div>
+        <div class="up">→ Tire2 (±0)</div>
+      </div>
+      <div class="summary-box t3">
+        <div class="tier">Tire3 出身</div>
+        <div class="count">8名</div>
+        <div class="up">→ Tire2 平均 <strong>+1</strong></div>
+      </div>
+      <div class="summary-box t4">
+        <div class="tier">Tire4 出身</div>
+        <div class="count">7名</div>
+        <div class="up">→ Tire1〜2 平均 <strong>+2〜3</strong></div>
+      </div>
+      <div class="summary-box t5">
+        <div class="tier">Tire5 出身</div>
+        <div class="count">12名</div>
+        <div class="up">→ Tire2〜3 平均 <strong>+2〜3</strong></div>
+      </div>
+    </div>
+    <div class="highlight">📊 全28名中25名がティアアップを実現　　<span style="font-size:22px;">89%</span></div>
+  </div>
+
+  <!-- 分布 -->
+  <div class="card">
+    <div class="card-title">ティアアップ幅の分布</div>
+    <div class="dist-row">
+      <div class="dist-label">+3アップ</div>
+      <div class="dist-bar-wrap"><div class="dist-bar bar-3" style="width:25%">7名</div></div>
+      <div class="dist-meta">25%</div>
+    </div>
+    <div class="dist-row">
+      <div class="dist-label">+2アップ</div>
+      <div class="dist-bar-wrap"><div class="dist-bar bar-2" style="width:29%">8名</div></div>
+      <div class="dist-meta">29%</div>
+    </div>
+    <div class="dist-row">
+      <div class="dist-label">+1アップ</div>
+      <div class="dist-bar-wrap"><div class="dist-bar bar-1" style="width:36%">10名</div></div>
+      <div class="dist-meta">36%</div>
+    </div>
+    <div class="dist-row">
+      <div class="dist-label">変動なし</div>
+      <div class="dist-bar-wrap"><div class="dist-bar bar-0" style="width:7%; min-width:48px">2名</div></div>
+      <div class="dist-meta" style="color:#94a3b8">7%</div>
+    </div>
+    <div class="dist-row">
+      <div class="dist-label">-1ダウン</div>
+      <div class="dist-bar-wrap"><div class="dist-bar bar-d" style="width:4%; min-width:48px">1名</div></div>
+      <div class="dist-meta" style="color:#ef4444">4%</div>
+    </div>
+  </div>
+
+  <!-- 個人データ Tire4 -->
+  <div class="card">
+    <div class="card-title">Tire4 出身 → 最大+3ティアアップ（7名）</div>
+    <table>
+      <thead>
+        <tr>
+          <th>氏名</th>
+          <th>学歴ティア</th>
+          <th>就職先ティア</th>
+          <th>変動幅</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>岩下</strong></td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t1">Tire1</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td><strong>向井</strong></td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t1">Tire1</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td>塚田</td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>細貝</td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>佐々木</td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>佐藤</td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>大西</td><td><span class="badge badge-t4">Tire4</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="up0">±0 ➡️</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 個人データ Tire5 -->
+  <div class="card">
+    <div class="card-title">Tire5 出身 → 全員ティアアップ達成（12名）</div>
+    <table>
+      <thead>
+        <tr>
+          <th>氏名</th>
+          <th>学歴ティア</th>
+          <th>就職先ティア</th>
+          <th>変動幅</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>渡辺</strong></td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td><strong>豊島</strong></td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td><strong>上鍵</strong></td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td><strong>村山</strong></td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td><strong>佐々木し</strong></td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up3">+3 ⤴️⤴️⤴️</td></tr>
+        <tr><td>佐野</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t3">Tire3</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>西川</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t3">Tire3</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>織田</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t3">Tire3</span></td><td class="up2">+2 ⤴️⤴️</td></tr>
+        <tr><td>宮川</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>仲尾</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>前田</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>田頭</td><td><span class="badge badge-t5">Tire5</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="up1">+1 ⤴️</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 個人データ Tire3 -->
+  <div class="card">
+    <div class="card-title">Tire3 出身（8名）</div>
+    <table>
+      <thead>
+        <tr>
+          <th>氏名</th>
+          <th>学歴ティア</th>
+          <th>就職先ティア</th>
+          <th>変動幅</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>坪坂</strong></td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t1">Tire1</span></td><td class="up3">+2 ⤴️⤴️</td></tr>
+        <tr><td>小禄</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>木村</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>平岩</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>吉田</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>保谷</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>仁和</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t2">Tire2</span></td><td class="up1">+1 ⤴️</td></tr>
+        <tr><td>新井</td><td><span class="badge badge-t3">Tire3</span></td><td><span class="badge badge-t4">Tire4</span></td><td class="dn">-1 ⤵️</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 委託費タイムライン -->
+  <div class="card">
+    <div class="card-title">参加してから委託費が入るまでのタイムライン</div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot" style="background:#94a3b8; box-shadow: 0 0 0 2px #94a3b8;"></div>
+        <div class="tl-month">初稼働〜2ヶ月</div>
+        <div class="tl-text">解除スキルの習得期間。委託費はまだゼロ。<br><span style="color:#94a3b8; font-size:12px;">※アルバイトと比較する時期ではない</span></div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-month">3ヶ月後（初委託費）</div>
+        <div class="tl-text">初開通が発生。インターンの意義を実感するフェーズ。</div>
+        <div class="tl-amount">平均 1.6開通 ≒ ¥24,000</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:#059669; box-shadow: 0 0 0 2px #059669;"></div>
+        <div class="tl-month">4〜5ヶ月後（サイクル確立）</div>
+        <div class="tl-text">まとまった開通が安定して発生。月収サイクルが回り始める。</div>
+        <div class="tl-amount">平均 5開通 ≒ ¥75,000</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:#7c3aed; box-shadow: 0 0 0 2px #7c3aed;"></div>
+        <div class="tl-month">6ヶ月〜（ガクチカ確立）</div>
+        <div class="tl-text">「売上に直結した課題解決」の実績として就活に活用できるフェーズ。<br>Tire1〜2企業へのアプローチが現実的になる。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- アルバイト比較 -->
+  <div class="card">
+    <div class="card-title">インターン vs アルバイト</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>比較軸</th>
+          <th>アルバイト</th>
+          <th>インターン（本プログラム）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="axis">目的</td>
+          <td class="arubaito">即時報酬</td>
+          <td class="intern">課題解決能力の習得＋成功体験</td>
+        </tr>
+        <tr>
+          <td class="axis">評価対象</td>
+          <td class="arubaito">稼働時間・作業量</td>
+          <td class="intern">開通率・問題解決の質</td>
+        </tr>
+        <tr>
+          <td class="axis">就活への影響</td>
+          <td class="arubaito">限定的</td>
+          <td class="intern">学歴ティアを2〜3段引き上げる実績</td>
+        </tr>
+        <tr>
+          <td class="axis">ガクチカ価値</td>
+          <td class="arubaito">低</td>
+          <td class="intern">高（売上・利益に直結した数値実績）</td>
+        </tr>
+        <tr>
+          <td class="axis">初収入タイミング</td>
+          <td class="arubaito">即日〜1ヶ月</td>
+          <td class="intern">3ヶ月後〜（先行投資の費用対効果）</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px; padding:14px 18px; background:#fef9c3; border-radius:8px; font-size:14px; color:#713f12;">
+      💡 <strong>「即金ならアルバイト、ガクチカ＋収入ならインターン」</strong>　— 採用フロー時点でこの認識を合わせることが最重要
+    </div>
+  </div>
+
+  <!-- ロールモデル -->
+  <div class="card">
+    <div class="card-title">ロールモデル（訴求力高順）</div>
+    <div class="model-grid">
+      <div class="model-card">
+        <div class="model-avatar">岩</div>
+        <div>
+          <div class="model-name">岩下</div>
+          <div class="model-path">Tire4 → <strong style="color:#92400e">Tire1</strong>（+3）</div>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-avatar">向</div>
+        <div>
+          <div class="model-name">向井</div>
+          <div class="model-path">Tire4 → <strong style="color:#92400e">Tire1</strong>（+3）</div>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-avatar" style="background: linear-gradient(135deg, #7c3aed, #db2777);">渡</div>
+        <div>
+          <div class="model-name">渡辺</div>
+          <div class="model-path">Tire5 → <strong style="color:#1e40af">Tire2</strong>（+3）</div>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-avatar" style="background: linear-gradient(135deg, #7c3aed, #db2777);">豊</div>
+        <div>
+          <div class="model-name">豊島</div>
+          <div class="model-path">Tire5 → <strong style="color:#1e40af">Tire2</strong>（+3）</div>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-avatar" style="background: linear-gradient(135deg, #0284c7, #059669);">坪</div>
+        <div>
+          <div class="model-name">坪坂</div>
+          <div class="model-path">Tire3 → <strong style="color:#92400e">Tire1</strong>（+2）</div>
+        </div>
+      </div>
+      <div class="model-card">
+        <div class="model-avatar" style="background: linear-gradient(135deg, #7c3aed, #db2777);">上</div>
+        <div>
+          <div class="model-name">上鍵</div>
+          <div class="model-path">Tire5 → <strong style="color:#1e40af">Tire2</strong>（+3）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成功例・失敗例 -->
+  <div class="card">
+    <div class="card-title">成功例・失敗例</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <!-- 成功例 -->
+      <div>
+        <div style="text-align:center; background:#dcfce7; color:#166534; font-size:13px; font-weight:800; padding:10px; border-radius:8px; margin-bottom:12px;">
+          ✅ 成功例（3名）
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <div style="border:1.5px solid #bbf7d0; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">岩</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">岩下</div>
+                <div style="font-size:12px;color:#64748b;">Tire4 → <strong style="color:#92400e;">Tire1</strong>（+3）</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">Tire4出身ながら開通実績を積み上げ、就活でTire1企業から内定。学歴フィルターを数字の実績で突破した最も象徴的なケース。</p>
+          </div>
+
+          <div style="border:1.5px solid #bbf7d0; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#7c3aed,#db2777);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">渡</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">渡辺</div>
+                <div style="font-size:12px;color:#64748b;">Tire5 → <strong style="color:#1e40af;">Tire2</strong>（+3）</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">最低ティアから3段ジャンプ。インターン参加前に受けていたら書類落ちしていた企業から内定を獲得。開通という結果が面接を一変させた。</p>
+          </div>
+
+          <div style="border:1.5px solid #bbf7d0; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#0284c7,#059669);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">坪</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">坪坂</div>
+                <div style="font-size:12px;color:#64748b;">Tire3 → <strong style="color:#92400e;">Tire1</strong>（+2）</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">中堅大学からTire1企業へ。「解除して終わり」ではなく開通にこだわり続けた姿勢が、課題解決能力として面接で評価された。</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 失敗例 -->
+      <div>
+        <div style="text-align:center; background:#fee2e2; color:#991b1b; font-size:13px; font-weight:800; padding:10px; border-radius:8px; margin-bottom:12px;">
+          ❌ 失敗例（3名）
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+          <div style="border:1.5px solid #fecaca; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:#f87171;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">新</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">新井</div>
+                <div style="font-size:12px;color:#64748b;">Tire3 → <strong style="color:#dc2626;">Tire4</strong>（−1）</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">唯一のティアダウン。解除スキルの習得に留まり、開通に繋がる課題解決のサイクルが作れなかった。ガクチカとして語れる実績が不足したまま就活へ。</p>
+          </div>
+
+          <div style="border:1.5px solid #fecaca; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fb923c;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">大</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">大西　🆑 途中離職</div>
+                <div style="font-size:12px;color:#64748b;">Tire4 → <strong style="color:#374151;">Tire4</strong>（±0）／勤務歴2年</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">2年間在籍しながらもTire4止まり。長く続けたにもかかわらず開通という結果に繋げられず、就活で語れる数字の実績が残らなかった。期間の長さではなく成果の質が問われることを示すケース。</p>
+          </div>
+
+          <div style="border:1.5px solid #fecaca; border-radius:10px; padding:14px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+              <div style="width:36px;height:36px;border-radius:8px;background:#94a3b8;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px;flex-shrink:0;">大</div>
+              <div>
+                <div style="font-weight:700;font-size:14px;">大本</div>
+                <div style="font-size:12px;color:#64748b;">Tire2 → <strong style="color:#374151;">Tire2</strong>（±0）</div>
+              </div>
+            </div>
+            <p style="font-size:12px;color:#374151;line-height:1.7;">元々Tire2出身にもかかわらず、インターン参加後もTire2止まり。開通という結果を面接で語れるレベルまで実績を積めず、インターンの参加価値を就活に活かしきれなかった。</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 失敗例だと就活で苦戦する理由 -->
+  <div class="card" style="border: 2px solid #fecaca;">
+    <div class="card-title" style="color:#dc2626;">失敗例の3名、就活で苦戦するよね？</div>
+
+    <div style="display:grid; gap:14px; margin-bottom:20px;">
+
+      <div style="display:flex; gap:14px; align-items:flex-start; background:#fef2f2; border-radius:10px; padding:16px;">
+        <div style="font-size:24px; flex-shrink:0;">😰</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#991b1b; margin-bottom:4px;">「インターン経験あります」だけでは刺さらない</div>
+          <p style="font-size:13px; color:#374151; line-height:1.7;">新井・大西・大本の3名に共通するのは、<strong>数字で語れる実績がない</strong>こと。面接官が聞きたいのは「何件売った」「開通率何%まで改善した」という具体的な数字。「営業をやっていました」だけでは、アルバイト経験と区別がつかない。</p>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:flex-start; background:#fef2f2; border-radius:10px; padding:16px;">
+        <div style="font-size:24px; flex-shrink:0;">😓</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#991b1b; margin-bottom:4px;">「何を学びましたか？」に答えられない</div>
+          <p style="font-size:13px; color:#374151; line-height:1.7;">大西は2年間在籍しながら結果が出なかった。「長く続けた」は美徳に見えるが、<strong>結果に繋げられなかった2年間</strong>をどう説明するか。成果なき継続は、自己分析の浅さや課題解決能力の欠如として捉えられるリスクがある。</p>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:14px; align-items:flex-start; background:#fef2f2; border-radius:10px; padding:16px;">
+        <div style="font-size:24px; flex-shrink:0;">😶</div>
+        <div>
+          <div style="font-weight:700; font-size:13px; color:#991b1b; margin-bottom:4px;">ティアを超える「逆転の武器」がない</div>
+          <p style="font-size:13px; color:#374151; line-height:1.7;">新井はTire3出身なのにTire4へ下降。大本はTire2出身にもかかわらず現状維持。<strong>インターン経験が学歴を補強するどころか、マイナス材料になりうる</strong>。「あれだけ時間を使って成果が出なかった」という評価になりかねない。</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="background:#1e293b; border-radius:10px; padding:18px; text-align:center; color:white;">
+      <p style="font-size:13px; font-weight:800; margin-bottom:6px;">だから「開通する解除」にこだわる意味がある</p>
+      <p style="font-size:13px; line-height:1.8; opacity:0.85;">解除しただけでは就活の武器にならない。<br>
+      <strong>開通＝売上貢献という結果</strong>があって初めて、面接で語れるガクチカになる。<br>
+      成功例との差はここ一点に尽きる。</p>
+    </div>
+  </div>
+
+  <!-- なぜ営業をやるべきか -->
+  <div class="card">
+    <div class="card-title">なぜ営業インターンをやるべきか</div>
+
+    <div style="display:grid; gap:16px;">
+
+      <div style="background:#eff6ff; border-radius:10px; padding:20px;">
+        <div style="font-size:13px; font-weight:800; color:#1e40af; margin-bottom:6px;">① 学歴の壁を数字で超えられる唯一の手段</div>
+        <p style="font-size:14px; color:#1e3a8a; line-height:1.7;">
+          就活市場で学歴フィルターを突破するには「数字で語れる実績」が最も有効だ。このデータが証明するのは、Tire4・Tire5出身でもTire1・Tire2企業に内定した事実——その共通点は全員、開通という売上直結の結果を持っていたことだ。営業は唯一、学生が在学中に「会社が求める売上への貢献」を体験できる職種であり、その実績は面接官が最も評価する言語に直結する。
+        </p>
+      </div>
+
+      <div style="background:#f0fdf4; border-radius:10px; padding:20px;">
+        <div style="font-size:13px; font-weight:800; color:#166534; margin-bottom:6px;">② 「解除」から「開通」への思考転換が課題解決能力そのもの</div>
+        <p style="font-size:14px; color:#14532d; line-height:1.7;">
+          データが示すのは、解除数が多くても開通が伴わなければ成果ではないという事実だ。2025年は2024年より解除が月+13件増えたが、開通は月−10件減った。この構造的な問題を現場で体感し、「なぜ開通しないのか」を自分で考え改善する経験こそが、社会が求める課題解決能力の原体験になる。営業はその因果関係が数字で即座に返ってくる、最もフィードバックが速い仕事だ。
+        </p>
+      </div>
+
+      <div style="background:#fefce8; border-radius:10px; padding:20px;">
+        <div style="font-size:13px; font-weight:800; color:#a16207; margin-bottom:6px;">③ 先行投資の費用対効果を体で理解できる</div>
+        <p style="font-size:14px; color:#713f12; line-height:1.7;">
+          初稼働から3ヶ月は収入がほぼゼロだ。しかし5ヶ月目から平均月¥75,000のサイクルが回り始め、6ヶ月以降はガクチカとして機能し始める。この「今すぐ稼ぐ」ではなく「仕込んで回収する」という構造を学生時代に経験することは、ビジネスの基本原理を自分のお金と時間を使って学ぶことに等しい。アルバイトでは絶対に得られない視点だ。
+        </p>
+      </div>
+
+      <div style="background:#fdf4ff; border-radius:10px; padding:20px;">
+        <div style="font-size:13px; font-weight:800; color:#6b21a8; margin-bottom:6px;">④ 成功体験のサイクルが最速で手に入る</div>
+        <p style="font-size:14px; color:#4a044e; line-height:1.7;">
+          離職したメンバーのデータを見ると、最大15開通（¥225,000/月）というトップクラスの実績を残しながら辞めたケースもある。半年以内の離職は「サイクルが回り始める直前」に起きやすく、最も勿体ないタイミングだ。逆に言えば、5ヶ月踏ん張ったメンバーは全員、自分の力で売上を作る成功体験を手に入れている。この体験は就活だけでなく、社会人になってからも「自分は結果を出せる」という根拠になり続ける。
+        </p>
+      </div>
+
+    </div>
+
+    <div style="margin-top:20px; background:linear-gradient(135deg,#1e3a8a,#4338ca); border-radius:12px; padding:20px; text-align:center; color:white;">
+      <p style="font-size:15px; font-weight:800; margin-bottom:6px;">結論</p>
+      <p style="font-size:14px; line-height:1.8; opacity:0.9;">
+        営業インターンは「即金」ではなく「実績と成長」への投資だ。<br>
+        学歴・即金を求めるならアルバイトでいい。<br>
+        でも、<strong>3〜5ヶ月後に学歴を超える武器を手に入れたいなら、ここしかない。</strong>
+      </p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -48,6 +48,38 @@ async function initDb() {
       created_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
       expires_at TEXT    NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS shifts (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year       INTEGER NOT NULL,
+      month      INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+      work_dates TEXT    NOT NULL DEFAULT '[]',
+      submitted  INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, year, month)
+    );
+    CREATE TABLE IF NOT EXISTS shift_deadlines (
+      id          SERIAL PRIMARY KEY,
+      year        INTEGER NOT NULL,
+      month       INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+      deadline_at TEXT    NOT NULL,
+      UNIQUE(year, month)
+    );
+    CREATE TABLE IF NOT EXISTS mtg_attendance (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date       TEXT    NOT NULL,
+      status     TEXT    NOT NULL CHECK (status IN ('present', 'absent', 'late')),
+      reason     TEXT    NOT NULL DEFAULT '',
+      late_time  TEXT    NOT NULL DEFAULT '',
+      updated_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, date)
+    );
+    CREATE TABLE IF NOT EXISTS mtg_deadlines (
+      id          SERIAL PRIMARY KEY,
+      date        TEXT    NOT NULL UNIQUE,
+      deadline_at TEXT    NOT NULL
+    );
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
