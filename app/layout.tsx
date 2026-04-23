@@ -5,8 +5,13 @@ import "./globals.css";
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HKR管理",
-  description: "Wi-Fi開通率(HKR)管理アプリ",
+  title: "インフラ管理",
+  description: "HKR・シフト管理システム",
+  openGraph: {
+    title: "インフラ管理",
+    description: "HKR・シフト管理システム",
+    siteName: "インフラ管理",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
