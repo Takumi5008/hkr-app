@@ -15,9 +15,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "インフラ管理",
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   themeColor: "#4338ca",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
