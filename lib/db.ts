@@ -80,6 +80,15 @@ async function initDb() {
       date        TEXT    NOT NULL UNIQUE,
       deadline_at TEXT    NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS tasks (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title      TEXT NOT NULL,
+      due_date   TEXT,
+      done       INTEGER NOT NULL DEFAULT 0,
+      done_at    TEXT,
+      created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
     CREATE TABLE IF NOT EXISTS mtg_month_deadlines (
       id          SERIAL PRIMARY KEY,
       year        INTEGER NOT NULL,

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
   { href: '/shift', label: 'シフト入力', icon: Calendar },
   { href: '/mtg', label: 'MTG出欠', icon: ClipboardList },
+  { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
 ]
 
 const managerNavItems = [
@@ -41,7 +42,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const bottomNavItems = [
     { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
     { href: '/input', label: 'HKR', icon: PenLine },
-    { href: '/shift', label: 'シフト', icon: Calendar },
+    { href: '/tasks', label: 'タスク', icon: CheckSquare },
     { href: '/mtg', label: 'MTG', icon: ClipboardList },
     { href: '/settings', label: '設定', icon: Settings },
   ]
