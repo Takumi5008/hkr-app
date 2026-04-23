@@ -138,6 +138,24 @@ export default function PerformancePage() {
     return `${Math.round((r.total_cancel / r.total_activation) * 100)}%`
   }
 
+  const periodMonths = (r: MemberPerformance) => {
+    if (!r.period_start || !r.period_end) return 1
+    const [sy, sm] = r.period_start.split('-').map(Number)
+    const [ey, em] = r.period_end.split('-').map(Number)
+    const months = (ey - sy) * 12 + (em - sm) + 1
+    return months > 0 ? months : 1
+  }
+
+  const avgActivation = (r: MemberPerformance) => {
+    if (r.total_activation === 0) return 0
+    return Math.round(r.total_activation / periodMonths(r))
+  }
+
+  const avgCancel = (r: MemberPerformance) => {
+    if (r.total_cancel === 0) return 0
+    return Math.round(r.total_cancel / periodMonths(r))
+  }
+
   const f = (v: string | undefined, key: keyof typeof form) =>
     setForm((prev) => ({ ...prev, [key]: v ?? '' }))
 
@@ -287,16 +305,16 @@ export default function PerformancePage() {
                 )}
               </div>
               <div className="px-5 py-4">
-                {/* 月次目標 */}
+                {/* 月次平均 */}
                 <div className="flex gap-4 mb-3">
                   <div className="text-center flex-1">
-                    <p className="text-xs text-gray-400 mb-0.5">開通目標/月</p>
-                    <p className="text-lg font-black text-violet-600">{r.activation_target}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                    <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
+                    <p className="text-lg font-black text-violet-600">{avgActivation(r)}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
                   </div>
                   <div className="w-px bg-gray-100" />
                   <div className="text-center flex-1">
-                    <p className="text-xs text-gray-400 mb-0.5">解除目標/月</p>
-                    <p className="text-lg font-black text-violet-600">{r.cancel_target}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                    <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
+                    <p className="text-lg font-black text-violet-600">{avgCancel(r)}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
                   </div>
                   <div className="w-px bg-gray-100" />
                   <div className="text-center flex-1">
