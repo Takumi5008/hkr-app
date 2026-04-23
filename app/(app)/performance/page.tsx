@@ -32,6 +32,13 @@ const emptyForm = {
   sortOrder: '0',
 }
 
+// period_start から年度を返す（4月始まり）
+function fiscalYear(dateStr: string): number {
+  if (!dateStr) return 0
+  const [y, m] = dateStr.split('-').map(Number)
+  return m >= 4 ? y : y - 1
+}
+
 export default function PerformancePage() {
   const [records, setRecords] = useState<MemberPerformance[]>([])
   const [role, setRole] = useState<string>('member')
@@ -40,11 +47,27 @@ export default function PerformancePage() {
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const [selectedFY, setSelectedFY] = useState<number>(0)
 
   useEffect(() => {
-    fetch('/api/performance').then((r) => r.json()).then(setRecords)
+    fetch('/api/performance').then((r) => r.json()).then((rows: MemberPerformance[]) => {
+      setRecords(rows)
+      // 最新年度を初期選択
+      if (rows.length > 0) {
+        const years = rows.map((r) => fiscalYear(r.period_start)).filter(Boolean)
+        setSelectedFY(Math.max(...years))
+      }
+    })
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
+
+  // 利用可能な年度一覧（降順）
+  const fiscalYears = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
+
+  // 選択年度でフィルタ（period_start が選択年度の 4/1〜翌3/31 に含まれるもの）
+  const filteredRecords = selectedFY
+    ? records.filter((r) => fiscalYear(r.period_start) === selectedFY)
+    : records
 
   const handleSeed = async () => {
     if (!confirm('初期データ（21名）を一括登録しますか？')) return
@@ -167,6 +190,24 @@ export default function PerformancePage() {
         <p className="text-sm text-violet-100 mt-0.5">メンバーの累計実績を管理</p>
       </div>
 
+      {/* 年度選択バー */}
+      {fiscalYears.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {fiscalYears.map((fy) => (
+            <button
+              key={fy}
+              onClick={() => setSelectedFY(fy)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
+                ${selectedFY === fy
+                  ? 'bg-violet-500 text-white shadow-sm'
+                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}
+            >
+              {fy}年度
+            </button>
+          ))}
+        </div>
+      )}
+
       {role === 'manager' && (
         <div className="flex justify-end mb-4">
           <button
@@ -278,7 +319,12 @@ export default function PerformancePage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {records.map((r) => (
+          {filteredRecords.length === 0 && (
+            <div className="text-center py-12 text-gray-300">
+              <p className="text-sm font-medium">{selectedFY}年度のデータがありません</p>
+            </div>
+          )}
+          {filteredRecords.map((r) => (
             <div key={r.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
                 <div>
