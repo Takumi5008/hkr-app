@@ -15,11 +15,11 @@ const navItems = [
   { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
-  { href: '/performance', label: '実績', icon: Award },
 ]
 
 const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
+  { href: '/performance', label: '実績', icon: Award },
   { href: '/admin', label: '管理', icon: Settings },
 ]
 

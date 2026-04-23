@@ -69,6 +69,11 @@ export default function PerformancePage() {
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
 
   useEffect(() => {
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
+  }, [])
+
+  useEffect(() => {
+    if (role !== 'manager') return
     fetch('/api/performance').then((r) => r.json()).then((rows: MemberPerformance[]) => {
       setRecords(rows)
       if (rows.length > 0) {
@@ -82,8 +87,16 @@ export default function PerformancePage() {
         setSelectedYear(Math.max(...rows.map((r) => r.year)))
       }
     })
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
-  }, [])
+  }, [role])
+
+  // マネージャー以外はアクセス不可
+  if (role && role !== 'manager') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400 text-sm">このページはマネージャーのみ閲覧できます</p>
+      </div>
+    )
+  }
 
   // 個人タブ用年度一覧（降順）
   const personalFYs = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
