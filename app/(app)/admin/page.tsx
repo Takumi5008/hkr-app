@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 
 type Role = 'member' | 'viewer' | 'manager'
 const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー' }
@@ -23,7 +23,7 @@ const WorkCell = ({ type }: { type: string | null }) => {
 }
 
 export default function AdminPage() {
-  const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg'>('users')
+  const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg' | 'progress'>('users')
 
   // Users & Products
   const [users, setUsers] = useState<any[]>([])
@@ -46,6 +46,11 @@ export default function AdminPage() {
   const [shiftsLoading, setShiftsLoading] = useState(false)
   const [deadlineAt, setDeadlineAt] = useState('')
   const [deadlineSaved, setDeadlineSaved] = useState(false)
+
+  // Progress
+  const [progressYear, setProgressYear] = useState(today.getFullYear())
+  const [progressMonth, setProgressMonth] = useState(today.getMonth() + 1)
+  const [progressData, setProgressData] = useState<any[]>([])
 
   // MTG
   const [mtgData, setMtgData] = useState<{ dates: string[]; members: any[]; map: Record<number, Record<string, any>> } | null>(null)
@@ -74,6 +79,13 @@ export default function AdminPage() {
   }, [adminTab, year, month])
 
   useEffect(() => {
+    if (adminTab !== 'progress') return
+    fetch(`/api/progress/all?year=${progressYear}&month=${progressMonth}`)
+      .then((r) => r.json())
+      .then(setProgressData)
+  }, [adminTab, progressYear, progressMonth])
+
+  useEffect(() => {
     if (adminTab !== 'mtg') return
     setMtgData(null)
     Promise.all([
@@ -89,6 +101,8 @@ export default function AdminPage() {
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
   const prevMtgMonth = () => { if (mtgMonth === 1) { setMtgYear((y) => y - 1); setMtgMonth(12) } else setMtgMonth((m) => m - 1) }
   const nextMtgMonth = () => { if (mtgMonth === 12) { setMtgYear((y) => y + 1); setMtgMonth(1) } else setMtgMonth((m) => m + 1) }
+  const prevProgressMonth = () => { if (progressMonth === 1) { setProgressYear((y) => y - 1); setProgressMonth(12) } else setProgressMonth((m) => m - 1) }
+  const nextProgressMonth = () => { if (progressMonth === 12) { setProgressYear((y) => y + 1); setProgressMonth(1) } else setProgressMonth((m) => m + 1) }
 
   async function handleSaveDeadline() {
     if (!deadlineAt) return
@@ -197,6 +211,7 @@ export default function AdminPage() {
           { id: 'users', label: 'ユーザー・商材', icon: Users },
           { id: 'shifts', label: 'シフト管理', icon: Calendar },
           { id: 'mtg', label: 'MTG管理', icon: ClipboardList },
+          { id: 'progress', label: '個人進捗', icon: BarChart2 },
         ].map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setAdminTab(id as any)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${adminTab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -454,6 +469,72 @@ export default function AdminPage() {
                 </table>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ===== 個人進捗タブ ===== */}
+      {adminTab === 'progress' && (
+        <>
+          <div className="flex items-center justify-center gap-4 mb-5">
+            <button onClick={prevProgressMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-orange-50 text-orange-500 font-bold transition flex items-center justify-center"><ChevronLeft size={18} /></button>
+            <span className="text-xl font-bold text-gray-800 min-w-32 text-center">{progressYear}年 {progressMonth}月</span>
+            <button onClick={nextProgressMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-orange-50 text-orange-500 font-bold transition flex items-center justify-center"><ChevronRight size={18} /></button>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <p className="text-xs font-semibold text-gray-600">{progressData.length}人のメンバー</p>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {progressData.map((m) => {
+                const todayDay = today.getDate()
+                const isCurrentMonth = progressYear === today.getFullYear() && progressMonth === today.getMonth() + 1
+                const sortedDates: number[] = [...(m.workDates ?? [])].sort((a: number, b: number) => a - b)
+                const total = sortedDates.length
+                const workDaysTodayCount = isCurrentMonth
+                  ? sortedDates.filter((d: number) => d <= todayDay).length
+                  : total
+                const targetByToday = total > 0 && m.cancelTarget > 0
+                  ? Math.round((m.cancelTarget * workDaysTodayCount) / total * 10) / 10
+                  : 0
+                const diff = m.actualCancel - targetByToday
+                const hasData = m.cancelTarget > 0 || m.actualCancel > 0
+
+                return (
+                  <div key={m.id} className="flex items-center px-4 py-4 gap-3">
+                    <div className="w-9 h-9 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {m.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{m.name}</p>
+                      {hasData ? (
+                        <p className="text-xs text-gray-400">
+                          実績 <span className="font-bold text-gray-600">{m.actualCancel}件</span>
+                          　／　目標 <span className="font-bold text-gray-600">{m.cancelTarget}件</span>
+                          　稼働 <span className="font-bold text-gray-600">{total}日</span>
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-300">未設定</p>
+                      )}
+                    </div>
+                    {hasData && total > 0 && m.cancelTarget > 0 && (
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-black shrink-0 ${
+                        diff > 0 ? 'bg-emerald-50 text-emerald-600' :
+                        diff < 0 ? 'bg-rose-50 text-rose-600' :
+                        'bg-indigo-50 text-indigo-600'
+                      }`}>
+                        {diff > 0 ? <TrendingUp size={14} /> : diff < 0 ? <TrendingDown size={14} /> : <Minus size={14} />}
+                        {diff > 0 ? `アド ${diff}` : diff < 0 ? `ビハ ${Math.abs(diff)}` : 'オンタイム'}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+              {progressData.length === 0 && (
+                <p className="text-center text-gray-400 text-sm py-8">読み込み中...</p>
+              )}
+            </div>
           </div>
         </>
       )}
