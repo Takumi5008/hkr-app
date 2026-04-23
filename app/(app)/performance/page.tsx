@@ -486,14 +486,6 @@ export default function PerformancePage() {
       {/* ===== 全体タブ ===== */}
       {tab === 'team' && (
         <>
-          {role === 'manager' && (
-            <div className="flex justify-end mb-3">
-              <button onClick={handleSeedMonthly} disabled={seedingMonthly}
-                className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white text-xs font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50 shadow-sm">
-                {seedingMonthly ? '登録中...' : '月次データ一括登録 (2022〜2026)'}
-              </button>
-            </div>
-          )}
           {teamYears.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <p className="text-sm font-medium">データがありません</p>
