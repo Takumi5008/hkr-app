@@ -61,6 +61,9 @@ export default function PerformancePage() {
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
   const [seedingMonthly, setSeedingMonthly] = useState(false)
+  const [editingMonth, setEditingMonth] = useState<{ year: number; month: number } | null>(null)
+  const [monthForm, setMonthForm] = useState({ totalActivation: '', totalCancel: '', memberCount: '', note: '' })
+  const [savingMonth, setSavingMonth] = useState(false)
   const [selectedFY, setSelectedFY] = useState<number>(0)   // 個人タブ用年度
   const [selectedYear, setSelectedYear] = useState<number>(0) // 全体タブ用暦年
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
@@ -112,6 +115,40 @@ export default function PerformancePage() {
       (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
       { activation: 0, cancel: 0 }
     )
+
+  const openEditMonth = (r: MonthlyRecord) => {
+    setEditingMonth({ year: r.year, month: r.month })
+    setMonthForm({
+      totalActivation: r.totalActivation > 0 ? String(r.totalActivation) : '',
+      totalCancel: r.totalCancel > 0 ? String(r.totalCancel) : '',
+      memberCount: r.memberCount > 0 ? String(r.memberCount) : '',
+      note: r.note ?? '',
+    })
+  }
+
+  const handleSaveMonth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingMonth) return
+    setSavingMonth(true)
+    const res = await fetch('/api/performance/monthly/upsert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: editingMonth.year,
+        month: editingMonth.month,
+        totalActivation: parseInt(monthForm.totalActivation) || 0,
+        totalCancel: parseInt(monthForm.totalCancel) || 0,
+        memberCount: parseInt(monthForm.memberCount) || 0,
+        note: monthForm.note,
+      }),
+    })
+    if (res.ok) {
+      const rows = await fetch('/api/performance/monthly').then((r) => r.json())
+      setMonthly(rows)
+    }
+    setSavingMonth(false)
+    setEditingMonth(null)
+  }
 
   const handleSeedMonthly = async () => {
     if (!confirm('月次データ（2022〜2026）を一括登録しますか？')) return
@@ -485,35 +522,87 @@ export default function PerformancePage() {
 
               {/* 月別リスト（1〜12月） */}
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-                <div className="grid grid-cols-5 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400">
-                  <span>月</span>
-                  <span className="text-right">人数</span>
-                  <span className="text-right">獲得</span>
-                  <span className="text-right">解除</span>
-                  <span className="text-right">解除率</span>
-                </div>
                 <div className="divide-y divide-gray-50">
                   {filteredMonthly.map((r) => {
                     const hasData = r.totalActivation > 0 || r.totalCancel > 0
+                    const isEditing = editingMonth?.year === r.year && editingMonth?.month === r.month
                     return (
-                      <div key={r.month} className={`${!hasData ? 'opacity-30' : ''}`}>
-                        <div className="grid grid-cols-5 items-center px-4 py-3">
-                          <span className="text-sm font-semibold text-gray-700">{r.month}月</span>
-                          <span className="text-right text-sm text-gray-500">
-                            {hasData && r.memberCount > 0 ? `${r.memberCount}名` : '-'}
-                          </span>
-                          <span className="text-right text-sm font-bold text-violet-600">
-                            {hasData ? <>{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
-                          </span>
-                          <span className="text-right text-sm font-bold text-violet-600">
-                            {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
-                          </span>
-                          <span className="text-right text-sm font-semibold text-emerald-600">
-                            {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
-                          </span>
+                      <div key={r.month}>
+                        {/* 通常表示行 */}
+                        <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
+                          <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
+                          <div className="flex-1 grid grid-cols-4 gap-1 text-right">
+                            <span className="text-xs text-gray-500">
+                              {hasData && r.memberCount > 0 ? `${r.memberCount}名` : '-'}
+                            </span>
+                            <span className="text-sm font-bold text-violet-600">
+                              {hasData ? <>{r.totalActivation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                            </span>
+                            <span className="text-sm font-bold text-violet-600">
+                              {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                            </span>
+                            <span className="text-sm font-semibold text-emerald-600">
+                              {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
+                            </span>
+                          </div>
+                          {role === 'manager' && !isEditing && (
+                            <button onClick={() => openEditMonth(r)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition shrink-0">
+                              <Pencil size={13} />
+                            </button>
+                          )}
+                          {role === 'manager' && isEditing && (
+                            <button onClick={() => setEditingMonth(null)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 transition shrink-0">
+                              <X size={13} />
+                            </button>
+                          )}
                         </div>
-                        {hasData && r.note && (
+                        {hasData && r.note && !isEditing && (
                           <p className="px-4 pb-2 text-xs text-gray-400">{r.note}</p>
+                        )}
+
+                        {/* 編集フォーム */}
+                        {isEditing && (
+                          <form onSubmit={handleSaveMonth} className="px-4 pb-4 bg-violet-50/40 space-y-2">
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">獲得</label>
+                                <input type="number" min={0} value={monthForm.totalActivation}
+                                  onChange={(e) => setMonthForm((p) => ({ ...p, totalActivation: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">解除</label>
+                                <input type="number" min={0} value={monthForm.totalCancel}
+                                  onChange={(e) => setMonthForm((p) => ({ ...p, totalCancel: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">人数</label>
+                                <input type="number" min={0} value={monthForm.memberCount}
+                                  onChange={(e) => setMonthForm((p) => ({ ...p, memberCount: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                              </div>
+                            </div>
+                            <input type="text" value={monthForm.note}
+                              onChange={(e) => setMonthForm((p) => ({ ...p, note: e.target.value }))}
+                              placeholder="メモ（任意）"
+                              className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setEditingMonth(null)}
+                                className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
+                                キャンセル
+                              </button>
+                              <button type="submit" disabled={savingMonth}
+                                className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition">
+                                <Save size={12} />{savingMonth ? '保存中...' : '保存'}
+                              </button>
+                            </div>
+                          </form>
                         )}
                       </div>
                     )
