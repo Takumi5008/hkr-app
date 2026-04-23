@@ -124,7 +124,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
         <div className="px-6 py-5 border-b border-indigo-800/60">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
-              <span className="text-sm font-black text-white">H</span>
+              <span className="text-xs font-black text-white">IP</span>
             </div>
             <div>
               <h1 className="text-base font-bold text-white">インフラ管理</h1>
@@ -140,7 +140,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
-              <span className="text-xs font-black text-white">H</span>
+              <span className="text-xs font-black text-white">IP</span>
             </div>
             <span className="text-base font-bold text-white">インフラ管理</span>
           </div>
@@ -161,7 +161,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
             <div className="flex items-center justify-between px-6 py-5 border-b border-indigo-800/60">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
-                  <span className="text-sm font-black text-white">H</span>
+                  <span className="text-xs font-black text-white">IP</span>
                 </div>
                 <div>
                   <h1 className="text-base font-bold text-white">インフラ管理</h1>

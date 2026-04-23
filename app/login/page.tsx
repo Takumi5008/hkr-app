@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur mb-4 shadow-lg">
-            <span className="text-2xl font-black text-white">イ</span>
+            <span className="text-lg font-black text-white">IP</span>
           </div>
           <h1 className="text-3xl font-bold text-white">インフラ管理</h1>
           <p className="mt-2 text-sm text-indigo-200">HKR・シフト管理システム</p>
