@@ -23,6 +23,8 @@ type MonthlyRecord = {
   month: number
   totalActivation: number
   totalCancel: number
+  memberCount: number
+  note: string
 }
 
 const emptyForm = {
@@ -58,6 +60,7 @@ export default function PerformancePage() {
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const [seedingMonthly, setSeedingMonthly] = useState(false)
   const [selectedFY, setSelectedFY] = useState<number>(0)   // 個人タブ用年度
   const [selectedYear, setSelectedYear] = useState<number>(0) // 全体タブ用暦年
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
@@ -109,6 +112,21 @@ export default function PerformancePage() {
       (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
       { activation: 0, cancel: 0 }
     )
+
+  const handleSeedMonthly = async () => {
+    if (!confirm('月次データ（2022〜2026）を一括登録しますか？')) return
+    setSeedingMonthly(true)
+    const res = await fetch('/api/performance/monthly/seed', { method: 'POST' })
+    const data = await res.json()
+    if (res.ok) {
+      const rows = await fetch('/api/performance/monthly').then((r) => r.json())
+      setMonthly(rows)
+      if (rows.length > 0) setSelectedYear(Math.max(...rows.map((r: MonthlyRecord) => r.year)))
+    } else {
+      alert(data.error ?? 'エラーが発生しました')
+    }
+    setSeedingMonthly(false)
+  }
 
   const handleSeed = async () => {
     if (!confirm('初期データ（21名）を一括登録しますか？')) return
@@ -438,7 +456,14 @@ export default function PerformancePage() {
           {teamYears.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <p className="text-sm font-medium">データがありません</p>
-              <p className="text-xs mt-1">HKR入力でデータを登録すると反映されます</p>
+              {role === 'manager' && (
+                <div className="mt-4">
+                  <button onClick={handleSeedMonthly} disabled={seedingMonthly}
+                    className="px-5 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50">
+                    {seedingMonthly ? '登録中...' : '月次データを一括登録 (2022〜2026)'}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -460,8 +485,9 @@ export default function PerformancePage() {
 
               {/* 月別リスト（1〜12月） */}
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-                <div className="grid grid-cols-4 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400">
+                <div className="grid grid-cols-5 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400">
                   <span>月</span>
+                  <span className="text-right">人数</span>
                   <span className="text-right">獲得</span>
                   <span className="text-right">解除</span>
                   <span className="text-right">解除率</span>
@@ -470,17 +496,25 @@ export default function PerformancePage() {
                   {filteredMonthly.map((r) => {
                     const hasData = r.totalActivation > 0 || r.totalCancel > 0
                     return (
-                      <div key={r.month} className={`grid grid-cols-4 items-center px-4 py-3 ${!hasData ? 'opacity-30' : ''}`}>
-                        <span className="text-sm font-semibold text-gray-700">{r.month}月</span>
-                        <span className="text-right text-sm font-bold text-violet-600">
-                          {hasData ? <>{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
-                        </span>
-                        <span className="text-right text-sm font-bold text-violet-600">
-                          {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
-                        </span>
-                        <span className="text-right text-sm font-semibold text-emerald-600">
-                          {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
-                        </span>
+                      <div key={r.month} className={`${!hasData ? 'opacity-30' : ''}`}>
+                        <div className="grid grid-cols-5 items-center px-4 py-3">
+                          <span className="text-sm font-semibold text-gray-700">{r.month}月</span>
+                          <span className="text-right text-sm text-gray-500">
+                            {hasData && r.memberCount > 0 ? `${r.memberCount}名` : '-'}
+                          </span>
+                          <span className="text-right text-sm font-bold text-violet-600">
+                            {hasData ? <>{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
+                          </span>
+                          <span className="text-right text-sm font-bold text-violet-600">
+                            {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
+                          </span>
+                          <span className="text-right text-sm font-semibold text-emerald-600">
+                            {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
+                          </span>
+                        </div>
+                        {hasData && r.note && (
+                          <p className="px-4 pb-2 text-xs text-gray-400">{r.note}</p>
+                        )}
                       </div>
                     )
                   })}
