@@ -58,7 +58,8 @@ export default function PerformancePage() {
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
-  const [selectedFY, setSelectedFY] = useState<number>(0)
+  const [selectedFY, setSelectedFY] = useState<number>(0)   // 個人タブ用年度
+  const [selectedYear, setSelectedYear] = useState<number>(0) // 全体タブ用暦年
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
 
   useEffect(() => {
@@ -69,33 +70,45 @@ export default function PerformancePage() {
         setSelectedFY(Math.max(...years))
       }
     })
-    fetch('/api/performance/monthly').then((r) => r.json()).then(setMonthly)
+    fetch('/api/performance/monthly').then((r) => r.json()).then((rows: MonthlyRecord[]) => {
+      setMonthly(rows)
+      if (rows.length > 0) {
+        setSelectedYear(Math.max(...rows.map((r) => r.year)))
+      }
+    })
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
 
-  // 年度一覧（個人タブ用: member_performance の period_start から）
+  // 個人タブ用年度一覧（降順）
   const personalFYs = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
 
-  // 年度一覧（全体タブ用: monthly records から）
-  const teamFYs = [...new Set(monthly.map((r) => monthlyFiscalYear(r.year, r.month)).filter(Boolean))].sort((a, b) => b - a)
-
-  const fiscalYears = tab === 'personal' ? personalFYs : teamFYs
+  // 全体タブ用暦年一覧（降順）
+  const teamYears = [...new Set(monthly.map((r) => r.year))].sort((a, b) => b - a)
 
   // 年度フィルタ後の個人レコード
   const filteredRecords = selectedFY
     ? records.filter((r) => fiscalYear(r.period_start) === selectedFY)
     : records
 
-  // 年度フィルタ後の月次レコード（降順）
-  const filteredMonthly = monthly
-    .filter((r) => monthlyFiscalYear(r.year, r.month) === selectedFY)
-    .sort((a, b) => b.year - a.year || b.month - a.month)
+  // 暦年フィルタ後の月次レコード（1〜12月の順）
+  const filteredMonthly = (() => {
+    // 選択年の1〜12月をすべて並べ、データがない月は 0 で埋める
+    const dataMap = new Map(
+      monthly.filter((r) => r.year === selectedYear).map((r) => [r.month, r])
+    )
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1
+      return dataMap.get(m) ?? { year: selectedYear, month: m, totalActivation: 0, totalCancel: 0 }
+    })
+  })()
 
-  // 全体タブの年間合計
-  const teamTotal = filteredMonthly.reduce(
-    (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
-    { activation: 0, cancel: 0 }
-  )
+  // 全体タブの年間合計（データがある月のみ）
+  const teamTotal = monthly
+    .filter((r) => r.year === selectedYear)
+    .reduce(
+      (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
+      { activation: 0, cancel: 0 }
+    )
 
   const handleSeed = async () => {
     if (!confirm('初期データ（21名）を一括登録しますか？')) return
@@ -187,11 +200,8 @@ export default function PerformancePage() {
   const f = (v: string | undefined, key: keyof typeof form) =>
     setForm((prev) => ({ ...prev, [key]: v ?? '' }))
 
-  // タブ切り替え時に年度を最新にリセット
   const switchTab = (t: 'personal' | 'team') => {
     setTab(t)
-    const fys = t === 'personal' ? personalFYs : teamFYs
-    if (fys.length > 0) setSelectedFY(fys[0])
   }
 
   return (
@@ -213,14 +223,25 @@ export default function PerformancePage() {
         ))}
       </div>
 
-      {/* 年度選択バー */}
-      {fiscalYears.length > 0 && (
+      {/* 年度／暦年選択バー */}
+      {tab === 'personal' && personalFYs.length > 0 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {fiscalYears.map((fy) => (
+          {personalFYs.map((fy) => (
             <button key={fy} onClick={() => setSelectedFY(fy)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
                 ${selectedFY === fy ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
               {fy}年度
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === 'team' && teamYears.length > 0 && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+          {teamYears.map((y) => (
+            <button key={y} onClick={() => setSelectedYear(y)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
+                ${selectedYear === y ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
+              {y}年
             </button>
           ))}
         </div>
@@ -414,33 +435,31 @@ export default function PerformancePage() {
       {/* ===== 全体タブ ===== */}
       {tab === 'team' && (
         <>
-          {/* 年間合計カード */}
-          {filteredMonthly.length > 0 && (
-            <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400 mb-1">年間獲得</p>
-                <p className="text-xl font-black text-violet-600">{teamTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400 mb-1">年間解除</p>
-                <p className="text-xl font-black text-violet-600">{teamTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-              </div>
-              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
-                <p className="text-xs text-gray-400 mb-1">解除率</p>
-                <p className="text-xl font-black text-emerald-600">{cancelRate(teamTotal.activation, teamTotal.cancel)}</p>
-              </div>
+          {teamYears.length === 0 ? (
+            <div className="text-center py-16 text-gray-300">
+              <p className="text-sm font-medium">データがありません</p>
+              <p className="text-xs mt-1">HKR入力でデータを登録すると反映されます</p>
             </div>
-          )}
-
-          {/* 月別リスト */}
-          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-            {filteredMonthly.length === 0 ? (
-              <div className="text-center py-12 text-gray-300">
-                <p className="text-sm font-medium">{selectedFY}年度のデータがありません</p>
-                <p className="text-xs mt-1">HKR入力でデータを登録すると反映されます</p>
+          ) : (
+            <>
+              {/* 年間合計カード */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                  <p className="text-xs text-gray-400 mb-1">{selectedYear}年 獲得計</p>
+                  <p className="text-xl font-black text-violet-600">{teamTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                  <p className="text-xs text-gray-400 mb-1">{selectedYear}年 解除計</p>
+                  <p className="text-xl font-black text-violet-600">{teamTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                  <p className="text-xs text-gray-400 mb-1">解除率</p>
+                  <p className="text-xl font-black text-emerald-600">{cancelRate(teamTotal.activation, teamTotal.cancel)}</p>
+                </div>
               </div>
-            ) : (
-              <>
+
+              {/* 月別リスト（1〜12月） */}
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                 <div className="grid grid-cols-4 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400">
                   <span>月</span>
                   <span className="text-right">獲得</span>
@@ -448,18 +467,27 @@ export default function PerformancePage() {
                   <span className="text-right">解除率</span>
                 </div>
                 <div className="divide-y divide-gray-50">
-                  {filteredMonthly.map((r) => (
-                    <div key={`${r.year}-${r.month}`} className="grid grid-cols-4 items-center px-4 py-3">
-                      <span className="text-sm font-semibold text-gray-700">{r.year}/{r.month}</span>
-                      <span className="text-right text-sm font-bold text-violet-600">{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></span>
-                      <span className="text-right text-sm font-bold text-violet-600">{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></span>
-                      <span className="text-right text-sm font-semibold text-emerald-600">{cancelRate(r.totalActivation, r.totalCancel)}</span>
-                    </div>
-                  ))}
+                  {filteredMonthly.map((r) => {
+                    const hasData = r.totalActivation > 0 || r.totalCancel > 0
+                    return (
+                      <div key={r.month} className={`grid grid-cols-4 items-center px-4 py-3 ${!hasData ? 'opacity-30' : ''}`}>
+                        <span className="text-sm font-semibold text-gray-700">{r.month}月</span>
+                        <span className="text-right text-sm font-bold text-violet-600">
+                          {hasData ? <>{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
+                        </span>
+                        <span className="text-right text-sm font-bold text-violet-600">
+                          {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></> : '-'}
+                        </span>
+                        <span className="text-right text-sm font-semibold text-emerald-600">
+                          {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
