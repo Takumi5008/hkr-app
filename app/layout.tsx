@@ -12,6 +12,12 @@ export const metadata: Metadata = {
     description: "HKR・シフト管理システム",
     siteName: "インフラ管理",
   },
+  appleWebApp: {
+    capable: true,
+    title: "インフラ管理",
+    statusBarStyle: "black-translucent",
+  },
+  themeColor: "#4338ca",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
