@@ -18,6 +18,13 @@ type MemberPerformance = {
   sort_order: number
 }
 
+type MonthlyRecord = {
+  year: number
+  month: number
+  totalActivation: number
+  totalCancel: number
+}
+
 const emptyForm = {
   name: '',
   activationTarget: '',
@@ -32,17 +39,20 @@ const emptyForm = {
   sortOrder: '0',
 }
 
-// period_start から年度を返す（4月始まり）
 function fiscalYear(dateStr: string): number {
   if (!dateStr) return 0
   const [y, m] = dateStr.split('-').map(Number)
   return m >= 4 ? y : y - 1
 }
 
+function monthlyFiscalYear(year: number, month: number): number {
+  return month >= 4 ? year : year - 1
+}
+
 export default function PerformancePage() {
   const [records, setRecords] = useState<MemberPerformance[]>([])
+  const [monthly, setMonthly] = useState<MonthlyRecord[]>([])
   const [role, setRole] = useState<string>('member')
-  const [userName, setUserName] = useState<string>('')
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
@@ -59,24 +69,33 @@ export default function PerformancePage() {
         setSelectedFY(Math.max(...years))
       }
     })
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => {
-      setRole(d.role ?? 'member')
-      setUserName(d.name ?? '')
-    })
+    fetch('/api/performance/monthly').then((r) => r.json()).then(setMonthly)
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
 
-  // 利用可能な年度一覧（降順）
-  const fiscalYears = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
+  // 年度一覧（個人タブ用: member_performance の period_start から）
+  const personalFYs = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
 
-  // 年度フィルタ後
-  const fyRecords = selectedFY
+  // 年度一覧（全体タブ用: monthly records から）
+  const teamFYs = [...new Set(monthly.map((r) => monthlyFiscalYear(r.year, r.month)).filter(Boolean))].sort((a, b) => b - a)
+
+  const fiscalYears = tab === 'personal' ? personalFYs : teamFYs
+
+  // 年度フィルタ後の個人レコード
+  const filteredRecords = selectedFY
     ? records.filter((r) => fiscalYear(r.period_start) === selectedFY)
     : records
 
-  // タブフィルタ（個人：名前の部分一致で自分のレコードを抽出）
-  const filteredRecords = tab === 'personal'
-    ? fyRecords.filter((r) => userName && (userName.includes(r.name) || r.name.includes(userName)))
-    : fyRecords
+  // 年度フィルタ後の月次レコード（降順）
+  const filteredMonthly = monthly
+    .filter((r) => monthlyFiscalYear(r.year, r.month) === selectedFY)
+    .sort((a, b) => b.year - a.year || b.month - a.month)
+
+  // 全体タブの年間合計
+  const teamTotal = filteredMonthly.reduce(
+    (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
+    { activation: 0, cancel: 0 }
+  )
 
   const handleSeed = async () => {
     if (!confirm('初期データ（21名）を一括登録しますか？')) return
@@ -92,11 +111,7 @@ export default function PerformancePage() {
     setSeeding(false)
   }
 
-  const openAdd = () => {
-    setEditId(null)
-    setForm({ ...emptyForm })
-    setShowForm(true)
-  }
+  const openAdd = () => { setEditId(null); setForm({ ...emptyForm }); setShowForm(true) }
 
   const openEdit = (r: MemberPerformance) => {
     setEditId(r.id)
@@ -135,9 +150,7 @@ export default function PerformancePage() {
     }
     if (editId !== null) {
       const res = await fetch(`/api/performance/${editId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       if (res.ok) {
         const updated = await res.json()
@@ -145,18 +158,14 @@ export default function PerformancePage() {
       }
     } else {
       const res = await fetch('/api/performance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       if (res.ok) {
         const created = await res.json()
         setRecords((prev) => [...prev, created].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id))
       }
     }
-    setSaving(false)
-    setShowForm(false)
-    setEditId(null)
+    setSaving(false); setShowForm(false); setEditId(null)
   }
 
   const handleDelete = async (id: number) => {
@@ -165,31 +174,25 @@ export default function PerformancePage() {
     setRecords((prev) => prev.filter((r) => r.id !== id))
   }
 
-  const cancelRate = (r: MemberPerformance) => {
-    if (r.total_activation === 0) return '-'
-    return `${Math.round((r.total_cancel / r.total_activation) * 100)}%`
-  }
+  const cancelRate = (a: number, c: number) => a === 0 ? '-' : `${Math.round((c / a) * 100)}%`
 
   const periodMonths = (r: MemberPerformance) => {
     if (!r.period_start || !r.period_end) return 1
     const [sy, sm] = r.period_start.split('-').map(Number)
     const [ey, em] = r.period_end.split('-').map(Number)
-    const months = (ey - sy) * 12 + (em - sm) + 1
-    return months > 0 ? months : 1
-  }
-
-  const avgActivation = (r: MemberPerformance) => {
-    if (r.total_activation === 0) return 0
-    return Math.round(r.total_activation / periodMonths(r))
-  }
-
-  const avgCancel = (r: MemberPerformance) => {
-    if (r.total_cancel === 0) return 0
-    return Math.round(r.total_cancel / periodMonths(r))
+    const m = (ey - sy) * 12 + (em - sm) + 1
+    return m > 0 ? m : 1
   }
 
   const f = (v: string | undefined, key: keyof typeof form) =>
     setForm((prev) => ({ ...prev, [key]: v ?? '' }))
+
+  // タブ切り替え時に年度を最新にリセット
+  const switchTab = (t: 'personal' | 'team') => {
+    setTab(t)
+    const fys = t === 'personal' ? personalFYs : teamFYs
+    if (fys.length > 0) setSelectedFY(fys[0])
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
@@ -202,12 +205,9 @@ export default function PerformancePage() {
       {/* タブ */}
       <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
         {(['personal', 'team'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
+          <button key={t} onClick={() => switchTab(t)}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
-              ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
+              ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {t === 'personal' ? '個人' : '全体'}
           </button>
         ))}
@@ -217,206 +217,250 @@ export default function PerformancePage() {
       {fiscalYears.length > 0 && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {fiscalYears.map((fy) => (
-            <button
-              key={fy}
-              onClick={() => setSelectedFY(fy)}
+            <button key={fy} onClick={() => setSelectedFY(fy)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
-                ${selectedFY === fy
-                  ? 'bg-violet-500 text-white shadow-sm'
-                  : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}
-            >
+                ${selectedFY === fy ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
               {fy}年度
             </button>
           ))}
         </div>
       )}
 
-      {role === 'manager' && tab === 'team' && (
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition shadow-sm"
-          >
-            <Plus size={15} />追加
-          </button>
-        </div>
-      )}
-
-      {/* フォーム */}
-      {showForm && role === 'manager' && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-violet-100 mb-6 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 bg-violet-50 border-b border-violet-100">
-            <h2 className="text-sm font-bold text-violet-700">{editId !== null ? '編集' : '新規追加'}</h2>
-            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition">
-              <X size={18} />
-            </button>
-          </div>
-          <form onSubmit={handleSave} className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">名前 *</label>
-                <input type="text" value={form.name} onChange={(e) => f(e.target.value, 'name')} required
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">開通目標/月</label>
-                <input type="number" min={0} value={form.activationTarget} onChange={(e) => f(e.target.value, 'activationTarget')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">解除目標/月</label>
-                <input type="number" min={0} value={form.cancelTarget} onChange={(e) => f(e.target.value, 'cancelTarget')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">稼働日/月</label>
-                <input type="number" min={0} value={form.workDaysTarget} onChange={(e) => f(e.target.value, 'workDaysTarget')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">期間開始</label>
-                <input type="date" value={form.periodStart} onChange={(e) => f(e.target.value, 'periodStart')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">期間終了</label>
-                <input type="date" value={form.periodEnd} onChange={(e) => f(e.target.value, 'periodEnd')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">総稼働数</label>
-                <input type="number" min={0} value={form.totalWork} onChange={(e) => f(e.target.value, 'totalWork')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">総獲得数</label>
-                <input type="number" min={0} value={form.totalActivation} onChange={(e) => f(e.target.value, 'totalActivation')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">総解除数</label>
-                <input type="number" min={0} value={form.totalCancel} onChange={(e) => f(e.target.value, 'totalCancel')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">表示順</label>
-                <input type="number" value={form.sortOrder} onChange={(e) => f(e.target.value, 'sortOrder')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">備考</label>
-                <input type="text" value={form.note} onChange={(e) => f(e.target.value, 'note')}
-                  className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => setShowForm(false)}
-                className="flex-1 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
-                キャンセル
-              </button>
-              <button type="submit" disabled={saving || !form.name.trim()}
-                className="flex-1 flex items-center justify-center gap-2 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition">
-                <Save size={14} />{saving ? '保存中...' : '保存'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* テーブル */}
-      {records.length === 0 ? (
-        <div className="text-center py-16 text-gray-300">
-          <p className="text-sm font-medium">実績データがありません</p>
+      {/* ===== 個人タブ ===== */}
+      {tab === 'personal' && (
+        <>
           {role === 'manager' && (
-            <div className="mt-4">
-              <p className="text-xs mb-3">「追加」ボタンから個別登録、または一括登録できます</p>
-              <button
-                onClick={handleSeed}
-                disabled={seeding}
-                className="px-5 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50"
-              >
-                {seeding ? '登録中...' : '初期データを一括登録'}
+            <div className="flex justify-end mb-4">
+              <button onClick={openAdd}
+                className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition shadow-sm">
+                <Plus size={15} />追加
               </button>
             </div>
           )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredRecords.length === 0 && (
-            <div className="text-center py-12 text-gray-300">
-              <p className="text-sm font-medium">
-                {tab === 'personal' ? 'あなたの実績データが見つかりません' : `${selectedFY}年度のデータがありません`}
-              </p>
+
+          {/* 追加・編集フォーム */}
+          {showForm && role === 'manager' && (
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-violet-100 mb-6 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 bg-violet-50 border-b border-violet-100">
+                <h2 className="text-sm font-bold text-violet-700">{editId !== null ? '編集' : '新規追加'}</h2>
+                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition"><X size={18} /></button>
+              </div>
+              <form onSubmit={handleSave} className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">名前 *</label>
+                    <input type="text" value={form.name} onChange={(e) => f(e.target.value, 'name')} required
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">開通目標/月</label>
+                    <input type="number" min={0} value={form.activationTarget} onChange={(e) => f(e.target.value, 'activationTarget')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">解除目標/月</label>
+                    <input type="number" min={0} value={form.cancelTarget} onChange={(e) => f(e.target.value, 'cancelTarget')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">稼働日/月</label>
+                    <input type="number" min={0} value={form.workDaysTarget} onChange={(e) => f(e.target.value, 'workDaysTarget')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">期間開始</label>
+                    <input type="date" value={form.periodStart} onChange={(e) => f(e.target.value, 'periodStart')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">期間終了</label>
+                    <input type="date" value={form.periodEnd} onChange={(e) => f(e.target.value, 'periodEnd')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">総稼働数</label>
+                    <input type="number" min={0} value={form.totalWork} onChange={(e) => f(e.target.value, 'totalWork')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">総獲得数</label>
+                    <input type="number" min={0} value={form.totalActivation} onChange={(e) => f(e.target.value, 'totalActivation')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">総解除数</label>
+                    <input type="number" min={0} value={form.totalCancel} onChange={(e) => f(e.target.value, 'totalCancel')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">表示順</label>
+                    <input type="number" value={form.sortOrder} onChange={(e) => f(e.target.value, 'sortOrder')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-semibold text-gray-500 mb-1 block">備考</label>
+                    <input type="text" value={form.note} onChange={(e) => f(e.target.value, 'note')}
+                      className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowForm(false)}
+                    className="flex-1 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+                    キャンセル
+                  </button>
+                  <button type="submit" disabled={saving || !form.name.trim()}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition">
+                    <Save size={14} />{saving ? '保存中...' : '保存'}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
-          {filteredRecords.map((r) => (
-            <div key={r.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
-                <div>
-                  <span className="text-base font-bold text-gray-800">{r.name}</span>
-                  {(r.period_start || r.period_end) && (
-                    <span className="ml-3 text-xs text-gray-400">
-                      {r.period_start && r.period_end
-                        ? `${r.period_start} 〜 ${r.period_end}`
-                        : r.period_start || r.period_end}
-                    </span>
-                  )}
+
+          {records.length === 0 ? (
+            <div className="text-center py-16 text-gray-300">
+              <p className="text-sm font-medium">実績データがありません</p>
+              {role === 'manager' && (
+                <div className="mt-4">
+                  <p className="text-xs mb-3">「追加」ボタンから個別登録、または一括登録できます</p>
+                  <button onClick={handleSeed} disabled={seeding}
+                    className="px-5 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50">
+                    {seeding ? '登録中...' : '初期データを一括登録'}
+                  </button>
                 </div>
-                {role === 'manager' && (
-                  <div className="flex gap-2">
-                    <button onClick={() => openEdit(r)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 transition">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(r.id)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition">
-                      <Trash2 size={14} />
-                    </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredRecords.length === 0 && (
+                <div className="text-center py-12 text-gray-300">
+                  <p className="text-sm font-medium">{selectedFY}年度のデータがありません</p>
+                </div>
+              )}
+              {filteredRecords.map((r) => (
+                <div key={r.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                    <div>
+                      <span className="text-base font-bold text-gray-800">{r.name}</span>
+                      {(r.period_start || r.period_end) && (
+                        <span className="ml-3 text-xs text-gray-400">
+                          {r.period_start && r.period_end ? `${r.period_start} 〜 ${r.period_end}` : r.period_start || r.period_end}
+                        </span>
+                      )}
+                    </div>
+                    {role === 'manager' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => openEdit(r)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 transition">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(r.id)}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="px-5 py-4">
+                    <div className="flex gap-4 mb-3">
+                      <div className="text-center flex-1">
+                        <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
+                        <p className="text-lg font-black text-violet-600">
+                          {r.total_activation === 0 ? 0 : Math.round(r.total_activation / periodMonths(r))}
+                          <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
+                        </p>
+                      </div>
+                      <div className="w-px bg-gray-100" />
+                      <div className="text-center flex-1">
+                        <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
+                        <p className="text-lg font-black text-violet-600">
+                          {r.total_cancel === 0 ? 0 : Math.round(r.total_cancel / periodMonths(r))}
+                          <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
+                        </p>
+                      </div>
+                      <div className="w-px bg-gray-100" />
+                      <div className="text-center flex-1">
+                        <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
+                        <p className="text-lg font-black text-violet-600">{r.work_days_target}<span className="text-xs font-normal text-gray-400 ml-0.5">日</span></p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 bg-gray-50 rounded-xl p-3">
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総稼働</p>
+                        <p className="text-sm font-bold text-gray-700">{r.total_work}<span className="text-xs font-normal text-gray-400">日</span></p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総獲得</p>
+                        <p className="text-sm font-bold text-gray-700">{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総解除</p>
+                        <p className="text-sm font-bold text-gray-700">{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">解除率</p>
+                        <p className="text-sm font-bold text-emerald-600">{cancelRate(r.total_activation, r.total_cancel)}</p>
+                      </div>
+                    </div>
+                    {r.note && <p className="text-xs text-gray-400 mt-2">{r.note}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ===== 全体タブ ===== */}
+      {tab === 'team' && (
+        <>
+          {/* 年間合計カード */}
+          {filteredMonthly.length > 0 && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400 mb-1">年間獲得</p>
+                <p className="text-xl font-black text-violet-600">{teamTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
               </div>
-              <div className="px-5 py-4">
-                {/* 月次平均 */}
-                <div className="flex gap-4 mb-3">
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
-                    <p className="text-lg font-black text-violet-600">{avgActivation(r)}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-                  </div>
-                  <div className="w-px bg-gray-100" />
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
-                    <p className="text-lg font-black text-violet-600">{avgCancel(r)}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-                  </div>
-                  <div className="w-px bg-gray-100" />
-                  <div className="text-center flex-1">
-                    <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
-                    <p className="text-lg font-black text-violet-600">{r.work_days_target}<span className="text-xs font-normal text-gray-400 ml-0.5">日</span></p>
-                  </div>
-                </div>
-                {/* 累計実績 */}
-                <div className="grid grid-cols-4 gap-2 bg-gray-50 rounded-xl p-3">
-                  <div className="text-center">
-                    <p className="text-xs text-gray-400 mb-0.5">総稼働</p>
-                    <p className="text-sm font-bold text-gray-700">{r.total_work}<span className="text-xs font-normal text-gray-400">日</span></p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-400 mb-0.5">総獲得</p>
-                    <p className="text-sm font-bold text-gray-700">{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-400 mb-0.5">総解除</p>
-                    <p className="text-sm font-bold text-gray-700">{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs text-gray-400 mb-0.5">解除率</p>
-                    <p className="text-sm font-bold text-emerald-600">{cancelRate(r)}</p>
-                  </div>
-                </div>
-                {r.note && <p className="text-xs text-gray-400 mt-2">{r.note}</p>}
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400 mb-1">年間解除</p>
+                <p className="text-xl font-black text-violet-600">{teamTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                <p className="text-xs text-gray-400 mb-1">解除率</p>
+                <p className="text-xl font-black text-emerald-600">{cancelRate(teamTotal.activation, teamTotal.cancel)}</p>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* 月別リスト */}
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+            {filteredMonthly.length === 0 ? (
+              <div className="text-center py-12 text-gray-300">
+                <p className="text-sm font-medium">{selectedFY}年度のデータがありません</p>
+                <p className="text-xs mt-1">HKR入力でデータを登録すると反映されます</p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-4 px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-400">
+                  <span>月</span>
+                  <span className="text-right">獲得</span>
+                  <span className="text-right">解除</span>
+                  <span className="text-right">解除率</span>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {filteredMonthly.map((r) => (
+                    <div key={`${r.year}-${r.month}`} className="grid grid-cols-4 items-center px-4 py-3">
+                      <span className="text-sm font-semibold text-gray-700">{r.year}/{r.month}</span>
+                      <span className="text-right text-sm font-bold text-violet-600">{r.totalActivation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></span>
+                      <span className="text-right text-sm font-bold text-violet-600">{r.totalCancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></span>
+                      <span className="text-right text-sm font-semibold text-emerald-600">{cancelRate(r.totalActivation, r.totalCancel)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
       )}
     </div>
   )
