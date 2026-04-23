@@ -91,10 +91,7 @@ export default function PerformancePage() {
   // 全体タブ用暦年一覧（降順）
   const teamYears = [...new Set(monthly.map((r) => r.year))].sort((a, b) => b - a)
 
-  // 年度フィルタ後の個人レコード
-  const filteredRecords = selectedFY
-    ? records.filter((r) => fiscalYear(r.period_start) === selectedFY)
-    : records
+  const filteredRecords = records
 
   // 暦年フィルタ後の月次レコード（1〜12月の順）
   const filteredMonthly = (() => {
