@@ -86,9 +86,11 @@ async function initDb() {
       year          INTEGER NOT NULL,
       month         INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
       cancel_target INTEGER NOT NULL DEFAULT 0,
+      actual_cancel INTEGER NOT NULL DEFAULT 0,
       work_dates    TEXT NOT NULL DEFAULT '[]',
       UNIQUE(user_id, year, month)
     );
+    ALTER TABLE monthly_progress ADD COLUMN IF NOT EXISTS actual_cancel INTEGER NOT NULL DEFAULT 0;
     CREATE TABLE IF NOT EXISTS schedules (
       id          SERIAL PRIMARY KEY,
       user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

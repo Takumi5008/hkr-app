@@ -8,8 +8,8 @@ export default function ProgressPage() {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
   const [cancelTarget, setCancelTarget] = useState(0)
-  const [workDates, setWorkDates] = useState<number[]>([])
   const [actualCancel, setActualCancel] = useState(0)
+  const [workDates, setWorkDates] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -47,7 +47,7 @@ export default function ProgressPage() {
     await fetch('/api/progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year, month, cancelTarget, workDates }),
+      body: JSON.stringify({ year, month, cancelTarget, actualCancel, workDates }),
     })
     setSaving(false)
     setSaved(true)
@@ -99,13 +99,25 @@ export default function ProgressPage() {
 
       {/* 目標入力 */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <label className="text-sm font-bold text-gray-700 shrink-0">解除目標</label>
+        <div className="flex items-center gap-3 mb-3">
+          <label className="text-sm font-bold text-gray-700 w-24 shrink-0">解除目標</label>
           <input
             type="number"
             min={0}
             value={cancelTarget || ''}
             onChange={(e) => { setCancelTarget(parseInt(e.target.value) || 0); setSaved(false) }}
+            placeholder="0"
+            className="w-24 text-center text-lg font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+          <span className="text-sm text-gray-500">件</span>
+        </div>
+        <div className="flex items-center gap-3 mb-4">
+          <label className="text-sm font-bold text-gray-700 w-24 shrink-0">現状解除数</label>
+          <input
+            type="number"
+            min={0}
+            value={actualCancel || ''}
+            onChange={(e) => { setActualCancel(parseInt(e.target.value) || 0); setSaved(false) }}
             placeholder="0"
             className="w-24 text-center text-lg font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
