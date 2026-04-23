@@ -496,7 +496,7 @@ export default function AdminPage() {
                   ? sortedDates.filter((d: number) => d <= todayDay).length
                   : total
                 const targetByToday = total > 0 && m.cancelTarget > 0
-                  ? Math.round((m.cancelTarget * workDaysTodayCount) / total * 10) / 10
+                  ? Math.round((m.cancelTarget * workDaysTodayCount) / total)
                   : 0
                 const diff = m.actualCancel - targetByToday
                 const hasData = m.cancelTarget > 0 || m.actualCancel > 0

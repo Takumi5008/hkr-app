@@ -69,7 +69,7 @@ export default function ProgressPage() {
 
   const cumulativeTarget = (index: number) => {
     if (total === 0 || cancelTarget === 0) return 0
-    return Math.round((cancelTarget * index) / total * 10) / 10
+    return Math.round((cancelTarget * index) / total)
   }
 
   const workDaysTodayCount = isCurrentMonth
