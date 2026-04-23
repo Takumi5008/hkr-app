@@ -522,6 +522,16 @@ export default function PerformancePage() {
 
               {/* 月別リスト（1〜12月） */}
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
+                  <span className="text-xs font-semibold text-gray-400 w-8">月</span>
+                  <div className="flex-1 grid grid-cols-4 gap-1 text-right">
+                    <span className="text-xs font-semibold text-gray-400">人数</span>
+                    <span className="text-xs font-semibold text-gray-400">獲得数</span>
+                    <span className="text-xs font-semibold text-gray-400">解除数</span>
+                    <span className="text-xs font-semibold text-gray-400">解除率</span>
+                  </div>
+                  {role === 'manager' && <div className="w-7 shrink-0" />}
+                </div>
                 <div className="divide-y divide-gray-50">
                   {filteredMonthly.map((r) => {
                     const hasData = r.totalActivation > 0 || r.totalCancel > 0
