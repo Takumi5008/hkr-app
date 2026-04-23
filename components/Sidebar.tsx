@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2 } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/input', label: 'HKR入力', icon: PenLine },
+  { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
   { href: '/shift', label: 'シフト入力', icon: Calendar },
   { href: '/mtg', label: 'MTG出欠', icon: ClipboardList },
