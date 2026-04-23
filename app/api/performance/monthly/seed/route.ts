@@ -61,14 +61,15 @@ export async function POST() {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
   if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
-  const existing = await dbQuery('SELECT COUNT(*) as cnt FROM monthly_team_stats', [])
-  const cnt = parseInt((existing[0] as any).cnt)
-  if (cnt > 0) return NextResponse.json({ error: 'データが既に存在します', count: cnt }, { status: 409 })
-
   for (const d of DATA) {
     await dbRun(
       `INSERT INTO monthly_team_stats (year, month, total_activation, total_cancel, member_count, note)
-       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (year, month) DO UPDATE SET
+         total_activation = EXCLUDED.total_activation,
+         total_cancel     = EXCLUDED.total_cancel,
+         member_count     = EXCLUDED.member_count,
+         note             = EXCLUDED.note`,
       [d.year, d.month, d.a, d.c, d.m, (d as any).note ?? '']
     )
   }
