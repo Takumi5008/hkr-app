@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
+  { href: '/performance', label: '実績', icon: Award },
 ]
 
 const managerNavItems = [

@@ -91,6 +91,22 @@ async function initDb() {
       UNIQUE(user_id, year, month)
     );
     ALTER TABLE monthly_progress ADD COLUMN IF NOT EXISTS actual_cancel INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE IF NOT EXISTS member_performance (
+      id                 SERIAL PRIMARY KEY,
+      name               TEXT NOT NULL,
+      activation_target  INTEGER NOT NULL DEFAULT 0,
+      cancel_target      INTEGER NOT NULL DEFAULT 0,
+      work_days_target   INTEGER NOT NULL DEFAULT 0,
+      period_start       TEXT NOT NULL DEFAULT '',
+      period_end         TEXT NOT NULL DEFAULT '',
+      total_work         INTEGER NOT NULL DEFAULT 0,
+      total_activation   INTEGER NOT NULL DEFAULT 0,
+      total_cancel       INTEGER NOT NULL DEFAULT 0,
+      note               TEXT NOT NULL DEFAULT '',
+      sort_order         INTEGER NOT NULL DEFAULT 0,
+      created_at         TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      updated_at         TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
     CREATE TABLE IF NOT EXISTS memos (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
