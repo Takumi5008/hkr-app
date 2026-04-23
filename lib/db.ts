@@ -80,6 +80,16 @@ async function initDb() {
       date        TEXT    NOT NULL UNIQUE,
       deadline_at TEXT    NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS schedules (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title       TEXT NOT NULL,
+      date        TEXT NOT NULL,
+      start_time  TEXT,
+      end_time    TEXT,
+      memo        TEXT NOT NULL DEFAULT '',
+      created_at  TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
     CREATE TABLE IF NOT EXISTS tasks (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

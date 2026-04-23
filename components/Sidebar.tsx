@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/shift', label: 'シフト入力', icon: Calendar },
   { href: '/mtg', label: 'MTG出欠', icon: ClipboardList },
   { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
+  { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
 ]
 
 const managerNavItems = [
@@ -41,8 +42,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
   // ボトムナビは共通4項目のみ（管理者専用メニューはハンバーガーから）
   const bottomNavItems = [
     { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
-    { href: '/input', label: 'HKR', icon: PenLine },
     { href: '/tasks', label: 'タスク', icon: CheckSquare },
+    { href: '/schedule', label: '予定', icon: CalendarDays },
     { href: '/mtg', label: 'MTG', icon: ClipboardList },
     { href: '/settings', label: '設定', icon: Settings },
   ]
