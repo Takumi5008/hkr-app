@@ -454,11 +454,6 @@ export default function PerformancePage() {
                           <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
                         </p>
                       </div>
-                      <div className="w-px bg-gray-100" />
-                      <div className="text-center flex-1">
-                        <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
-                        <p className="text-lg font-black text-violet-600">{r.work_days_target}<span className="text-xs font-normal text-gray-400 ml-0.5">日</span></p>
-                      </div>
                     </div>
                     <div className="grid grid-cols-4 gap-2 bg-gray-50 rounded-xl p-3">
                       <div className="text-center">
