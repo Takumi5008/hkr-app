@@ -406,7 +406,7 @@ export default function PerformancePage() {
                       <span className="text-base font-bold text-gray-800">{r.name}</span>
                       {(r.period_start || r.period_end) && (
                         <span className="ml-3 text-xs text-gray-400">
-                          {r.period_start && r.period_end ? `${r.period_start} 〜 ${r.period_end}` : r.period_start || r.period_end}
+                          {r.period_start && r.period_end ? `${r.period_start.slice(0, 7)} 〜 ${r.period_end.slice(0, 7)}` : (r.period_start || r.period_end).slice(0, 7)}
                         </span>
                       )}
                     </div>
