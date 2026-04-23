@@ -46,7 +46,6 @@ export default function LoginPage() {
             <span className="text-lg font-black text-white">IP</span>
           </div>
           <h1 className="text-3xl font-bold text-white">インフラ管理</h1>
-          <p className="mt-2 text-sm text-indigo-200">HKR・シフト管理システム</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">

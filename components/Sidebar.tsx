@@ -128,7 +128,6 @@ export default function Sidebar({ name, role }: SidebarProps) {
             </div>
             <div>
               <h1 className="text-base font-bold text-white">インフラ管理</h1>
-              <p className="text-xs text-indigo-400">HKR・シフト管理</p>
             </div>
           </div>
         </div>
