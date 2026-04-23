@@ -25,15 +25,16 @@ export async function POST(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
   if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
-  const { memberName, year, month, totalActivation, totalCancel } = await req.json()
+  const { memberName, year, month, totalActivation, totalCancel, workDays } = await req.json()
 
   await dbRun(
-    `INSERT INTO member_monthly_stats (member_name, year, month, total_activation, total_cancel)
-     VALUES ($1,$2,$3,$4,$5)
+    `INSERT INTO member_monthly_stats (member_name, year, month, total_activation, total_cancel, work_days)
+     VALUES ($1,$2,$3,$4,$5,$6)
      ON CONFLICT (member_name, year, month) DO UPDATE SET
        total_activation = EXCLUDED.total_activation,
-       total_cancel     = EXCLUDED.total_cancel`,
-    [memberName, year, month, totalActivation ?? 0, totalCancel ?? 0]
+       total_cancel     = EXCLUDED.total_cancel,
+       work_days        = EXCLUDED.work_days`,
+    [memberName, year, month, totalActivation ?? 0, totalCancel ?? 0, workDays ?? 0]
   )
 
   const rows = await dbQuery(

@@ -141,8 +141,10 @@ async function initDb() {
       month            INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
       total_activation INTEGER NOT NULL DEFAULT 0,
       total_cancel     INTEGER NOT NULL DEFAULT 0,
+      work_days        INTEGER NOT NULL DEFAULT 0,
       UNIQUE(member_name, year, month)
     );
+    ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_days INTEGER NOT NULL DEFAULT 0;
     CREATE TABLE IF NOT EXISTS monthly_team_stats (
       id           SERIAL PRIMARY KEY,
       year         INTEGER NOT NULL,
