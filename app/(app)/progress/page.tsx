@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock } from 'lucide-react'
 
 export default function ProgressPage() {
   const today = new Date()
@@ -10,6 +10,9 @@ export default function ProgressPage() {
   const [cancelTarget, setCancelTarget] = useState(0)
   const [actualCancel, setActualCancel] = useState(0)
   const [workDates, setWorkDates] = useState<number[]>([])
+  const [deadlineAt, setDeadlineAt] = useState<string | null>(null)
+  const [deadlinePassed, setDeadlinePassed] = useState(false)
+  const [role, setRole] = useState<string>('member')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -18,6 +21,9 @@ export default function ProgressPage() {
   const todayYear = today.getFullYear()
   const isCurrentMonth = year === todayYear && month === todayMonth
 
+  // カレンダー操作がロックされるか（メンバーかつ締切過ぎ）
+  const calendarLocked = deadlinePassed && role !== 'manager'
+
   useEffect(() => {
     fetch(`/api/progress?year=${year}&month=${month}`)
       .then((r) => r.json())
@@ -25,6 +31,9 @@ export default function ProgressPage() {
         setCancelTarget(d.cancelTarget)
         setWorkDates(d.workDates)
         setActualCancel(d.actualCancel)
+        setDeadlineAt(d.deadlineAt)
+        setDeadlinePassed(d.deadlinePassed)
+        setRole(d.role)
       })
   }, [year, month])
 
@@ -36,6 +45,7 @@ export default function ProgressPage() {
   const weeks = ['日', '月', '火', '水', '木', '金', '土']
 
   const toggleDay = (day: number) => {
+    if (calendarLocked) return
     setWorkDates((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)
     )
@@ -54,17 +64,14 @@ export default function ProgressPage() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  // 稼働日ごとの累計目標数を計算
   const sortedWorkDates = [...workDates].sort((a, b) => a - b)
   const total = sortedWorkDates.length
 
   const cumulativeTarget = (index: number) => {
-    // index: 1始まり
     if (total === 0 || cancelTarget === 0) return 0
     return Math.round((cancelTarget * index) / total * 10) / 10
   }
 
-  // 今日時点で何番目の稼働日か
   const workDaysTodayCount = isCurrentMonth
     ? sortedWorkDates.filter((d) => d <= todayDay).length
     : total
@@ -125,7 +132,19 @@ export default function ProgressPage() {
         </div>
 
         {/* 稼働日カレンダー */}
-        <p className="text-xs font-semibold text-gray-500 mb-2">稼働日を選択</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-gray-500">稼働日（シフトから自動反映）</p>
+          {calendarLocked && (
+            <span className="flex items-center gap-1 text-xs text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full font-semibold">
+              <Lock size={10} />締切済み
+            </span>
+          )}
+          {deadlineAt && !deadlinePassed && (
+            <span className="text-xs text-gray-400">
+              締切 {new Date(deadlineAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-7 gap-1 mb-1">
           {weeks.map((w, i) => (
             <div key={w} className={`text-center text-xs font-bold py-0.5 ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-indigo-500' : 'text-gray-400'}`}>{w}</div>
@@ -141,11 +160,14 @@ export default function ProgressPage() {
               <button
                 key={day}
                 onClick={() => toggleDay(day)}
+                disabled={calendarLocked}
                 className={`aspect-square rounded-lg text-xs font-semibold transition-all
-                  ${isWork ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-50 hover:bg-orange-50'}
-                  ${!isWork && dow === 0 ? 'text-rose-400' : ''}
-                  ${!isWork && dow === 6 ? 'text-indigo-400' : ''}
-                  ${!isWork && dow !== 0 && dow !== 6 ? 'text-gray-600' : ''}
+                  ${isWork
+                    ? calendarLocked ? 'bg-orange-300 text-white' : 'bg-orange-500 text-white shadow-sm'
+                    : calendarLocked ? 'bg-gray-50 text-gray-300 cursor-default' : 'bg-gray-50 hover:bg-orange-50'}
+                  ${!isWork && !calendarLocked && dow === 0 ? 'text-rose-400' : ''}
+                  ${!isWork && !calendarLocked && dow === 6 ? 'text-indigo-400' : ''}
+                  ${!isWork && !calendarLocked && dow !== 0 && dow !== 6 ? 'text-gray-600' : ''}
                   ${isToday && !isWork ? 'ring-2 ring-orange-400' : ''}
                 `}
               >
@@ -177,11 +199,9 @@ export default function ProgressPage() {
             {isCurrentMonth ? '今日時点の状況' : `${month}月の結果`}
           </p>
           <div className="flex items-center gap-3">
-            {diff > 0
-              ? <TrendingUp size={32} className="opacity-90" />
-              : diff < 0
-              ? <TrendingDown size={32} className="opacity-90" />
-              : <Minus size={32} className="opacity-90" />}
+            {diff > 0 ? <TrendingUp size={32} className="opacity-90" /> :
+             diff < 0 ? <TrendingDown size={32} className="opacity-90" /> :
+             <Minus size={32} className="opacity-90" />}
             <div>
               <p className="text-3xl font-black leading-none">
                 {diff > 0 ? `アド ${diff}` : diff < 0 ? `ビハ ${Math.abs(diff)}` : 'オンタイム'}
@@ -218,9 +238,7 @@ export default function ProgressPage() {
                     {isToday && <span className="ml-2 text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">今日</span>}
                   </div>
                   <div className="text-right">
-                    <span className={`text-base font-black ${
-                      isPast || isToday ? 'text-orange-500' : 'text-gray-300'
-                    }`}>
+                    <span className={`text-base font-black ${isPast || isToday ? 'text-orange-500' : 'text-gray-300'}`}>
                       {cumTarget}件
                     </span>
                   </div>
@@ -233,7 +251,7 @@ export default function ProgressPage() {
 
       {sortedWorkDates.length === 0 && (
         <div className="text-center py-10 text-gray-300">
-          <p className="text-sm font-medium">稼働日を選択してください</p>
+          <p className="text-sm font-medium">シフトを提出すると稼働日が自動反映されます</p>
         </div>
       )}
     </div>
