@@ -49,6 +49,10 @@ export default function AdminPage() {
 
   // MTG
   const [mtgData, setMtgData] = useState<{ dates: string[]; members: any[]; map: Record<number, Record<string, any>> } | null>(null)
+  const [mtgYear, setMtgYear] = useState(today.getFullYear())
+  const [mtgMonth, setMtgMonth] = useState(today.getMonth() + 1)
+  const [mtgDeadlineAt, setMtgDeadlineAt] = useState('')
+  const [mtgDeadlineSaved, setMtgDeadlineSaved] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setCurrentUserId(d.id))
@@ -71,11 +75,20 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (adminTab !== 'mtg') return
-    fetch('/api/mtg/all').then((r) => r.json()).then(setMtgData)
-  }, [adminTab])
+    setMtgData(null)
+    Promise.all([
+      fetch(`/api/mtg/all?year=${mtgYear}&month=${mtgMonth}`).then((r) => r.json()),
+      fetch(`/api/mtg/deadlines?year=${mtgYear}&month=${mtgMonth}`).then((r) => r.json()),
+    ]).then(([data, dl]) => {
+      setMtgData(data)
+      setMtgDeadlineAt(dl.deadlineAt ?? '')
+    })
+  }, [adminTab, mtgYear, mtgMonth])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
+  const prevMtgMonth = () => { if (mtgMonth === 1) { setMtgYear((y) => y - 1); setMtgMonth(12) } else setMtgMonth((m) => m - 1) }
+  const nextMtgMonth = () => { if (mtgMonth === 12) { setMtgYear((y) => y + 1); setMtgMonth(1) } else setMtgMonth((m) => m + 1) }
 
   async function handleSaveDeadline() {
     if (!deadlineAt) return
@@ -95,6 +108,26 @@ export default function AdminPage() {
       body: JSON.stringify({ year, month }),
     })
     setDeadlineAt('')
+  }
+
+  async function handleSaveMtgDeadline() {
+    if (!mtgDeadlineAt) return
+    await fetch('/api/mtg/deadlines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: mtgYear, month: mtgMonth, deadlineAt: mtgDeadlineAt }),
+    })
+    setMtgDeadlineSaved(true)
+    setTimeout(() => setMtgDeadlineSaved(false), 2000)
+  }
+
+  async function handleDeleteMtgDeadline() {
+    await fetch('/api/mtg/deadlines', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: mtgYear, month: mtgMonth }),
+    })
+    setMtgDeadlineAt('')
   }
 
   async function handleGenerateInvite() {
@@ -352,48 +385,77 @@ export default function AdminPage() {
 
       {/* ===== MTG管理タブ ===== */}
       {adminTab === 'mtg' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 text-sm">MTG出欠一覧（直近8週）</h3>
-          {!mtgData ? (
-            <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="text-xs border-collapse w-full">
-                <thead>
-                  <tr>
-                    <th className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-left min-w-20 sticky left-0 z-10 text-gray-600 font-semibold">名前</th>
-                    {mtgData.dates.map((date) => (
-                      <th key={date} className="border border-gray-100 px-2 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold min-w-16">
-                        {formatDate(date)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {mtgData.members.map((member, idx) => (
-                    <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">{member.name}</td>
-                      {mtgData.dates.map((date) => {
-                        const rec = mtgData.map[member.id]?.[date]
-                        if (!rec) return <td key={date} className="border border-gray-100 px-2 py-2 text-center text-gray-200">-</td>
-                        const { text, cls } = statusLabel(rec.status)
-                        return (
-                          <td key={date} className="border border-gray-100 px-2 py-2 text-center">
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{text}</span>
-                            {rec.late_time && <p className="text-gray-400 mt-0.5">{rec.late_time}</p>}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  ))}
-                  {mtgData.members.length === 0 && (
-                    <tr><td colSpan={mtgData.dates.length + 1} className="text-center text-gray-400 py-8">メンバーがいません</td></tr>
-                  )}
-                </tbody>
-              </table>
+        <>
+          <div className="flex items-center justify-center gap-4 mb-5">
+            <button onClick={prevMtgMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-emerald-50 text-emerald-600 font-bold transition flex items-center justify-center"><ChevronLeft size={18} /></button>
+            <span className="text-xl font-bold text-gray-800 min-w-32 text-center">{mtgYear}年 {mtgMonth}月</span>
+            <button onClick={nextMtgMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-emerald-50 text-emerald-600 font-bold transition flex items-center justify-center"><ChevronRight size={18} /></button>
+          </div>
+
+          {/* MTG締切設定 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+            <h3 className="font-semibold text-gray-900 mb-3 text-sm">提出締切の設定</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input type="datetime-local" value={mtgDeadlineAt} onChange={(e) => setMtgDeadlineAt(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <button onClick={handleSaveMtgDeadline} disabled={!mtgDeadlineAt}
+                className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+                {mtgDeadlineSaved ? '✓ 保存しました' : '保存'}
+              </button>
+              {mtgDeadlineAt && (
+                <button onClick={handleDeleteMtgDeadline} className="px-4 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                  締切を削除
+                </button>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+
+          {/* MTG出欠一覧 */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4 text-sm">MTG出欠一覧</h3>
+            {!mtgData ? (
+              <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
+            ) : mtgData.dates.length === 0 ? (
+              <p className="text-gray-400 text-sm py-4 text-center">この月に金曜日はありません</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="text-xs border-collapse w-full">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-left min-w-20 sticky left-0 z-10 text-gray-600 font-semibold">名前</th>
+                      {mtgData.dates.map((date) => (
+                        <th key={date} className="border border-gray-100 px-2 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold min-w-16">
+                          {formatDate(date)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mtgData.members.map((member, idx) => (
+                      <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                        <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">{member.name}</td>
+                        {mtgData.dates.map((date) => {
+                          const rec = mtgData.map[member.id]?.[date]
+                          if (!rec) return <td key={date} className="border border-gray-100 px-2 py-2 text-center text-gray-200">-</td>
+                          const { text, cls } = statusLabel(rec.status)
+                          return (
+                            <td key={date} className="border border-gray-100 px-2 py-2 text-center">
+                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{text}</span>
+                              {rec.late_time && <p className="text-gray-400 mt-0.5">{rec.late_time}</p>}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                    {mtgData.members.length === 0 && (
+                      <tr><td colSpan={mtgData.dates.length + 1} className="text-center text-gray-400 py-8">メンバーがいません</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

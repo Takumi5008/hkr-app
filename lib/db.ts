@@ -80,6 +80,13 @@ async function initDb() {
       date        TEXT    NOT NULL UNIQUE,
       deadline_at TEXT    NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS mtg_month_deadlines (
+      id          SERIAL PRIMARY KEY,
+      year        INTEGER NOT NULL,
+      month       INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+      deadline_at TEXT    NOT NULL,
+      UNIQUE(year, month)
+    );
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
