@@ -12,17 +12,20 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get('type')
   if (!year || !month || !type) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
 
+  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const targetUserId = isManager && searchParams.get('userId') ? searchParams.get('userId') : session.userId
+
   if (type === 'all') {
     const rows = await dbQuery(
       `SELECT * FROM activation_records WHERE user_id=$1 AND year=$2 AND month=$3 ORDER BY date ASC, id ASC`,
-      [session.userId, year, month]
+      [targetUserId, year, month]
     )
     return NextResponse.json(rows)
   }
 
   const rows = await dbQuery(
     `SELECT * FROM activation_records WHERE user_id=$1 AND year=$2 AND month=$3 AND type=$4 ORDER BY id ASC`,
-    [session.userId, year, month, type]
+    [targetUserId, year, month, type]
   )
   return NextResponse.json(rows)
 }

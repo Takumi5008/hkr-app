@@ -87,6 +87,8 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[]
   { key: 'activation', label: '開通' },
 ]
 
+type User = { id: number; name: string; role: string }
+
 export default function ActivationPage() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -96,14 +98,30 @@ export default function ActivationPage() {
   const [editingId, setEditingId] = useState<number | 'new' | null>(null)
   const [form, setForm] = useState({ ...emptyRecord })
   const [saving, setSaving] = useState(false)
+  const [myRole, setMyRole] = useState<string>('')
+  const [members, setMembers] = useState<User[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/progress').then((r) => r.json()).then((data) => {
+      const role = data.role ?? ''
+      setMyRole(role)
+      if (role === 'manager' || role === 'viewer') {
+        fetch('/api/users').then((r) => r.json()).then((users: User[]) => {
+          setMembers(users.filter((u) => u.role !== 'viewer'))
+        })
+      }
+    })
+  }, [])
 
   const fetchRecords = () => {
-    fetch(`/api/activation?year=${year}&month=${month}&type=${type}`)
+    const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
+    fetch(`/api/activation?year=${year}&month=${month}&type=${type}${userParam}`)
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setRecords(data) })
   }
 
-  useEffect(() => { fetchRecords() }, [year, month, type])
+  useEffect(() => { fetchRecords() }, [year, month, type, selectedUserId])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
@@ -164,6 +182,23 @@ export default function ActivationPage() {
         <h1 className="text-2xl font-bold">開通表</h1>
         <p className="text-sm text-violet-100 mt-0.5">月別の開通管理</p>
       </div>
+
+      {/* 管理者：メンバー選択 */}
+      {(myRole === 'manager' || myRole === 'viewer') && members.length > 0 && (
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-gray-500 shrink-0">メンバー</span>
+          <select
+            value={selectedUserId ?? ''}
+            onChange={(e) => { setSelectedUserId(e.target.value ? Number(e.target.value) : null); setEditingId(null) }}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+          >
+            <option value="">自分</option>
+            {members.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* 月選択 */}
       <div className="flex items-center justify-center gap-4 mb-5">
