@@ -565,11 +565,6 @@ export default function PerformancePage() {
                   <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
                     <div>
                       <span className="text-base font-bold text-gray-800">{r.name}</span>
-                      {(r.period_start || r.period_end) && (
-                        <span className="ml-3 text-xs text-gray-400">
-                          {r.period_start && r.period_end ? `${r.period_start.slice(0, 7)} 〜 ${r.period_end.slice(0, 7)}` : (r.period_start || r.period_end).slice(0, 7)}
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="px-5 py-4">
