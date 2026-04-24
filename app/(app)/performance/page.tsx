@@ -625,22 +625,6 @@ export default function PerformancePage() {
               {/* 月次データテーブル（名前・年選択後） */}
               {selectedName && selectedPersonalYear > 0 && (
                 <div className="mt-4">
-                  {/* 年間合計カード */}
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
-                      <p className="text-xs text-gray-400 mb-1">{selectedPersonalYear}年 獲得計</p>
-                      <p className="text-lg font-black text-violet-600">{memberYearTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
-                      <p className="text-xs text-gray-400 mb-1">{selectedPersonalYear}年 解除計</p>
-                      <p className="text-lg font-black text-violet-600">{memberYearTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
-                    </div>
-                    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-3 text-center">
-                      <p className="text-xs text-gray-400 mb-1">解除率</p>
-                      <p className="text-lg font-black text-emerald-600">{cancelRate(memberYearTotal.activation, memberYearTotal.cancel)}</p>
-                    </div>
-                  </div>
-
                   {/* 月別リスト */}
                   <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                     <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
