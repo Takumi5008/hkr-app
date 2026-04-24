@@ -73,6 +73,7 @@ export default function PerformancePage() {
   const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '' })
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
+  const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete'>('view')
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
@@ -253,7 +254,7 @@ export default function PerformancePage() {
     setSeeding(false)
   }
 
-  const openAdd = () => { setEditId(null); setForm({ ...emptyForm }); setShowForm(true) }
+  const openAdd = () => { setEditId(null); setForm({ ...emptyForm }); setPersonalTab('add') }
 
   const openEdit = (r: MemberPerformance) => {
     setEditId(r.id)
@@ -270,7 +271,7 @@ export default function PerformancePage() {
       note: r.note,
       sortOrder: String(r.sort_order),
     })
-    setShowForm(true)
+    setPersonalTab('add')
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -307,7 +308,7 @@ export default function PerformancePage() {
         setRecords((prev) => [...prev, created].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id))
       }
     }
-    setSaving(false); setShowForm(false); setEditId(null)
+    setSaving(false); setPersonalTab('view'); setEditId(null)
   }
 
   const handleDelete = async (id: number) => {
@@ -394,21 +395,25 @@ export default function PerformancePage() {
       {/* ===== 個人タブ ===== */}
       {tab === 'personal' && (
         <>
+          {/* サブタブ：一覧 / 追加 / 削除 */}
           {role === 'manager' && (
-            <div className="flex justify-end mb-4">
-              <button onClick={openAdd}
-                className="flex items-center gap-2 px-4 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition shadow-sm">
-                <Plus size={15} />追加
-              </button>
+            <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+              {(['view', 'add', 'delete'] as const).map((t) => (
+                <button key={t} onClick={() => { setPersonalTab(t); if (t !== 'add') setEditId(null) }}
+                  className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
+                    ${personalTab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                  {t === 'view' ? '一覧' : t === 'add' ? '追加' : '削除'}
+                </button>
+              ))}
             </div>
           )}
 
-          {/* 追加・編集フォーム */}
-          {showForm && role === 'manager' && (
+          {/* 追加・編集フォーム（追加タブ） */}
+          {personalTab === 'add' && role === 'manager' && (
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-violet-100 mb-6 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 bg-violet-50 border-b border-violet-100">
                 <h2 className="text-sm font-bold text-violet-700">{editId !== null ? '編集' : '新規追加'}</h2>
-                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition"><X size={18} /></button>
+                <button onClick={() => setPersonalTab('view')} className="text-gray-400 hover:text-gray-600 transition"><X size={18} /></button>
               </div>
               <form onSubmit={handleSave} className="p-5 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -469,7 +474,7 @@ export default function PerformancePage() {
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1">
-                  <button type="button" onClick={() => setShowForm(false)}
+                  <button type="button" onClick={() => setPersonalTab('view')}
                     className="flex-1 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
                     キャンセル
                   </button>
@@ -482,12 +487,44 @@ export default function PerformancePage() {
             </div>
           )}
 
-          {records.length === 0 ? (
+          {/* 削除タブ */}
+          {personalTab === 'delete' && role === 'manager' && (
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+              {records.length === 0 ? (
+                <p className="text-sm text-gray-300 text-center py-12">データがありません</p>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {records.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between px-5 py-3">
+                      <div>
+                        <span className="text-sm font-semibold text-gray-800">{r.name}</span>
+                        {(r.period_start || r.period_end) && (
+                          <span className="ml-3 text-xs text-gray-400">
+                            {r.period_start && r.period_end
+                              ? `${r.period_start.slice(0, 7)} 〜 ${r.period_end.slice(0, 7)}`
+                              : (r.period_start || r.period_end).slice(0, 7)}
+                          </span>
+                        )}
+                      </div>
+                      <button onClick={() => handleDelete(r.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
+                        <Trash2 size={13} />削除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 一覧タブ */}
+          {(personalTab === 'view' || role !== 'manager') && (
+            records.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <p className="text-sm font-medium">実績データがありません</p>
               {role === 'manager' && (
                 <div className="mt-4">
-                  <p className="text-xs mb-3">「追加」ボタンから個別登録、または一括登録できます</p>
+                  <p className="text-xs mb-3">「追加」タブから個別登録、または一括登録できます</p>
                   <button onClick={handleSeed} disabled={seeding}
                     className="px-5 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl hover:bg-violet-600 transition disabled:opacity-50">
                     {seeding ? '登録中...' : '初期データを一括登録'}
@@ -685,7 +722,7 @@ export default function PerformancePage() {
                 </div>
               )}
             </div>
-          )}
+          ))}
         </>
       )}
 
