@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Save, X } from 'lucide-react'
 
-type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct'
+type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'all'
 
 type ActivationRecord = {
   id: number
+  type: ActivationType
   name: string
   date: string
   line: string
@@ -28,7 +29,7 @@ const emptyRecord = {
   day_before_delivery: '', week_after_delivery: '', activation: '',
 }
 
-const COLS: Record<ActivationType, { key: keyof typeof emptyRecord; label: string }[]> = {
+const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyRecord; label: string }[]> = {
   sonet: [
     { key: 'name', label: '名前' },
     { key: 'date', label: '日にち' },
@@ -71,7 +72,20 @@ const TYPE_LABELS: Record<ActivationType, string> = {
   sonet: 'So-net',
   wimax_post: 'WiMAX後送り',
   wimax_direct: 'WiMAX直せち',
+  all: '一覧',
 }
+
+const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[] = [
+  { key: 'type_label', label: '種別' },
+  { key: 'name', label: '名前' },
+  { key: 'date', label: '日にち' },
+  { key: 'line', label: '回線' },
+  { key: 'cancel', label: '解除' },
+  { key: 'neg_apply', label: '申込時ネガキャン' },
+  { key: 'neg_cancel', label: '解除時ネガキャン' },
+  { key: 'fm', label: 'FM' },
+  { key: 'activation', label: '開通' },
+]
 
 export default function ActivationPage() {
   const today = new Date()
@@ -140,7 +154,7 @@ export default function ActivationPage() {
   const f = (key: keyof typeof emptyRecord) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [key]: e.target.value }))
 
-  const cols = COLS[type]
+  const cols = type !== 'all' ? COLS[type as Exclude<ActivationType, 'all'>] : COLS['sonet']
 
   const EditForm = () => (
     <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
@@ -191,7 +205,7 @@ export default function ActivationPage() {
       </div>
 
       {/* タイプタブ */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex flex-wrap gap-2 mb-5">
         {(Object.keys(TYPE_LABELS) as ActivationType[]).map((t) => (
           <button
             key={t}
@@ -205,7 +219,50 @@ export default function ActivationPage() {
         ))}
       </div>
 
-      {/* テーブル */}
+      {/* 一覧タブ */}
+      {type === 'all' && (
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="text-xs border-collapse w-full">
+              <thead>
+                <tr>
+                  <th className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold w-6">#</th>
+                  {LIST_COLS.map((c) => (
+                    <th key={c.key} className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold whitespace-nowrap">{c.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {records.length === 0 && (
+                  <tr>
+                    <td colSpan={LIST_COLS.length + 1} className="border border-gray-100 px-4 py-8 text-center text-gray-400 text-sm">
+                      データがありません
+                    </td>
+                  </tr>
+                )}
+                {records.map((rec, i) => (
+                  <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
+                    <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
+                    {LIST_COLS.map((c) => {
+                      const val = c.key === 'type_label'
+                        ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
+                        : rec[c.key as keyof ActivationRecord]
+                      return (
+                        <td key={c.key} className="border border-gray-100 px-3 py-2 text-center">
+                          {val ? <span className="text-gray-700">{val as string}</span> : <span className="text-gray-200">-</span>}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 個別タイプのテーブル */}
+      {type !== 'all' && (
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="text-xs border-collapse w-full">
@@ -254,9 +311,10 @@ export default function ActivationPage() {
           </table>
         </div>
       </div>
+      )}
 
       {/* 追加ボタン */}
-      {editingId === null && (
+      {editingId === null && type !== 'all' && (
         <button
           onClick={openNew}
           className="mt-4 flex items-center gap-2 px-4 py-2 bg-violet-500 text-white text-sm font-medium rounded-lg hover:bg-violet-600 transition shadow"
