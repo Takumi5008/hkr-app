@@ -667,24 +667,24 @@ export default function PerformancePage() {
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
                         <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.activation : (r.total_activation === 0 ? 0 : Math.round(r.total_activation / periodMonths(r)))}
-                          <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
+                          {hasMonthlyData ? memberAvg.activation : '-'}
+                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>}
                         </p>
                       </div>
                       <div className="w-px bg-gray-100" />
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
                         <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.cancel : (r.total_cancel === 0 ? 0 : Math.round(r.total_cancel / periodMonths(r)))}
-                          <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
+                          {hasMonthlyData ? memberAvg.cancel : '-'}
+                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>}
                         </p>
                       </div>
                       <div className="w-px bg-gray-100" />
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
                         <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.workDays : r.work_days_target}
-                          <span className="text-xs font-normal text-gray-400 ml-0.5">日</span>
+                          {hasMonthlyData ? memberAvg.workDays : '-'}
+                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">日</span>}
                         </p>
                       </div>
                     </div>
@@ -692,23 +692,19 @@ export default function PerformancePage() {
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">総獲得</p>
                         <p className="text-sm font-bold text-gray-700">
-                          {hasMonthlyData ? allMonthsTotal.activation : r.total_activation}
-                          <span className="text-xs font-normal text-gray-400">件</span>
+                          {hasMonthlyData ? <>{allMonthsTotal.activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">総解除</p>
                         <p className="text-sm font-bold text-gray-700">
-                          {hasMonthlyData ? allMonthsTotal.cancel : r.total_cancel}
-                          <span className="text-xs font-normal text-gray-400">件</span>
+                          {hasMonthlyData ? <>{allMonthsTotal.cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">解除率</p>
                         <p className="text-sm font-bold text-emerald-600">
-                          {hasMonthlyData
-                            ? cancelRate(allMonthsTotal.activation, allMonthsTotal.cancel)
-                            : cancelRate(r.total_activation, r.total_cancel)}
+                          {hasMonthlyData ? cancelRate(allMonthsTotal.activation, allMonthsTotal.cancel) : '-'}
                         </p>
                       </div>
                     </div>
