@@ -355,7 +355,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {shifts.map((member, idx) => (
+                    {[...shifts].sort((a, b) => (b.submitted ? 1 : 0) - (a.submitted ? 1 : 0)).map((member, idx) => (
                       <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">{member.name}</td>
                         <td className="border border-gray-100 px-2 py-2 text-center">
