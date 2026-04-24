@@ -657,13 +657,6 @@ export default function PerformancePage() {
                     <div key={r.id} className="flex items-center justify-between px-5 py-3">
                       <div>
                         <span className="text-sm font-semibold text-gray-800">{r.name}</span>
-                        {(r.period_start || r.period_end) && (
-                          <span className="ml-3 text-xs text-gray-400">
-                            {r.period_start && r.period_end
-                              ? `${r.period_start.slice(0, 7)} 〜 ${r.period_end.slice(0, 7)}`
-                              : (r.period_start || r.period_end).slice(0, 7)}
-                          </span>
-                        )}
                       </div>
                       <button onClick={() => handleDelete(r.id)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-lg transition">
