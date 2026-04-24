@@ -571,18 +571,6 @@ export default function PerformancePage() {
                         </span>
                       )}
                     </div>
-                    {role === 'manager' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => openEdit(r)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 transition">
-                          <Pencil size={14} />
-                        </button>
-                        <button onClick={() => handleDelete(r.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
                   </div>
                   <div className="px-5 py-4">
                     <div className="flex gap-4 mb-3">
