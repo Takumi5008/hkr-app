@@ -80,11 +80,16 @@ export default function PerformancePage() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [newMemberInput, setNewMemberInput] = useState('')
   const [addingMember, setAddingMember] = useState(false)
+  const [extraTeamYears, setExtraTeamYears] = useState<number[]>([])
+  const [showAddTeamYear, setShowAddTeamYear] = useState(false)
+  const [newTeamYearInput, setNewTeamYearInput] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
     const saved = localStorage.getItem('extraPersonalYears')
     if (saved) setExtraPersonalYears(JSON.parse(saved))
+    const savedTeam = localStorage.getItem('extraTeamYears')
+    if (savedTeam) setExtraTeamYears(JSON.parse(savedTeam))
   }, [])
 
   // 名前が変わったら全期間の月次データを取得（年は関係なく全件）
@@ -126,7 +131,7 @@ export default function PerformancePage() {
   const personalFYs = [...new Set(records.map((r) => fiscalYear(r.period_start)).filter(Boolean))].sort((a, b) => b - a)
 
   // 全体タブ用暦年一覧（降順）
-  const teamYears = [...new Set(monthly.map((r) => r.year))].sort((a, b) => b - a)
+  const teamYears = [...new Set([...monthly.map((r) => r.year), ...extraTeamYears])].sort((a, b) => b - a)
 
   const filteredRecords = selectedName ? records.filter((r) => r.name === selectedName) : records
 
@@ -384,6 +389,18 @@ export default function PerformancePage() {
     setNewMemberInput('')
   }
 
+  const handleAddTeamYear = () => {
+    const y = parseInt(newTeamYearInput)
+    if (!y || y < 2000 || y > 2100) return
+    if (teamYears.includes(y)) { setShowAddTeamYear(false); setNewTeamYearInput(''); setSelectedYear(y); return }
+    const updated = [...extraTeamYears, y]
+    setExtraTeamYears(updated)
+    localStorage.setItem('extraTeamYears', JSON.stringify(updated))
+    setSelectedYear(y)
+    setShowAddTeamYear(false)
+    setNewTeamYearInput('')
+  }
+
   const handleAddYear = () => {
     const y = parseInt(newYearInput)
     if (!y || y < 2000 || y > 2100) return
@@ -496,8 +513,8 @@ export default function PerformancePage() {
       )}
 
       {/* 全体タブ：暦年選択バー */}
-      {tab === 'team' && teamYears.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {tab === 'team' && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 items-center">
           {teamYears.map((y) => (
             <button key={y} onClick={() => setSelectedYear(y)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
@@ -505,6 +522,32 @@ export default function PerformancePage() {
               {y}年
             </button>
           ))}
+          {showAddTeamYear ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <input
+                type="number"
+                value={newTeamYearInput}
+                onChange={(e) => setNewTeamYearInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddTeamYear(); if (e.key === 'Escape') { setShowAddTeamYear(false); setNewTeamYearInput('') } }}
+                placeholder="年を入力"
+                autoFocus
+                className="w-24 text-sm px-2 py-1.5 border border-violet-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+              <button onClick={handleAddTeamYear}
+                className="px-3 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg hover:bg-violet-600 transition">
+                追加
+              </button>
+              <button onClick={() => { setShowAddTeamYear(false); setNewTeamYearInput('') }}
+                className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddTeamYear(true)}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-white text-gray-400 ring-1 ring-gray-200 hover:text-violet-500 hover:bg-violet-50 transition text-lg font-bold">
+              +
+            </button>
+          )}
         </div>
       )}
 
