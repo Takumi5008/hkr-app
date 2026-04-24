@@ -388,7 +388,19 @@ export default function PerformancePage() {
         fetch(`/api/performance/${r.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sortOrder: i }),
+          body: JSON.stringify({
+            name: r.name,
+            activationTarget: r.activation_target,
+            cancelTarget: r.cancel_target,
+            workDaysTarget: r.work_days_target,
+            periodStart: r.period_start,
+            periodEnd: r.period_end,
+            totalWork: r.total_work,
+            totalActivation: r.total_activation,
+            totalCancel: r.total_cancel,
+            note: r.note,
+            sortOrder: i,
+          }),
         })
       )
     )
