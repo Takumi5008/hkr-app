@@ -22,7 +22,19 @@ type ActivationRecord = {
   delivery_date: string
   week_after_delivery: string
   activation: string
+  fm_done: number
+  week_after_done: number
+  day_before_construction_done: number
+  construction_date_done: number
+  day_before_delivery_done: number
+  delivery_date_done: number
+  week_after_delivery_done: number
 }
+
+const DONE_KEYS = [
+  'fm', 'week_after', 'day_before_construction', 'construction_date',
+  'day_before_delivery', 'delivery_date', 'week_after_delivery',
+] as const
 
 const emptyRecord = {
   name: '', date: '', line: '', cancel: '', neg_apply: '', neg_cancel: '', fm: '',
@@ -116,6 +128,52 @@ export default function ActivationPage() {
   const [myRole, setMyRole] = useState<string>('')
   const [members, setMembers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [notifEnabled, setNotifEnabled] = useState(false)
+
+  // 通知許可 & 購読
+  const enableNotifications = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('このブラウザはプッシュ通知に対応していません')
+      return
+    }
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') { alert('通知が許可されませんでした'); return }
+
+    const reg = await navigator.serviceWorker.register('/sw.js')
+    await navigator.serviceWorker.ready
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    })
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(sub),
+    })
+    setNotifEnabled(true)
+    alert('通知を有効にしました。毎日20時に未確認項目を通知します。')
+  }
+
+  const disableNotifications = async () => {
+    await fetch('/api/push/subscribe', { method: 'DELETE' })
+    setNotifEnabled(false)
+  }
+
+  // ⭕️トグル
+  const toggleDone = async (id: number, field: string, current: number) => {
+    const newVal = current === 0 ? 1 : 0
+    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, [`${field}_done`]: newVal } : r))
+    await fetch('/api/activation/done', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, field, done: newVal }),
+    })
+  }
+
+  useEffect(() => {
+    fetch('/api/push/subscribe').then((r) => r.json()).then((d) => setNotifEnabled(d.subscribed ?? false))
+  }, [])
 
   useEffect(() => {
     fetch('/api/progress').then((r) => r.json()).then((data) => {
@@ -233,6 +291,21 @@ export default function ActivationPage() {
         </div>
       )}
 
+      {/* 通知設定ボタン */}
+      <div className="flex justify-end mb-3">
+        {notifEnabled ? (
+          <button onClick={disableNotifications}
+            className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition">
+            🔔 通知オン（タップで解除）
+          </button>
+        ) : (
+          <button onClick={enableNotifications}
+            className="text-xs px-3 py-1.5 rounded-lg bg-violet-100 text-violet-600 hover:bg-violet-200 transition font-medium">
+            🔔 20時通知を有効にする
+          </button>
+        )}
+      </div>
+
       {/* 月選択 */}
       <div className="flex items-center justify-center gap-4 mb-5">
         <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-violet-50 text-violet-500 font-bold transition flex items-center justify-center">
@@ -333,15 +406,31 @@ export default function ActivationPage() {
               {records.map((rec, i) => (
                 <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
                   <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
-                  {cols.map((c) => (
-                    <td key={c.key} className="border border-gray-100 px-3 py-2 text-center">
-                      {rec[c.key] ? (
-                        <span className="text-gray-700">{rec[c.key]}</span>
-                      ) : (
-                        <span className="text-gray-200">-</span>
-                      )}
-                    </td>
-                  ))}
+                  {cols.map((c) => {
+                    const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
+                    const doneKey = `${c.key}_done` as keyof ActivationRecord
+                    const isDone = isDoneField && rec[doneKey] === 1
+                    return (
+                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''}`}>
+                        {isDoneField && rec[c.key] ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-gray-700">{rec[c.key]}</span>
+                            <button
+                              onClick={() => toggleDone(rec.id, c.key, rec[doneKey] as number)}
+                              className="text-lg leading-none"
+                              title={isDone ? '未完了に戻す' : '完了にする'}
+                            >
+                              {isDone ? '⭕' : '🔘'}
+                            </button>
+                          </div>
+                        ) : rec[c.key] ? (
+                          <span className="text-gray-700">{rec[c.key]}</span>
+                        ) : (
+                          <span className="text-gray-200">-</span>
+                        )}
+                      </td>
+                    )
+                  })}
                   <td className="border border-gray-100 px-2 py-2 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openEdit(rec)} className="text-gray-300 hover:text-violet-500 transition">
