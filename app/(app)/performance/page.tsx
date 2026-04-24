@@ -79,11 +79,12 @@ export default function PerformancePage() {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
   }, [])
 
+  // 名前が変わったら全期間の月次データを取得（年は関係なく全件）
   useEffect(() => {
-    if (!selectedName || !selectedPersonalYear) return
-    fetch(`/api/performance/member-monthly?name=${encodeURIComponent(selectedName)}&year=${selectedPersonalYear}`)
+    if (!selectedName) return
+    fetch(`/api/performance/member-monthly?name=${encodeURIComponent(selectedName)}`)
       .then((r) => r.json()).then(setMemberMonthly)
-  }, [selectedName, selectedPersonalYear])
+  }, [selectedName])
 
   useEffect(() => {
     if (role !== 'manager') return
@@ -120,6 +121,25 @@ export default function PerformancePage() {
   const teamYears = [...new Set(monthly.map((r) => r.year))].sort((a, b) => b - a)
 
   const filteredRecords = selectedName ? records.filter((r) => r.name === selectedName) : records
+
+  // 月次データからメンバーの全期間統計を計算
+  const monthsWithActivation = memberMonthly.filter((r) => r.total_activation > 0)
+  const monthsWithCancel = memberMonthly.filter((r) => r.total_cancel > 0)
+  const monthsWithWork = memberMonthly.filter((r) => r.work_days > 0)
+  const allMonthsTotal = {
+    activation: memberMonthly.reduce((s, r) => s + r.total_activation, 0),
+    cancel: memberMonthly.reduce((s, r) => s + r.total_cancel, 0),
+    workDays: memberMonthly.reduce((s, r) => s + r.work_days, 0),
+  }
+  const memberAvg = {
+    activation: monthsWithActivation.length > 0
+      ? Math.round(allMonthsTotal.activation / monthsWithActivation.length) : 0,
+    cancel: monthsWithCancel.length > 0
+      ? Math.round(allMonthsTotal.cancel / monthsWithCancel.length) : 0,
+    workDays: monthsWithWork.length > 0
+      ? Math.round(allMonthsTotal.workDays / monthsWithWork.length) : 0,
+  }
+  const hasMonthlyData = memberMonthly.length > 0
 
   // 個人タブ：年一覧（2022〜当年）
   const currentYear = new Date().getFullYear()
@@ -568,7 +588,7 @@ export default function PerformancePage() {
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
                         <p className="text-lg font-black text-violet-600">
-                          {r.total_activation === 0 ? 0 : Math.round(r.total_activation / periodMonths(r))}
+                          {hasMonthlyData ? memberAvg.activation : (r.total_activation === 0 ? 0 : Math.round(r.total_activation / periodMonths(r)))}
                           <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
                         </p>
                       </div>
@@ -576,28 +596,41 @@ export default function PerformancePage() {
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
                         <p className="text-lg font-black text-violet-600">
-                          {r.total_cancel === 0 ? 0 : Math.round(r.total_cancel / periodMonths(r))}
+                          {hasMonthlyData ? memberAvg.cancel : (r.total_cancel === 0 ? 0 : Math.round(r.total_cancel / periodMonths(r)))}
                           <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>
                         </p>
                       </div>
                       <div className="w-px bg-gray-100" />
                       <div className="text-center flex-1">
                         <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
-                        <p className="text-lg font-black text-violet-600">{r.work_days_target}<span className="text-xs font-normal text-gray-400 ml-0.5">日</span></p>
+                        <p className="text-lg font-black text-violet-600">
+                          {hasMonthlyData ? memberAvg.workDays : r.work_days_target}
+                          <span className="text-xs font-normal text-gray-400 ml-0.5">日</span>
+                        </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-xl p-3">
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">総獲得</p>
-                        <p className="text-sm font-bold text-gray-700">{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {hasMonthlyData ? allMonthsTotal.activation : r.total_activation}
+                          <span className="text-xs font-normal text-gray-400">件</span>
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">総解除</p>
-                        <p className="text-sm font-bold text-gray-700">{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {hasMonthlyData ? allMonthsTotal.cancel : r.total_cancel}
+                          <span className="text-xs font-normal text-gray-400">件</span>
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">解除率</p>
-                        <p className="text-sm font-bold text-emerald-600">{cancelRate(r.total_activation, r.total_cancel)}</p>
+                        <p className="text-sm font-bold text-emerald-600">
+                          {hasMonthlyData
+                            ? cancelRate(allMonthsTotal.activation, allMonthsTotal.cancel)
+                            : cancelRate(r.total_activation, r.total_cancel)}
+                        </p>
                       </div>
                     </div>
                     {r.note && <p className="text-xs text-gray-400 mt-2">{r.note}</p>}

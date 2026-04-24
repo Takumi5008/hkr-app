@@ -11,12 +11,17 @@ export async function GET(req: NextRequest) {
   const name = searchParams.get('name')
   const year = searchParams.get('year')
 
-  if (!name || !year) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
+  if (!name) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
 
-  const rows = await dbQuery(
-    'SELECT * FROM member_monthly_stats WHERE member_name=$1 AND year=$2 ORDER BY month ASC',
-    [name, Number(year)]
-  )
+  const rows = year
+    ? await dbQuery(
+        'SELECT * FROM member_monthly_stats WHERE member_name=$1 AND year=$2 ORDER BY year ASC, month ASC',
+        [name, Number(year)]
+      )
+    : await dbQuery(
+        'SELECT * FROM member_monthly_stats WHERE member_name=$1 ORDER BY year ASC, month ASC',
+        [name]
+      )
   return NextResponse.json(rows)
 }
 
