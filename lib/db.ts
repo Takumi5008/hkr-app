@@ -172,6 +172,27 @@ async function initDb() {
       cancel           INTEGER NOT NULL DEFAULT 0,
       UNIQUE(user_id, date)
     );
+    CREATE TABLE IF NOT EXISTS activation_records (
+      id                    SERIAL PRIMARY KEY,
+      user_id               INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year                  INTEGER NOT NULL,
+      month                 INTEGER NOT NULL,
+      type                  TEXT NOT NULL,
+      name                  TEXT NOT NULL DEFAULT '',
+      date                  TEXT NOT NULL DEFAULT '',
+      line                  TEXT NOT NULL DEFAULT '',
+      cancel                TEXT NOT NULL DEFAULT '',
+      neg_apply             TEXT NOT NULL DEFAULT '',
+      neg_cancel            TEXT NOT NULL DEFAULT '',
+      fm                    TEXT NOT NULL DEFAULT '',
+      week_after            TEXT NOT NULL DEFAULT '',
+      day_before_construction TEXT NOT NULL DEFAULT '',
+      construction_date     TEXT NOT NULL DEFAULT '',
+      day_before_delivery   TEXT NOT NULL DEFAULT '',
+      week_after_delivery   TEXT NOT NULL DEFAULT '',
+      activation            TEXT NOT NULL DEFAULT '',
+      created_at            TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
     CREATE TABLE IF NOT EXISTS mtg_month_deadlines (
       id          SERIAL PRIMARY KEY,
       year        INTEGER NOT NULL,

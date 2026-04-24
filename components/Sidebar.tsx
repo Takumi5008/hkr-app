@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2 } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap } from 'lucide-react'
 import { useState } from 'react'
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/activity', label: '行動表', icon: Table2 },
+  { href: '/activation', label: '開通表', icon: Zap },
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
   { href: '/shift', label: 'シフト入力', icon: Calendar },
   { href: '/mtg', label: 'MTG出欠', icon: ClipboardList },

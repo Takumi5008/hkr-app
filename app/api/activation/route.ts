@@ -1,0 +1,76 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/session'
+import { dbQuery, dbRun } from '@/lib/db'
+
+export async function GET(req: NextRequest) {
+  const session = await getSession()
+  if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const year = searchParams.get('year')
+  const month = searchParams.get('month')
+  const type = searchParams.get('type')
+  if (!year || !month || !type) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
+
+  const rows = await dbQuery(
+    `SELECT * FROM activation_records WHERE user_id=$1 AND year=$2 AND month=$3 AND type=$4 ORDER BY id ASC`,
+    [session.userId, year, month, type]
+  )
+  return NextResponse.json(rows)
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getSession()
+  if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+
+  const body = await req.json()
+  const { year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
+    week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation } = body
+
+  const result = await dbRun(
+    `INSERT INTO activation_records
+     (user_id, year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
+      week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+     RETURNING id`,
+    [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '',
+     neg_apply ?? '', neg_cancel ?? '', fm ?? '', week_after ?? '',
+     day_before_construction ?? '', construction_date ?? '',
+     day_before_delivery ?? '', week_after_delivery ?? '', activation ?? '']
+  )
+  return NextResponse.json({ id: result.id })
+}
+
+export async function PATCH(req: NextRequest) {
+  const session = await getSession()
+  if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+
+  const body = await req.json()
+  const { id, name, date, line, cancel, neg_apply, neg_cancel, fm,
+    week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation } = body
+
+  await dbRun(
+    `UPDATE activation_records SET
+     name=$1, date=$2, line=$3, cancel=$4, neg_apply=$5, neg_cancel=$6, fm=$7,
+     week_after=$8, day_before_construction=$9, construction_date=$10,
+     day_before_delivery=$11, week_after_delivery=$12, activation=$13
+     WHERE id=$14 AND user_id=$15`,
+    [name ?? '', date ?? '', line ?? '', cancel ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
+     week_after ?? '', day_before_construction ?? '', construction_date ?? '',
+     day_before_delivery ?? '', week_after_delivery ?? '', activation ?? '',
+     id, session.userId]
+  )
+  return NextResponse.json({ ok: true })
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getSession()
+  if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id不足' }, { status: 400 })
+
+  await dbRun(`DELETE FROM activation_records WHERE id=$1 AND user_id=$2`, [id, session.userId])
+  return NextResponse.json({ ok: true })
+}
