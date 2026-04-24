@@ -155,6 +155,23 @@ async function initDb() {
       note             TEXT NOT NULL DEFAULT '',
       UNIQUE(year, month)
     );
+    CREATE TABLE IF NOT EXISTS daily_activity (
+      id               SERIAL PRIMARY KEY,
+      user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date             TEXT NOT NULL,
+      work_hours       TEXT NOT NULL DEFAULT '',
+      pin_count        INTEGER NOT NULL DEFAULT 0,
+      pingpong_count   INTEGER NOT NULL DEFAULT 0,
+      intercom_count   INTEGER NOT NULL DEFAULT 0,
+      face_other       INTEGER NOT NULL DEFAULT 0,
+      face_unused      INTEGER NOT NULL DEFAULT 0,
+      hearing_sheet    INTEGER NOT NULL DEFAULT 0,
+      consent_form     INTEGER NOT NULL DEFAULT 0,
+      wimax            INTEGER NOT NULL DEFAULT 0,
+      sonet            INTEGER NOT NULL DEFAULT 0,
+      cancel           INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(user_id, date)
+    );
     CREATE TABLE IF NOT EXISTS mtg_month_deadlines (
       id          SERIAL PRIMARY KEY,
       year        INTEGER NOT NULL,
