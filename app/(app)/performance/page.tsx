@@ -393,15 +393,21 @@ export default function PerformancePage() {
       </div>
 
       {/* 個人タブ：名前選択バー */}
-      {tab === 'personal' && records.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {tab === 'personal' && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 items-center">
           {records.map((r) => (
-            <button key={r.id} onClick={() => setSelectedName(r.name)}
+            <button key={r.id} onClick={() => { setSelectedName(r.name); setPersonalTab('view') }}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
-                ${selectedName === r.name ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
+                ${selectedName === r.name && personalTab !== 'add' ? 'bg-violet-500 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-violet-50'}`}>
               {r.name}
             </button>
           ))}
+          {role === 'manager' && (
+            <button onClick={openAdd}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-white text-gray-400 ring-1 ring-gray-200 hover:text-violet-500 hover:bg-violet-50 transition text-lg font-bold">
+              +
+            </button>
+          )}
         </div>
       )}
 
@@ -461,13 +467,13 @@ export default function PerformancePage() {
       {tab === 'personal' && (
         <>
           {/* サブタブ：一覧 / 追加 / 削除 */}
-          {role === 'manager' && (
+          {role === 'manager' && personalTab !== 'add' && (
             <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-              {(['view', 'add', 'delete'] as const).map((t) => (
-                <button key={t} onClick={() => { setPersonalTab(t); if (t !== 'add') setEditId(null) }}
+              {(['view', 'delete'] as const).map((t) => (
+                <button key={t} onClick={() => { setPersonalTab(t); setEditId(null) }}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
                     ${personalTab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {t === 'view' ? '一覧' : t === 'add' ? '追加' : '削除'}
+                  {t === 'view' ? '一覧' : '削除'}
                 </button>
               ))}
             </div>
