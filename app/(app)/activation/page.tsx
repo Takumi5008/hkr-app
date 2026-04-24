@@ -114,11 +114,29 @@ export default function ActivationPage() {
     })
   }, [])
 
+  const parseDate = (s: string) => {
+    if (!s) return 0
+    // YYYY-MM-DD, YYYY/MM/DD, MM/DD, M/D, M月D日 など対応
+    const iso = s.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/)
+    if (iso) return new Date(parseInt(iso[1]), parseInt(iso[2]) - 1, parseInt(iso[3])).getTime()
+    const md = s.match(/(\d{1,2})[\/月](\d{1,2})/)
+    if (md) return new Date(year, parseInt(md[1]) - 1, parseInt(md[2])).getTime()
+    const d = s.match(/^(\d{1,2})$/)
+    if (d) return parseInt(d[1])
+    return 0
+  }
+
   const fetchRecords = () => {
     const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
     fetch(`/api/activation?year=${year}&month=${month}&type=${type}${userParam}`)
       .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setRecords(data) })
+      .then((data: ActivationRecord[]) => {
+        if (!Array.isArray(data)) return
+        if (type === 'all') {
+          data.sort((a, b) => parseDate(a.date) - parseDate(b.date))
+        }
+        setRecords(data)
+      })
   }
 
   useEffect(() => { fetchRecords() }, [year, month, type, selectedUserId])
