@@ -654,8 +654,8 @@ export default function PerformancePage() {
               ) : (
                 <div className="divide-y divide-gray-50">
                   {records.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between px-5 py-3">
-                      <div>
+                    <div key={r.id} className="flex items-center gap-4 px-5 py-3">
+                      <div className="flex-none">
                         <span className="text-sm font-semibold text-gray-800">{r.name}</span>
                       </div>
                       <button onClick={() => handleDelete(r.id)}
