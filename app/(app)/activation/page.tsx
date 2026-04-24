@@ -156,34 +156,6 @@ export default function ActivationPage() {
 
   const cols = type !== 'all' ? COLS[type as Exclude<ActivationType, 'all'>] : COLS['sonet']
 
-  const EditForm = () => (
-    <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
-      <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {cols.map((c) => (
-          <div key={c.key}>
-            <label className="text-xs text-gray-500 mb-0.5 block">{c.label}</label>
-            <input
-              type="text"
-              value={form[c.key]}
-              onChange={f(c.key)}
-              className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
-            />
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-2 mt-3">
-        <button onClick={() => setEditingId(null)}
-          className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
-          キャンセル
-        </button>
-        <button onClick={handleSave} disabled={saving}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition">
-          <Save size={12} />{saving ? '保存中...' : '保存'}
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -325,7 +297,34 @@ export default function ActivationPage() {
       )}
 
       {/* 編集/追加フォーム */}
-      {editingId !== null && <EditForm />}
+      {editingId !== null && (
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
+          <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {cols.map((c) => (
+              <div key={c.key}>
+                <label className="text-xs text-gray-500 mb-0.5 block">{c.label}</label>
+                <input
+                  type="text"
+                  value={form[c.key]}
+                  onChange={f(c.key)}
+                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => setEditingId(null)}
+              className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
+              キャンセル
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition">
+              <Save size={12} />{saving ? '保存中...' : '保存'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
