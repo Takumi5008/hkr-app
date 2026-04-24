@@ -78,16 +78,29 @@ const TYPE_LABELS: Record<ActivationType, string> = {
 }
 
 const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[] = [
-  { key: 'type_label', label: '種別' },
-  { key: 'name', label: '名前' },
-  { key: 'date', label: '日にち' },
-  { key: 'line', label: '回線' },
-  { key: 'cancel', label: '解除' },
-  { key: 'neg_apply', label: '申込時ネガキャン' },
-  { key: 'neg_cancel', label: '解除時ネガキャン' },
-  { key: 'fm', label: 'FM' },
-  { key: 'activation', label: '開通' },
+  { key: 'type_label',              label: '種別' },
+  { key: 'name',                    label: '名前' },
+  { key: 'date',                    label: '日にち' },
+  { key: 'line',                    label: '回線' },
+  { key: 'cancel',                  label: '解除' },
+  { key: 'neg_apply',               label: '申込時ネガキャン' },
+  { key: 'neg_cancel',              label: '解除時ネガキャン' },
+  { key: 'fm',                      label: 'FM' },
+  { key: 'week_after',              label: '獲得1週間後' },
+  { key: 'day_before_construction', label: '工事日前日' },
+  { key: 'construction_date',       label: '工事日' },
+  { key: 'day_before_delivery',     label: '受け取り日前日' },
+  { key: 'delivery_date',           label: '受取日' },
+  { key: 'week_after_delivery',     label: '受け取り1週間後' },
+  { key: 'activation',              label: '開通' },
 ]
+
+// 各タイプで使用しないフィールド（一覧でハイフン表示）
+const TYPE_NA_FIELDS: Record<Exclude<ActivationType, 'all'>, (keyof ActivationRecord)[]> = {
+  sonet:        ['day_before_delivery', 'delivery_date', 'week_after_delivery'],
+  wimax_post:   ['week_after', 'day_before_construction', 'construction_date'],
+  wimax_direct: ['day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'],
+}
 
 type User = { id: number; name: string; role: string }
 
@@ -267,21 +280,28 @@ export default function ActivationPage() {
                     </td>
                   </tr>
                 )}
-                {records.map((rec, i) => (
-                  <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
-                    <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
-                    {LIST_COLS.map((c) => {
-                      const val = c.key === 'type_label'
-                        ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
-                        : rec[c.key as keyof ActivationRecord]
-                      return (
-                        <td key={c.key} className="border border-gray-100 px-3 py-2 text-center">
-                          {val ? <span className="text-gray-700">{val as string}</span> : <span className="text-gray-200">-</span>}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
+                {records.map((rec, i) => {
+                  const naFields = TYPE_NA_FIELDS[rec.type as Exclude<ActivationType, 'all'>] ?? []
+                  return (
+                    <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
+                      <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
+                      {LIST_COLS.map((c) => {
+                        const isNA = c.key !== 'type_label' && naFields.includes(c.key as keyof ActivationRecord)
+                        const val = c.key === 'type_label'
+                          ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
+                          : rec[c.key as keyof ActivationRecord]
+                        return (
+                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''}`}>
+                            {isNA
+                              ? <span className="text-gray-300">-</span>
+                              : val ? <span className="text-gray-700">{val as string}</span> : <span className="text-gray-200">-</span>
+                            }
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
