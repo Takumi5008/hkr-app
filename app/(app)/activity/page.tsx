@@ -138,6 +138,9 @@ export default function ActivityPage() {
 
   const daysWithData = records.filter((r) => r.work_hours !== '').length
 
+  const totalWorkHours = Math.round(records.reduce((s, r) => s + (parseFloat(r.work_hours) || 0), 0) * 10) / 10
+  const avgWorkHours = daysWithData > 0 ? Math.round(totalWorkHours / daysWithData * 10) / 10 : 0
+
   const totals = {
     pin_count:      records.reduce((s, r) => s + r.pin_count, 0),
     pingpong_count: records.reduce((s, r) => s + r.pingpong_count, 0),
@@ -327,7 +330,7 @@ export default function ActivityPage() {
               {/* 合計行 */}
               <tr className="bg-teal-50/60">
                 <td className="border border-gray-100 px-2 py-2.5 text-center font-bold text-teal-700 sticky left-0 bg-teal-50/60">合計</td>
-                <td className="border border-gray-100 px-2 py-2.5 text-center text-gray-300 text-xs">-</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totalWorkHours)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.pin_count)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.pingpong_count)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.intercom_count)}</td>
@@ -344,7 +347,7 @@ export default function ActivityPage() {
               {/* 平均行 */}
               <tr className="bg-indigo-50/40">
                 <td className="border border-gray-100 px-2 py-2.5 text-center font-bold text-indigo-600 sticky left-0 bg-indigo-50/40">平均</td>
-                <td className="border border-gray-100 px-2 py-2.5 text-center text-gray-300 text-xs">-</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(avgWorkHours)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.pin_count / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.pingpong_count / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.intercom_count / daysWithData * 10) / 10 : 0)}</td>
