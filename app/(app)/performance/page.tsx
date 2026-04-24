@@ -74,9 +74,14 @@ export default function PerformancePage() {
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
   const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete'>('view')
+  const [extraPersonalYears, setExtraPersonalYears] = useState<number[]>([])
+  const [showAddYear, setShowAddYear] = useState(false)
+  const [newYearInput, setNewYearInput] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
+    const saved = localStorage.getItem('extraPersonalYears')
+    if (saved) setExtraPersonalYears(JSON.parse(saved))
   }, [])
 
   // 名前が変わったら全期間の月次データを取得（年は関係なく全件）
@@ -142,9 +147,10 @@ export default function PerformancePage() {
   }
   const hasMonthlyData = yearMonthly.length > 0
 
-  // 個人タブ：年一覧（2022〜当年）
+  // 個人タブ：年一覧（2022〜当年 + 追加分）
   const currentYear = new Date().getFullYear()
-  const personalYears = Array.from({ length: currentYear - 2021 }, (_, i) => currentYear - i)
+  const basePersonalYears = Array.from({ length: currentYear - 2021 }, (_, i) => currentYear - i)
+  const personalYears = [...new Set([...basePersonalYears, ...extraPersonalYears])].sort((a, b) => b - a)
 
   // 個人タブ：選択年の月次データ（1〜12月埋め）
   const filteredMemberMonthly = (() => {
@@ -355,6 +361,18 @@ export default function PerformancePage() {
     setTab(t)
   }
 
+  const handleAddYear = () => {
+    const y = parseInt(newYearInput)
+    if (!y || y < 2000 || y > 2100) return
+    if (personalYears.includes(y)) { setShowAddYear(false); setNewYearInput(''); return }
+    const updated = [...extraPersonalYears, y]
+    setExtraPersonalYears(updated)
+    localStorage.setItem('extraPersonalYears', JSON.stringify(updated))
+    setSelectedPersonalYear(y)
+    setShowAddYear(false)
+    setNewYearInput('')
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-purple-500 rounded-2xl px-6 py-5 shadow-md text-white">
@@ -389,7 +407,7 @@ export default function PerformancePage() {
 
       {/* 個人タブ：年選択バー（名前選択後に表示） */}
       {tab === 'personal' && selectedName && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 items-center">
           {personalYears.map((y) => (
             <button key={y} onClick={() => setSelectedPersonalYear(y)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
@@ -397,6 +415,32 @@ export default function PerformancePage() {
               {y}年
             </button>
           ))}
+          {showAddYear ? (
+            <div className="flex items-center gap-1 shrink-0">
+              <input
+                type="number"
+                value={newYearInput}
+                onChange={(e) => setNewYearInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddYear(); if (e.key === 'Escape') { setShowAddYear(false); setNewYearInput('') } }}
+                placeholder="年を入力"
+                autoFocus
+                className="w-24 text-sm px-2 py-1.5 border border-violet-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+              />
+              <button onClick={handleAddYear}
+                className="px-3 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg hover:bg-violet-600 transition">
+                追加
+              </button>
+              <button onClick={() => { setShowAddYear(false); setNewYearInput('') }}
+                className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setShowAddYear(true)}
+              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-white text-gray-400 ring-1 ring-gray-200 hover:text-violet-500 hover:bg-violet-50 transition text-lg font-bold">
+              +
+            </button>
+          )}
         </div>
       )}
 
