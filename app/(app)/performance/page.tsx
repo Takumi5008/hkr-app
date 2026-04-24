@@ -122,14 +122,15 @@ export default function PerformancePage() {
 
   const filteredRecords = selectedName ? records.filter((r) => r.name === selectedName) : records
 
-  // 月次データからメンバーの全期間統計を計算
-  const monthsWithActivation = memberMonthly.filter((r) => r.total_activation > 0)
-  const monthsWithCancel = memberMonthly.filter((r) => r.total_cancel > 0)
-  const monthsWithWork = memberMonthly.filter((r) => r.work_days > 0)
+  // 選択年の月次データでメンバー統計を計算
+  const yearMonthly = memberMonthly.filter((r) => r.year === selectedPersonalYear)
+  const monthsWithActivation = yearMonthly.filter((r) => r.total_activation > 0)
+  const monthsWithCancel = yearMonthly.filter((r) => r.total_cancel > 0)
+  const monthsWithWork = yearMonthly.filter((r) => r.work_days > 0)
   const allMonthsTotal = {
-    activation: memberMonthly.reduce((s, r) => s + r.total_activation, 0),
-    cancel: memberMonthly.reduce((s, r) => s + r.total_cancel, 0),
-    workDays: memberMonthly.reduce((s, r) => s + r.work_days, 0),
+    activation: yearMonthly.reduce((s, r) => s + r.total_activation, 0),
+    cancel: yearMonthly.reduce((s, r) => s + r.total_cancel, 0),
+    workDays: yearMonthly.reduce((s, r) => s + r.work_days, 0),
   }
   const memberAvg = {
     activation: monthsWithActivation.length > 0
@@ -139,7 +140,7 @@ export default function PerformancePage() {
     workDays: monthsWithWork.length > 0
       ? Math.round(allMonthsTotal.workDays / monthsWithWork.length) : 0,
   }
-  const hasMonthlyData = memberMonthly.length > 0
+  const hasMonthlyData = yearMonthly.length > 0
 
   // 個人タブ：年一覧（2022〜当年）
   const currentYear = new Date().getFullYear()
