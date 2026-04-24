@@ -145,6 +145,7 @@ async function initDb() {
       UNIQUE(member_name, year, month)
     );
     ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_days INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS monthly_team_stats (
       id           SERIAL PRIMARY KEY,
       year         INTEGER NOT NULL,
@@ -189,6 +190,7 @@ async function initDb() {
       day_before_construction TEXT NOT NULL DEFAULT '',
       construction_date     TEXT NOT NULL DEFAULT '',
       day_before_delivery   TEXT NOT NULL DEFAULT '',
+      delivery_date         TEXT NOT NULL DEFAULT '',
       week_after_delivery   TEXT NOT NULL DEFAULT '',
       activation            TEXT NOT NULL DEFAULT '',
       created_at            TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')

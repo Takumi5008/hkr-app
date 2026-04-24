@@ -19,6 +19,7 @@ type ActivationRecord = {
   day_before_construction: string
   construction_date: string
   day_before_delivery: string
+  delivery_date: string
   week_after_delivery: string
   activation: string
 }
@@ -26,7 +27,7 @@ type ActivationRecord = {
 const emptyRecord = {
   name: '', date: '', line: '', cancel: '', neg_apply: '', neg_cancel: '', fm: '',
   week_after: '', day_before_construction: '', construction_date: '',
-  day_before_delivery: '', week_after_delivery: '', activation: '',
+  day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
 }
 
 const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyRecord; label: string }[]> = {
@@ -52,6 +53,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
     { key: 'day_before_delivery', label: '受け取り日前日' },
+    { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
   ],
@@ -151,7 +153,7 @@ export default function ActivationPage() {
       neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
       week_after: rec.week_after, day_before_construction: rec.day_before_construction,
       construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
-      week_after_delivery: rec.week_after_delivery, activation: rec.activation,
+      delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery, activation: rec.activation,
     })
   }
 

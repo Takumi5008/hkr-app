@@ -36,18 +36,18 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const { year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
-    week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation } = body
+    week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
   const result = await dbRun(
     `INSERT INTO activation_records
      (user_id, year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
-      week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+      week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      RETURNING id`,
     [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '',
      neg_apply ?? '', neg_cancel ?? '', fm ?? '', week_after ?? '',
      day_before_construction ?? '', construction_date ?? '',
-     day_before_delivery ?? '', week_after_delivery ?? '', activation ?? '']
+     day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '']
   )
   return NextResponse.json({ id: result.id })
 }
@@ -58,17 +58,17 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json()
   const { id, name, date, line, cancel, neg_apply, neg_cancel, fm,
-    week_after, day_before_construction, construction_date, day_before_delivery, week_after_delivery, activation } = body
+    week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
   await dbRun(
     `UPDATE activation_records SET
      name=$1, date=$2, line=$3, cancel=$4, neg_apply=$5, neg_cancel=$6, fm=$7,
      week_after=$8, day_before_construction=$9, construction_date=$10,
-     day_before_delivery=$11, week_after_delivery=$12, activation=$13
-     WHERE id=$14 AND user_id=$15`,
+     day_before_delivery=$11, delivery_date=$12, week_after_delivery=$13, activation=$14
+     WHERE id=$15 AND user_id=$16`,
     [name ?? '', date ?? '', line ?? '', cancel ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
      week_after ?? '', day_before_construction ?? '', construction_date ?? '',
-     day_before_delivery ?? '', week_after_delivery ?? '', activation ?? '',
+     day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
      id, session.userId]
   )
   return NextResponse.json({ ok: true })
