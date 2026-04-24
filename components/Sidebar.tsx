@@ -55,7 +55,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
   const NavContent = () => (
     <>
-      <nav className="flex-1 px-3 py-4 space-y-0.5">
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto min-h-0">
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
@@ -127,7 +127,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   return (
     <>
       {/* PC サイドバー */}
-      <aside className="hidden sm:flex w-60 bg-gradient-to-b from-indigo-950 to-indigo-900 flex-col h-full fixed left-0 top-0 z-10 shadow-xl">
+      <aside className="hidden sm:flex w-60 bg-gradient-to-b from-indigo-950 to-indigo-900 flex-col h-full fixed left-0 top-0 z-10 shadow-xl overflow-hidden">
         <div className="px-6 py-5 border-b border-indigo-800/60">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
@@ -163,7 +163,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
       {mobileOpen && (
         <div className="sm:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-72 bg-gradient-to-b from-indigo-950 to-indigo-900 h-full flex flex-col shadow-2xl">
+          <div className="relative w-72 bg-gradient-to-b from-indigo-950 to-indigo-900 h-full flex flex-col shadow-2xl overflow-hidden">
             <div className="flex items-center justify-between px-6 py-5 border-b border-indigo-800/60">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
