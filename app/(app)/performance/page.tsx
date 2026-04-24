@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Save } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown } from 'lucide-react'
 
 type MemberPerformance = {
   id: number
@@ -73,7 +73,9 @@ export default function PerformancePage() {
   const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '' })
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
-  const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete'>('view')
+  const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete' | 'sort'>('view')
+  const [sortedRecords, setSortedRecords] = useState<MemberPerformance[]>([])
+  const [savingOrder, setSavingOrder] = useState(false)
   const [extraPersonalYears, setExtraPersonalYears] = useState<number[]>([])
   const [showAddYear, setShowAddYear] = useState(false)
   const [newYearInput, setNewYearInput] = useState('')
@@ -91,6 +93,8 @@ export default function PerformancePage() {
     const savedTeam = localStorage.getItem('extraTeamYears')
     if (savedTeam) setExtraTeamYears(JSON.parse(savedTeam))
   }, [])
+
+  useEffect(() => { setSortedRecords(records) }, [records])
 
   // 名前が変わったら全期間の月次データを取得（年は関係なく全件）
   useEffect(() => {
@@ -369,6 +373,31 @@ export default function PerformancePage() {
     setTab(t)
   }
 
+  const moveMember = (idx: number, dir: -1 | 1) => {
+    const next = idx + dir
+    if (next < 0 || next >= sortedRecords.length) return
+    const arr = [...sortedRecords]
+    ;[arr[idx], arr[next]] = [arr[next], arr[idx]]
+    setSortedRecords(arr)
+  }
+
+  const handleSaveOrder = async () => {
+    setSavingOrder(true)
+    await Promise.all(
+      sortedRecords.map((r, i) =>
+        fetch(`/api/performance/${r.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sortOrder: i }),
+        })
+      )
+    )
+    const rows = await fetch('/api/performance').then((r) => r.json())
+    setRecords(rows)
+    setSavingOrder(false)
+    setPersonalTab('view')
+  }
+
   const handleAddMember = async () => {
     const name = newMemberInput.trim()
     if (!name) return
@@ -557,11 +586,11 @@ export default function PerformancePage() {
           {/* サブタブ：一覧 / 追加 / 削除 */}
           {role === 'manager' && personalTab !== 'add' && (
             <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-              {(['view', 'delete'] as const).map((t) => (
-                <button key={t} onClick={() => { setPersonalTab(t); setEditId(null) }}
+              {(['view', 'sort', 'delete'] as const).map((t) => (
+                <button key={t} onClick={() => { setPersonalTab(t); setEditId(null); if (t === 'sort') setSortedRecords(records) }}
                   className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
                     ${personalTab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-                  {t === 'view' ? '一覧' : '削除'}
+                  {t === 'view' ? '一覧' : t === 'sort' ? '並び替え' : '削除'}
                 </button>
               ))}
             </div>
@@ -643,6 +672,46 @@ export default function PerformancePage() {
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* 並び替えタブ */}
+          {personalTab === 'sort' && role === 'manager' && (
+            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+              {sortedRecords.length === 0 ? (
+                <p className="text-sm text-gray-300 text-center py-12">データがありません</p>
+              ) : (
+                <>
+                  <div className="divide-y divide-gray-50">
+                    {sortedRecords.map((r, idx) => (
+                      <div key={r.id} className="flex items-center px-4 py-2.5 gap-3">
+                        <div className="flex flex-col gap-0.5">
+                          <button onClick={() => moveMember(idx, -1)} disabled={idx === 0}
+                            className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-violet-500 hover:bg-violet-50 disabled:opacity-20 transition">
+                            <ChevronUp size={14} />
+                          </button>
+                          <button onClick={() => moveMember(idx, 1)} disabled={idx === sortedRecords.length - 1}
+                            className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-violet-500 hover:bg-violet-50 disabled:opacity-20 transition">
+                            <ChevronDown size={14} />
+                          </button>
+                        </div>
+                        <span className="text-xs text-gray-300 w-5 text-center">{idx + 1}</span>
+                        <span className="text-sm font-semibold text-gray-800">{r.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+                    <button onClick={() => setPersonalTab('view')}
+                      className="flex-1 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-xl hover:bg-gray-50 transition">
+                      キャンセル
+                    </button>
+                    <button onClick={handleSaveOrder} disabled={savingOrder}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-violet-500 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition">
+                      <Save size={14} />{savingOrder ? '保存中...' : '保存'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
