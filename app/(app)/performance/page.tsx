@@ -77,6 +77,9 @@ export default function PerformancePage() {
   const [extraPersonalYears, setExtraPersonalYears] = useState<number[]>([])
   const [showAddYear, setShowAddYear] = useState(false)
   const [newYearInput, setNewYearInput] = useState('')
+  const [showAddMember, setShowAddMember] = useState(false)
+  const [newMemberInput, setNewMemberInput] = useState('')
+  const [addingMember, setAddingMember] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
@@ -361,6 +364,26 @@ export default function PerformancePage() {
     setTab(t)
   }
 
+  const handleAddMember = async () => {
+    const name = newMemberInput.trim()
+    if (!name) return
+    setAddingMember(true)
+    const res = await fetch('/api/performance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, activationTarget: 0, cancelTarget: 0, workDaysTarget: 0, periodStart: '', periodEnd: '', totalWork: 0, totalActivation: 0, totalCancel: 0, note: '', sortOrder: 0 }),
+    })
+    if (res.ok) {
+      const created = await res.json()
+      setRecords((prev) => [...prev, created].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id))
+      setSelectedName(created.name)
+      setPersonalTab('view')
+    }
+    setAddingMember(false)
+    setShowAddMember(false)
+    setNewMemberInput('')
+  }
+
   const handleAddYear = () => {
     const y = parseInt(newYearInput)
     if (!y || y < 2000 || y > 2100) return
@@ -403,10 +426,32 @@ export default function PerformancePage() {
             </button>
           ))}
           {role === 'manager' && (
-            <button onClick={openAdd}
-              className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-white text-gray-400 ring-1 ring-gray-200 hover:text-violet-500 hover:bg-violet-50 transition text-lg font-bold">
-              +
-            </button>
+            showAddMember ? (
+              <div className="flex items-center gap-1 shrink-0">
+                <input
+                  type="text"
+                  value={newMemberInput}
+                  onChange={(e) => setNewMemberInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddMember(); if (e.key === 'Escape') { setShowAddMember(false); setNewMemberInput('') } }}
+                  placeholder="名前を入力"
+                  autoFocus
+                  className="w-28 text-sm px-2 py-1.5 border border-violet-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+                <button onClick={handleAddMember} disabled={addingMember || !newMemberInput.trim()}
+                  className="px-3 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg hover:bg-violet-600 transition disabled:opacity-50">
+                  {addingMember ? '...' : '追加'}
+                </button>
+                <button onClick={() => { setShowAddMember(false); setNewMemberInput('') }}
+                  className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAddMember(true)}
+                className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-white text-gray-400 ring-1 ring-gray-200 hover:text-violet-500 hover:bg-violet-50 transition text-lg font-bold">
+                +
+              </button>
+            )
           )}
         </div>
       )}
