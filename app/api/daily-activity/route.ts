@@ -11,9 +11,12 @@ export async function GET(req: NextRequest) {
   const month = searchParams.get('month')
   if (!year || !month) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
 
+  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const targetUserId = isManager && searchParams.get('userId') ? searchParams.get('userId') : session.userId
+
   const rows = await dbQuery(
     `SELECT * FROM daily_activity WHERE user_id=$1 AND date LIKE $2 ORDER BY date ASC`,
-    [session.userId, `${year}-${String(month).padStart(2, '0')}-%`]
+    [targetUserId, `${year}-${String(month).padStart(2, '0')}-%`]
   )
   return NextResponse.json(rows)
 }
