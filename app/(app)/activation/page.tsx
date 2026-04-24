@@ -291,21 +291,6 @@ export default function ActivationPage() {
         </div>
       )}
 
-      {/* 通知設定ボタン */}
-      <div className="flex justify-end mb-3">
-        {notifEnabled ? (
-          <button onClick={disableNotifications}
-            className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 transition">
-            🔔 通知オン（タップで解除）
-          </button>
-        ) : (
-          <button onClick={enableNotifications}
-            className="text-xs px-3 py-1.5 rounded-lg bg-violet-100 text-violet-600 hover:bg-violet-200 transition font-medium">
-            🔔 20時通知を有効にする
-          </button>
-        )}
-      </div>
-
       {/* 月選択 */}
       <div className="flex items-center justify-center gap-4 mb-5">
         <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-violet-50 text-violet-500 font-bold transition flex items-center justify-center">
