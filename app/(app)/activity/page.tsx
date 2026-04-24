@@ -56,6 +56,7 @@ export default function ActivityPage() {
   const [editingDay, setEditingDay] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
+  const [tab, setTab] = useState<'activity' | 'conversion'>('activity')
 
   useEffect(() => {
     fetch(`/api/daily-activity?year=${year}&month=${month}`)
@@ -117,6 +118,8 @@ export default function ActivityPage() {
   const f = (key: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((p) => ({ ...p, [key]: e.target.value }))
 
+  const daysWithData = records.filter((r) => r.work_hours !== '').length
+
   const totals = {
     pin_count:      records.reduce((s, r) => s + r.pin_count, 0),
     pingpong_count: records.reduce((s, r) => s + r.pingpong_count, 0),
@@ -148,6 +151,21 @@ export default function ActivityPage() {
         <p className="text-sm text-teal-100 mt-0.5">日別の行動記録</p>
       </div>
 
+      {/* タブ */}
+      <div className="flex gap-2 mb-5">
+        {(['activity', 'conversion'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === t ? 'bg-teal-500 text-white shadow' : 'bg-white text-gray-500 hover:bg-teal-50 shadow-sm'
+            }`}
+          >
+            {t === 'activity' ? '行動表' : '転換率'}
+          </button>
+        ))}
+      </div>
+
       {/* 月選択 */}
       <div className="flex items-center justify-center gap-4 mb-5">
         <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-teal-50 text-teal-500 font-bold transition flex items-center justify-center">
@@ -159,7 +177,30 @@ export default function ActivityPage() {
         </button>
       </div>
 
-      {/* テーブル */}
+      {tab === 'conversion' && (() => {
+        const face = totals.face_other + totals.face_unused
+        const ratio = (num: number, den: number) =>
+          den > 0 ? `${Math.round(num / den * 1000) / 10}%` : '-'
+        const convItems = [
+          { label: 'ピンポン数 → 対面', value: ratio(face, totals.pingpong_count) },
+          { label: '対面 → シート',     value: ratio(totals.hearing_sheet, face) },
+          { label: 'シート → 同意書',   value: ratio(totals.consent_form, totals.hearing_sheet) },
+          { label: '同意書 → 件数',     value: ratio(totals.wimax + totals.sonet, totals.consent_form) },
+        ]
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {convItems.map(({ label, value }) => (
+              <div key={label} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 flex flex-col items-center gap-2">
+                <p className="text-xs text-gray-500 text-center">{label}</p>
+                <p className="text-2xl font-bold text-teal-600">{value}</p>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
+      {tab === 'activity' && (
+      <>{/* テーブル */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="text-xs border-collapse" style={{ minWidth: '700px', width: '100%' }}>
@@ -264,10 +305,28 @@ export default function ActivityPage() {
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.cancel)}</td>
                 <td className="border border-gray-100" />
               </tr>
+
+              {/* 平均行 */}
+              <tr className="bg-indigo-50/40">
+                <td className="border border-gray-100 px-2 py-2.5 text-center font-bold text-indigo-600 sticky left-0 bg-indigo-50/40">平均</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-gray-300 text-xs">-</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.pin_count / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.pingpong_count / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.intercom_count / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.face_other / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.face_unused / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.hearing_sheet / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.consent_form / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.wimax / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.sonet / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.cancel / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100" />
+              </tr>
             </tbody>
           </table>
         </div>
       </div>
+      </>)}
     </div>
   )
 }
