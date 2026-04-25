@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { dbQuery } from '@/lib/db'
+import { getSession } from '@/lib/session'
 
 // JST今日の日付を複数フォーマットで返す
 function todayFormats(): string[] {
@@ -30,9 +31,11 @@ const CHECK_FIELDS = [
 ]
 
 export async function GET(req: NextRequest) {
-  // Vercel Cron secret check
+  // Vercel Cron secret check or manager session
   const authHeader = req.headers.get('authorization')
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const session = await getSession()
+  const isManager = session.role === 'manager'
+  if (!isManager && process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: '認証エラー' }, { status: 401 })
   }
 

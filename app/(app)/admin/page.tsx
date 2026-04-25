@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil } from 'lucide-react'
+import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 
 type Role = 'member' | 'viewer' | 'manager'
@@ -38,6 +38,8 @@ export default function AdminPage() {
   const [newProduct, setNewProduct] = useState('')
   const [productError, setProductError] = useState('')
   const [addingProduct, setAddingProduct] = useState(false)
+  const [pushSending, setPushSending] = useState(false)
+  const [pushResult, setPushResult] = useState<string | null>(null)
 
   // Shifts
   const today = new Date()
@@ -185,6 +187,19 @@ export default function AdminPage() {
     setProducts((prev) => prev.filter((p) => p.name !== name))
   }
 
+  async function handleSendTestPush() {
+    setPushSending(true)
+    setPushResult(null)
+    const res = await fetch('/api/push/cron', { headers: { authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}` } })
+    const data = await res.json()
+    if (data.ok) {
+      setPushResult(`送信完了：${data.sent}件送信、${data.checked}人対象`)
+    } else {
+      setPushResult(`エラー：${data.error ?? '不明'}`)
+    }
+    setPushSending(false)
+  }
+
   async function handleRoleChange(id: number, role: Role) {
     setSaving(id)
     await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, role }) })
@@ -291,6 +306,16 @@ export default function AdminPage() {
       {/* ===== ユーザー・商材タブ ===== */}
       {adminTab === 'users' && (
         <>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><Bell size={16} className="text-amber-500" />開通フォロー通知を今すぐ送信</h3>
+            <p className="text-xs text-gray-400 mb-4">通知が届くか確認したいときに使えます。今日の未確認フォロー項目がある場合のみ送信されます。</p>
+            <button onClick={handleSendTestPush} disabled={pushSending}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors">
+              <Bell size={15} />{pushSending ? '送信中...' : '今すぐ通知を送る'}
+            </button>
+            {pushResult && <p className="mt-3 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{pushResult}</p>}
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
             <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><Link2 size={16} className="text-blue-600" />招待リンクを発行する</h3>
             <p className="text-xs text-gray-400 mb-4">有効期限7日間・1回限り使用可能です。</p>
