@@ -195,11 +195,13 @@ export default function AdminPage() {
       const timer = setTimeout(() => controller.abort(), 15000)
       const res = await fetch('/api/push/cron', { signal: controller.signal })
       clearTimeout(timer)
-      const data = await res.json()
+      const text = await res.text()
+      if (!text) { setPushResult(`エラー：空のレスポンス（ステータス ${res.status}）`); setPushSending(false); return }
+      const data = JSON.parse(text)
       if (data.ok) {
         setPushResult(`送信完了：${data.sent}件送信、${data.checked}人対象`)
       } else {
-        setPushResult(`エラー：${data.error ?? '不明'}`)
+        setPushResult(`エラー：${data.error ?? '不明'}（ステータス ${res.status}）`)
       }
     } catch (e: any) {
       setPushResult(`エラー：${e?.message === 'This operation was aborted' ? 'タイムアウト（15秒）' : e?.message ?? '不明'}`)
