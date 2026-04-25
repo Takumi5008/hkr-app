@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 
 type Role = 'member' | 'viewer' | 'manager'
@@ -59,6 +59,15 @@ export default function AdminPage() {
   const [mtgMonth, setMtgMonth] = useState(today.getMonth() + 1)
   const [mtgDeadlineAt, setMtgDeadlineAt] = useState('')
   const [mtgDeadlineSaved, setMtgDeadlineSaved] = useState(false)
+  const [mtgEditCell, setMtgEditCell] = useState<{ memberId: number; date: string } | null>(null)
+  const [mtgEditSaving, setMtgEditSaving] = useState(false)
+
+  // Shift edit
+  const [shiftEditUserId, setShiftEditUserId] = useState<number | null>(null)
+  const [shiftEditName, setShiftEditName] = useState('')
+  const [shiftEditDates, setShiftEditDates] = useState<{ day: number; type: string }[]>([])
+  const [shiftEditLoading, setShiftEditLoading] = useState(false)
+  const [shiftEditSaving, setShiftEditSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setCurrentUserId(d.id))
@@ -182,6 +191,64 @@ export default function AdminPage() {
     setUsers((prev) => prev.map((u) => u.id === id ? { ...u, role } : u))
     setSaved(id); setSaving(null)
     setTimeout(() => setSaved(null), 2000)
+  }
+
+  async function handleShiftEditOpen(userId: number, name: string) {
+    setShiftEditUserId(userId)
+    setShiftEditName(name)
+    setShiftEditLoading(true)
+    const res = await fetch(`/api/shifts/member/${userId}?year=${year}&month=${month}`)
+    const data = await res.json()
+    const raw: any[] = data.workDates ?? []
+    const normalized: { day: number; type: string }[] =
+      raw.length === 0 ? [] :
+      typeof raw[0] === 'number' ? raw.map((d: number) => ({ day: d, type: 'full' })) :
+      raw
+    setShiftEditDates(normalized)
+    setShiftEditLoading(false)
+  }
+
+  function handleShiftDayToggle(day: number) {
+    setShiftEditDates((prev) => {
+      const existing = prev.find((e) => e.day === day)
+      if (!existing) return [...prev, { day, type: 'full' }]
+      if (existing.type === 'full') return prev.map((e) => e.day === day ? { ...e, type: 'am' } : e)
+      if (existing.type === 'am') return prev.map((e) => e.day === day ? { ...e, type: 'pm' } : e)
+      return prev.filter((e) => e.day !== day)
+    })
+  }
+
+  async function handleShiftEditSave() {
+    if (shiftEditUserId === null) return
+    setShiftEditSaving(true)
+    await fetch(`/api/shifts/member/${shiftEditUserId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year, month, workDates: shiftEditDates, submitted: true }),
+    })
+    // Update local shifts state
+    setShifts((prev) => prev.map((m) =>
+      m.id === shiftEditUserId ? { ...m, workDates: shiftEditDates, submitted: true } : m
+    ))
+    setShiftEditSaving(false)
+    setShiftEditUserId(null)
+  }
+
+  async function handleMtgEdit(memberId: number, date: string, status: 'present' | 'absent' | 'late') {
+    setMtgEditSaving(true)
+    await fetch(`/api/mtg/admin/${memberId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date, status, reason: '', lateTime: '' }),
+    })
+    setMtgData((prev) => {
+      if (!prev) return prev
+      const newMap = { ...prev.map }
+      newMap[memberId] = { ...newMap[memberId], [date]: { status, late_time: '' } }
+      return { ...prev, map: newMap }
+    })
+    setMtgEditSaving(false)
+    setMtgEditCell(null)
   }
 
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -357,7 +424,15 @@ export default function AdminPage() {
                   <tbody>
                     {[...shifts].sort((a, b) => (b.submitted ? 1 : 0) - (a.submitted ? 1 : 0)).map((member, idx) => (
                       <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                        <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">{member.name}</td>
+                        <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">
+                          <div className="flex items-center gap-1.5">
+                            {member.name}
+                            <button onClick={() => handleShiftEditOpen(member.id, member.name)}
+                              className="text-gray-300 hover:text-indigo-500 transition-colors shrink-0" title="シフトを修正">
+                              <Pencil size={12} />
+                            </button>
+                          </div>
+                        </td>
                         <td className="border border-gray-100 px-2 py-2 text-center">
                           {member.submitted
                             ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-bold">✓</span>
@@ -403,6 +478,55 @@ export default function AdminPage() {
         </>
       )}
 
+      {/* シフト編集モーダル */}
+      {shiftEditUserId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShiftEditUserId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900">{shiftEditName} のシフト修正</h3>
+              <button onClick={() => setShiftEditUserId(null)} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">タップで切り替え：● 全日 → 前 午前 → 後 午後 → なし</p>
+            {shiftEditLoading ? (
+              <p className="text-center text-gray-400 text-sm py-6">読み込み中...</p>
+            ) : (
+              <div className="grid grid-cols-7 gap-1 mb-5">
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
+                  const dow = new Date(year, month - 1, d).getDay()
+                  const entry = shiftEditDates.find((e) => e.day === d)
+                  const type = entry?.type ?? null
+                  return (
+                    <button key={d} onClick={() => handleShiftDayToggle(d)}
+                      className={`flex flex-col items-center py-1.5 rounded-lg text-xs font-bold transition-colors border
+                        ${type === 'full' ? 'bg-indigo-600 text-white border-indigo-600' :
+                          type === 'am' ? 'bg-sky-500 text-white border-sky-500' :
+                          type === 'pm' ? 'bg-amber-500 text-white border-amber-500' :
+                          'bg-white text-gray-400 border-gray-200 hover:border-indigo-300'}
+                        ${dow === 0 ? 'opacity-60' : ''}`}>
+                      <span className="text-[10px] font-normal leading-none mb-0.5">{['日', '月', '火', '水', '木', '金', '土'][dow]}</span>
+                      <span>{d}</span>
+                      <span className="text-[9px] leading-none mt-0.5">
+                        {type === 'full' ? '●' : type === 'am' ? '前' : type === 'pm' ? '後' : ''}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShiftEditUserId(null)}
+                className="px-4 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={handleShiftEditSave} disabled={shiftEditSaving || shiftEditLoading}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                {shiftEditSaving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ===== MTG管理タブ ===== */}
       {adminTab === 'mtg' && (
         <>
@@ -431,8 +555,8 @@ export default function AdminPage() {
           </div>
 
           {/* MTG出欠一覧 */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4 text-sm">MTG出欠一覧</h3>
+          <div className="bg-white rounded-xl border border-gray-200 p-5" onClick={(e) => { if (mtgEditCell) setMtgEditCell(null) }}>
+            <h3 className="font-semibold text-gray-900 mb-4 text-sm">MTG出欠一覧 <span className="text-xs font-normal text-gray-400">（セルをクリックして出欠を変更）</span></h3>
             {!mtgData ? (
               <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
             ) : mtgData.dates.length === 0 ? (
@@ -460,12 +584,38 @@ export default function AdminPage() {
                         <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">{member.name}</td>
                         {mtgData.dates.map((date) => {
                           const rec = mtgData.map[member.id]?.[date]
-                          if (!rec) return <td key={date} className="border border-gray-100 px-2 py-2 text-center text-gray-200">-</td>
-                          const { text, cls } = statusLabel(rec.status)
+                          const isEditing = mtgEditCell?.memberId === member.id && mtgEditCell?.date === date
                           return (
-                            <td key={date} className="border border-gray-100 px-2 py-2 text-center">
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{text}</span>
-                              {rec.late_time && <p className="text-gray-400 mt-0.5">{rec.late_time}</p>}
+                            <td key={date} className="border border-gray-100 px-2 py-2 text-center relative">
+                              <button
+                                onClick={() => setMtgEditCell(isEditing ? null : { memberId: member.id, date })}
+                                className="w-full flex flex-col items-center gap-0.5 group"
+                              >
+                                {rec ? (
+                                  <>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full group-hover:opacity-80 transition-opacity ${statusLabel(rec.status).cls}`}>
+                                      {statusLabel(rec.status).text}
+                                    </span>
+                                    {rec.late_time && <span className="text-gray-400 text-[10px]">{rec.late_time}</span>}
+                                  </>
+                                ) : (
+                                  <span className="text-gray-200 group-hover:text-indigo-300 transition-colors">-</span>
+                                )}
+                              </button>
+                              {isEditing && (
+                                <div className="absolute z-30 top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 min-w-16">
+                                  {(['present', 'absent', 'late'] as const).map((s) => {
+                                    const { text, cls } = statusLabel(s)
+                                    return (
+                                      <button key={s} onClick={() => handleMtgEdit(member.id, date, s)}
+                                        disabled={mtgEditSaving}
+                                        className={`text-xs font-semibold px-3 py-1 rounded-lg transition-opacity disabled:opacity-50 ${cls} hover:opacity-80`}>
+                                        {text}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
                             </td>
                           )
                         })}
