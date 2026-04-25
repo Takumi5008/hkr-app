@@ -201,7 +201,7 @@ export default function AdminPage() {
       if (data.ok) {
         setPushResult(`送信完了：${data.sent}件送信、${data.checked}人対象`)
       } else {
-        setPushResult(`エラー：${data.error ?? '不明'}（ステータス ${res.status}）`)
+        setPushResult(JSON.stringify(data))
       }
     } catch (e: any) {
       setPushResult(`エラー：${e?.message === 'This operation was aborted' ? 'タイムアウト（15秒）' : e?.message ?? '不明'}`)
