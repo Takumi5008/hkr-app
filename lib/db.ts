@@ -216,6 +216,8 @@ async function initDb() {
       deadline_at TEXT    NOT NULL,
       UNIQUE(year, month)
     );
+    ALTER TABLE shift_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
