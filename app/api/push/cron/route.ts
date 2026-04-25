@@ -82,10 +82,13 @@ export async function GET(req: NextRequest) {
     })
 
     try {
-      await webpush.sendNotification(JSON.parse(subs[0].subscription), payload)
+      await Promise.race([
+        webpush.sendNotification(JSON.parse(subs[0].subscription), payload),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+      ])
       sent++
-    } catch (e) {
-      // 期限切れのサブスクリプションは削除
+    } catch (e: any) {
+      // 期限切れまたはタイムアウトのサブスクリプションは削除
       await dbQuery(`DELETE FROM push_subscriptions WHERE user_id = $1`, [userId])
     }
   }

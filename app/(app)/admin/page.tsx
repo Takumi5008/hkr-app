@@ -190,12 +190,19 @@ export default function AdminPage() {
   async function handleSendTestPush() {
     setPushSending(true)
     setPushResult(null)
-    const res = await fetch('/api/push/cron', { headers: { authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ''}` } })
-    const data = await res.json()
-    if (data.ok) {
-      setPushResult(`送信完了：${data.sent}件送信、${data.checked}人対象`)
-    } else {
-      setPushResult(`エラー：${data.error ?? '不明'}`)
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 15000)
+      const res = await fetch('/api/push/cron', { signal: controller.signal })
+      clearTimeout(timer)
+      const data = await res.json()
+      if (data.ok) {
+        setPushResult(`送信完了：${data.sent}件送信、${data.checked}人対象`)
+      } else {
+        setPushResult(`エラー：${data.error ?? '不明'}`)
+      }
+    } catch (e: any) {
+      setPushResult(`エラー：${e?.message === 'This operation was aborted' ? 'タイムアウト（15秒）' : e?.message ?? '不明'}`)
     }
     setPushSending(false)
   }
