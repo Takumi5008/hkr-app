@@ -60,10 +60,26 @@ export default function Sidebar({ name, role }: SidebarProps) {
         await fetch('/api/push/subscribe', { method: 'DELETE' })
         setPushSubscribed(false)
       } else {
+        // iOSはPWA（ホーム画面追加）モードでないと通知が使えない
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true
+        if (!isStandalone) {
+          alert('通知を使うには、Safariの共有ボタン →「ホーム画面に追加」してから、ホーム画面のアイコンで開いてください。')
+          setPushLoading(false)
+          return
+        }
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+          alert('このブラウザはプッシュ通知に対応していません')
+          setPushLoading(false)
+          return
+        }
         const reg = await navigator.serviceWorker.register('/sw.js')
         await navigator.serviceWorker.ready
         const permission = await Notification.requestPermission()
-        if (permission !== 'granted') { alert('通知を許可してください'); setPushLoading(false); return }
+        if (permission !== 'granted') {
+          alert(`通知が許可されませんでした（状態: ${permission}）\n設定アプリ → Safari → 通知 から許可してください`)
+          setPushLoading(false)
+          return
+        }
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
@@ -75,8 +91,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
         })
         setPushSubscribed(true)
       }
-    } catch (e) {
-      alert('通知の設定に失敗しました')
+    } catch (e: any) {
+      alert(`エラー: ${e?.message ?? '不明なエラー'}`)
     }
     setPushLoading(false)
   }
