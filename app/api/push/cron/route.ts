@@ -51,11 +51,8 @@ export async function GET(req: NextRequest) {
   if (!rawPublic || !rawPrivate) {
     return NextResponse.json({ error: 'VAPID keys not configured' }, { status: 500 })
   }
-  // =・空白・改行・引用符を除去してURLセーフbase64に正規化
   const vapidPublic = rawPublic.trim().replace(/[="'\s]/g, '')
   const vapidPrivate = rawPrivate.trim().replace(/[="'\s]/g, '')
-
-  return NextResponse.json({ debug: { pubLen: vapidPublic.length, pubStart: vapidPublic.slice(0, 10), pubEnd: vapidPublic.slice(-5) } })
 
   webpush.setVapidDetails(
     'mailto:admin@example.com',
