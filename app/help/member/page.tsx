@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 export default function MemberHelpPage() {
   return (
     <div className="bg-white min-h-screen font-sans">
@@ -65,6 +67,7 @@ export default function MemberHelpPage() {
             { label: '進捗状況', desc: '目標に対する達成率をグラフで確認' },
             { label: 'タスク', desc: '本日のタスクや期限が近いものを表示' },
           ]} />
+          <Screenshot src="/screenshots/dashboard.png" caption="ダッシュボード画面" />
         </Section>
 
         <Section num="03" title="HKR入力" color="violet">
@@ -78,6 +81,7 @@ export default function MemberHelpPage() {
             '「保存」ボタンをタップして完了',
           ]} />
           <Tip>入力した数値は翌月以降も累積で確認できます。</Tip>
+          <Screenshot src="/screenshots/input.png" caption="HKR入力画面" />
         </Section>
 
         <Section num="04" title="行動表" color="sky">
@@ -96,6 +100,7 @@ export default function MemberHelpPage() {
             { label: '対面', desc: '実際に話せた件数' },
             { label: 'WiMAX・So-net', desc: '商品ごとの成約数' },
           ]} />
+          <Screenshot src="/screenshots/activity.png" caption="行動表画面" />
         </Section>
 
         <Section num="05" title="開通表" color="amber">
@@ -120,6 +125,7 @@ export default function MemberHelpPage() {
               ))}
             </div>
           </div>
+          <Screenshot src="/screenshots/activation.png" caption="開通表画面" />
         </Section>
 
         <Section num="06" title="シフト入力" color="emerald">
@@ -133,6 +139,7 @@ export default function MemberHelpPage() {
             '「提出する」ボタンをタップして完了',
           ]} />
           <Tip>締切1時間前になると通知が届きます。締切後は提出できません。</Tip>
+          <Screenshot src="/screenshots/shift.png" caption="シフト入力画面" />
         </Section>
 
         <Section num="07" title="MTG出欠" color="rose">
@@ -146,6 +153,7 @@ export default function MemberHelpPage() {
             '遅刻の場合は到着予定時刻も入力',
           ]} />
           <Tip>締切1時間前になると通知が届きます。</Tip>
+          <Screenshot src="/screenshots/mtg.png" caption="MTG出欠画面" />
         </Section>
 
         <Section num="08" title="その他機能" color="purple">
@@ -156,6 +164,14 @@ export default function MemberHelpPage() {
             { label: 'マイ推移', desc: '自分のHKR実績の月別推移グラフを確認できます' },
             { label: '個人進捗', desc: '今月の目標に対する進捗状況を確認できます' },
           ]} />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Screenshot src="/screenshots/tasks.png" caption="タスク管理" />
+            <Screenshot src="/screenshots/trends.png" caption="マイ推移" />
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Screenshot src="/screenshots/schedule.png" caption="スケジュール" />
+            <Screenshot src="/screenshots/memo.png" caption="メモ" />
+          </div>
         </Section>
 
         <Section num="09" title="通知について" color="orange">
@@ -182,6 +198,15 @@ export default function MemberHelpPage() {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
+    </div>
+  )
+}
+
+function Screenshot({ src, caption }: { src: string; caption: string }) {
+  return (
+    <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 shadow-sm print:break-inside-avoid">
+      <Image src={src} alt={caption} width={800} height={500} className="w-full object-cover object-top" style={{ maxHeight: '280px' }} />
+      <p className="text-xs text-gray-500 text-center py-2 bg-gray-50">{caption}</p>
     </div>
   )
 }

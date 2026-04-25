@@ -1,5 +1,7 @@
 'use client'
 
+import Image from 'next/image'
+
 export default function ManagerHelpPage() {
   return (
     <div className="bg-white min-h-screen font-sans">
@@ -75,6 +77,7 @@ export default function ManagerHelpPage() {
             'メンバーがURLを開いて登録する',
           ]} />
           <Tip>招待リンクは有効期限7日間・1回限り使用可能です。</Tip>
+          <Screenshot src="/screenshots/admin.png" caption="管理ページ — ユーザー・商材タブ" />
         </Section>
 
         <Section num="02" title="ロール変更" color="blue">
@@ -129,6 +132,7 @@ export default function ManagerHelpPage() {
             </ol>
           </div>
           <Tip>● 全日 / 前 午前 / 後 午後 の3種類で設定できます。</Tip>
+          <Screenshot src="/screenshots/shift.png" caption="シフト管理画面" />
         </Section>
 
         <Section num="05" title="MTG管理" color="rose">
@@ -156,6 +160,7 @@ export default function ManagerHelpPage() {
               ))}
             </ol>
           </div>
+          <Screenshot src="/screenshots/mtg.png" caption="MTG出欠管理画面" />
         </Section>
 
         <Section num="06" title="個人進捗の確認" color="orange">
@@ -172,6 +177,7 @@ export default function ManagerHelpPage() {
             { label: 'ビハ 〇', desc: '目標より〇件遅れている状態' },
             { label: 'オンタイム', desc: '目標通りに進んでいる状態' },
           ]} />
+          <Screenshot src="/screenshots/progress.png" caption="個人進捗確認画面" />
         </Section>
 
         <Section num="07" title="全員の行動表・転換率" color="sky">
@@ -185,6 +191,7 @@ export default function ManagerHelpPage() {
             '「転換率」タブでピンポン→対面→成約の転換率を確認',
           ]} />
           <Tip>自分のデータを見るときは「自分」を選択してください。</Tip>
+          <Screenshot src="/screenshots/activity.png" caption="行動表・転換率画面" />
         </Section>
 
         <Section num="08" title="全員の開通表" color="amber">
@@ -196,6 +203,7 @@ export default function ManagerHelpPage() {
             '画面上部のメンバー選択から確認したいメンバーを選ぶ',
             '「一覧」タブで全回線の状況を日付順に確認',
           ]} />
+          <Screenshot src="/screenshots/activation.png" caption="開通表画面" />
         </Section>
 
         <Section num="09" title="通知送信" color="purple">
@@ -228,6 +236,15 @@ export default function ManagerHelpPage() {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
+    </div>
+  )
+}
+
+function Screenshot({ src, caption }: { src: string; caption: string }) {
+  return (
+    <div className="mt-4 rounded-xl overflow-hidden border border-gray-200 shadow-sm print:break-inside-avoid">
+      <Image src={src} alt={caption} width={800} height={500} className="w-full object-cover object-top" style={{ maxHeight: '320px' }} />
+      <p className="text-xs text-gray-500 text-center py-2 bg-gray-50">{caption}</p>
     </div>
   )
 }
