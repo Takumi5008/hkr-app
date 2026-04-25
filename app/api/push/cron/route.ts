@@ -31,11 +31,18 @@ const CHECK_FIELDS = [
 ]
 
 export async function GET(req: NextRequest) {
+  try {
   // Vercel Cron secret check or manager session
   const authHeader = req.headers.get('authorization')
-  const session = await getSession()
-  const isManager = session.role === 'manager'
+  let isManager = false
+  try {
+    const session = await getSession()
+    isManager = session.role === 'manager'
+  } catch {}
   if (!isManager && process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: '認証エラー' }, { status: 401 })
+  }
+  if (!isManager && !process.env.CRON_SECRET) {
     return NextResponse.json({ error: '認証エラー' }, { status: 401 })
   }
 
@@ -94,4 +101,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent, checked: notifyMap.size })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? '不明なエラー' }, { status: 500 })
+  }
 }
