@@ -46,14 +46,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: '認証エラー' }, { status: 401 })
   }
 
-  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  const rawPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ''
+  const rawPrivate = process.env.VAPID_PRIVATE_KEY ?? ''
+  if (!rawPublic || !rawPrivate) {
     return NextResponse.json({ error: 'VAPID keys not configured' }, { status: 500 })
   }
+  // =・空白・改行・引用符を除去してURLセーフbase64に正規化
+  const vapidPublic = rawPublic.trim().replace(/[="'\s]/g, '')
+  const vapidPrivate = rawPrivate.trim().replace(/[="'\s]/g, '')
+
+  return NextResponse.json({ debug: { pubLen: vapidPublic.length, pubStart: vapidPublic.slice(0, 10), pubEnd: vapidPublic.slice(-5) } })
 
   webpush.setVapidDetails(
     'mailto:admin@example.com',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY.replace(/=/g, ''),
-    process.env.VAPID_PRIVATE_KEY.replace(/=/g, '')
+    vapidPublic,
+    vapidPrivate
   )
 
   const formats = todayFormats()
