@@ -52,6 +52,13 @@ export default function Sidebar({ name, role }: SidebarProps) {
     fetch('/api/push/subscribe').then((r) => r.json()).then((d) => setPushSubscribed(d.subscribed ?? false)).catch(() => {})
   }, [role])
 
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = atob(base64)
+    return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)))
+  }
+
   async function handlePushToggle() {
     if (pushLoading) return
     setPushLoading(true)
@@ -80,9 +87,11 @@ export default function Sidebar({ name, role }: SidebarProps) {
           setPushLoading(false)
           return
         }
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        if (!vapidKey) { alert('VAPID公開鍵が設定されていません'); setPushLoading(false); return }
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
         })
         await fetch('/api/push/subscribe', {
           method: 'POST',
