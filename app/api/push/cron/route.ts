@@ -52,8 +52,8 @@ export async function GET(req: NextRequest) {
 
   webpush.setVapidDetails(
     'mailto:admin@example.com',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY.replace(/=/g, ''),
+    process.env.VAPID_PRIVATE_KEY.replace(/=/g, '')
   )
 
   const formats = todayFormats()
