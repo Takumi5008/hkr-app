@@ -21,24 +21,13 @@ export default function NotificationBanner() {
     // 20時以降のみ表示
     if (h < 20) return
 
-    // 今日すでに閉じていたら表示しない
-    const key = `notif-dismissed-${y}-${m}-${d}`
-    if (localStorage.getItem(key)) { setDismissed(true); return }
-
     fetch(`/api/activation/today-unchecked?y=${y}&m=${m}&d=${d}`)
       .then((r) => r.json())
       .then((data: Item[]) => { if (Array.isArray(data) && data.length > 0) setItems(data) })
       .catch(() => {})
   }, [])
 
-  const dismiss = () => {
-    const now = new Date()
-    const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-    const key = `notif-dismissed-${jst.getUTCFullYear()}-${jst.getUTCMonth() + 1}-${jst.getUTCDate()}`
-    localStorage.setItem(key, '1')
-    setDismissed(true)
-  }
-
+  // ✕はセッション中のみ非表示（リロードで復活）
   if (dismissed || items.length === 0) return null
 
   return (
@@ -52,11 +41,11 @@ export default function NotificationBanner() {
               <span key={i}>{it.name}（{it.label}）{i < items.length - 1 ? '、' : ''}</span>
             ))}
           </p>
-          <Link href="/activation" onClick={dismiss} className="text-xs underline text-amber-100 mt-1 inline-block">
+          <Link href="/activation" onClick={() => setDismissed(true)} className="text-xs underline text-amber-100 mt-1 inline-block">
             開通表を確認する →
           </Link>
         </div>
-        <button onClick={dismiss} className="shrink-0 text-amber-100 hover:text-white transition">
+        <button onClick={() => setDismissed(true)} className="shrink-0 text-amber-100 hover:text-white transition">
           <X size={18} />
         </button>
       </div>
