@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff } from 'lucide-react'
+import { useState, useEffect } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
@@ -43,6 +43,43 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
   const isManager = role === 'manager' || role === 'viewer'
   const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : 'メンバー'
+
+  const [pushSubscribed, setPushSubscribed] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
+
+  useEffect(() => {
+    if (role !== 'manager') return
+    fetch('/api/push/subscribe').then((r) => r.json()).then((d) => setPushSubscribed(d.subscribed ?? false)).catch(() => {})
+  }, [role])
+
+  async function handlePushToggle() {
+    if (pushLoading) return
+    setPushLoading(true)
+    try {
+      if (pushSubscribed) {
+        await fetch('/api/push/subscribe', { method: 'DELETE' })
+        setPushSubscribed(false)
+      } else {
+        const reg = await navigator.serviceWorker.register('/sw.js')
+        await navigator.serviceWorker.ready
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') { alert('通知を許可してください'); setPushLoading(false); return }
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        })
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub),
+        })
+        setPushSubscribed(true)
+      }
+    } catch (e) {
+      alert('通知の設定に失敗しました')
+    }
+    setPushLoading(false)
+  }
 
   // ボトムナビは共通4項目のみ（管理者専用メニューはハンバーガーから）
   const bottomNavItems = [
@@ -112,6 +149,19 @@ export default function Sidebar({ name, role }: SidebarProps) {
             <p className="text-xs text-indigo-400">{roleLabel}</p>
           </div>
         </Link>
+
+        {role === 'manager' && (
+          <button
+            onClick={handlePushToggle}
+            disabled={pushLoading}
+            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 ${
+              pushSubscribed ? 'text-amber-300 hover:bg-white/10' : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {pushSubscribed ? <Bell size={17} className="text-amber-300" /> : <BellOff size={17} />}
+            {pushLoading ? '設定中...' : pushSubscribed ? '通知ON' : '通知を有効にする'}
+          </button>
+        )}
 
         <button
           onClick={handleLogout}
