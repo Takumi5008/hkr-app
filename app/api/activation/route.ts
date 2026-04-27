@@ -61,9 +61,9 @@ export async function PATCH(req: NextRequest) {
   const { id, name, date, line, cancel, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
-  // 更新前の activation 状態を取得
-  const prev = await dbQueryOne<{ activation: string; date: string }>(
-    'SELECT activation, date FROM activation_records WHERE id=$1 AND user_id=$2',
+  // 更新前の状態を取得
+  const prev = await dbQueryOne<{ activation: string; cancel: string; date: string }>(
+    'SELECT activation, cancel, date FROM activation_records WHERE id=$1 AND user_id=$2',
     [id, session.userId]
   )
 
@@ -79,14 +79,20 @@ export async function PATCH(req: NextRequest) {
      id, session.userId]
   )
 
-  // ⭕️トグルに応じてポイント加減
+  // 開通⭕️トグル: +5pt / -5pt
   if (activation && !prev?.activation) {
-    // 空 → ⭕️: +5pt（削除済みなら再追加も可）
     await removePointTransaction(session.userId as number, 'activation_mark', String(id))
     await addPointTransaction(session.userId as number, 5, '開通確認', 'activation_mark', String(id))
   } else if (!activation && prev?.activation) {
-    // ⭕️ → 空: ポイントを戻す
     await removePointTransaction(session.userId as number, 'activation_mark', String(id))
+  }
+
+  // 解除⭕️トグル: +1pt / -1pt
+  if (cancel && !prev?.cancel) {
+    await removePointTransaction(session.userId as number, 'cancel_mark', String(id))
+    await addPointTransaction(session.userId as number, 1, '解除確認', 'cancel_mark', String(id))
+  } else if (!cancel && prev?.cancel) {
+    await removePointTransaction(session.userId as number, 'cancel_mark', String(id))
   }
 
   return NextResponse.json({ ok: true })
