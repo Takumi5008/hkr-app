@@ -2,6 +2,9 @@ import { dbQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
+import ActivationBadge from '@/components/ActivationBadge'
+import WeeklyRankingCard from '@/components/WeeklyRankingCard'
+import RecentActivationFeed from '@/components/RecentActivationFeed'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,9 +22,9 @@ export default async function ChallengePage() {
   )
   const total: number = row?.total ?? 0
 
-  // 個人別ランキング
+  // 個人別月次ランキング（今月）
   const memberRows = await dbQuery(
-    `SELECT u.name, COALESCE(SUM(r.activation_count), 0)::int AS activation
+    `SELECT u.id, u.name, COALESCE(SUM(r.activation_count), 0)::int AS activation
      FROM users u
      LEFT JOIN records r ON r.user_id = u.id AND r.year = $1 AND r.month = $2
      GROUP BY u.id, u.name
@@ -29,6 +32,14 @@ export default async function ChallengePage() {
      ORDER BY activation DESC`,
     [year, month]
   )
+
+  // 累計開通数（バッジ用）
+  const cumulativeRows = await dbQuery(
+    `SELECT user_id, COALESCE(SUM(activation_count), 0)::int AS cumulative
+     FROM records
+     GROUP BY user_id`
+  )
+  const cumulativeMap = new Map(cumulativeRows.map((r: any) => [r.user_id, r.cumulative]))
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -40,24 +51,34 @@ export default async function ChallengePage() {
 
       <TeamChallengeCard total={total} year={year} month={month} />
 
-      {/* 個人別貢献ランキング */}
+      {/* 本日の開通速報（全員に表示） */}
+      <RecentActivationFeed />
+
+      {/* 今週の開通ランキング */}
+      <WeeklyRankingCard />
+
+      {/* 個人別月次ランキング */}
       {memberRows.length > 0 && (
         <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
           <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
             🏅 今月の個人別開通数
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {memberRows.map((m: any, i: number) => {
-              const pct = Math.round((m.activation / total) * 100)
+              const pct = total > 0 ? Math.round((m.activation / total) * 100) : 0
               const medals = ['🥇', '🥈', '🥉']
+              const cumulative = cumulativeMap.get(m.id) ?? 0
               return (
-                <div key={m.name} className="flex items-center gap-3">
+                <div key={m.id} className="flex items-center gap-3">
                   <span className="text-base w-6 text-center shrink-0">
                     {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
+                        <ActivationBadge cumulative={cumulative} size="xs" />
+                      </div>
                       <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -74,6 +95,28 @@ export default async function ChallengePage() {
           </div>
         </div>
       )}
+
+      {/* バッジ一覧 */}
+      <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
+        <h2 className="text-sm font-bold text-gray-700 mb-3">🎖️ 称号バッジ一覧</h2>
+        <div className="grid grid-cols-1 gap-2">
+          {[
+            { min: 100, emoji: '👑', label: '開通マスター', desc: '累計100件以上' },
+            { min: 60,  emoji: '💎', label: '開通職人',   desc: '累計60件以上' },
+            { min: 30,  emoji: '🔥', label: '開通師',     desc: '累計30件以上' },
+            { min: 10,  emoji: '⚡', label: '開通士',     desc: '累計10件以上' },
+            { min: 0,   emoji: '🌱', label: '見習い',     desc: '累計0件〜' },
+          ].map((b) => (
+            <div key={b.min} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
+              <span className="text-xl w-7 text-center">{b.emoji}</span>
+              <div className="flex-1">
+                <span className="text-sm font-bold text-gray-800">{b.label}</span>
+                <span className="text-xs text-gray-400 ml-2">{b.desc}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

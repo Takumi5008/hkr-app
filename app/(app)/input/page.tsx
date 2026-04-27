@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { calcHKR, formatMonth } from '@/lib/hkr'
 import { CheckCircle, X, Plus, Pencil } from 'lucide-react'
+import CelebrationOverlay from '@/components/CelebrationOverlay'
 
 type FormData = { [K: string]: { cancel: string; activation: string } }
 type Tab = 'input' | 'products'
@@ -16,6 +17,7 @@ export default function InputPage() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [celebrationCount, setCelebrationCount] = useState(0)
 
   const [role, setRole] = useState<string>('')
   const [tab, setTab] = useState<Tab>('input')
@@ -71,6 +73,7 @@ export default function InputPage() {
   async function handleSave() {
     setError('')
     setLoading(true)
+    const totalActivation = products.reduce((sum, p) => sum + parseInt(form[p]?.activation || '0', 10), 0)
     for (const product of products) {
       const res = await fetch('/api/records', {
         method: 'POST',
@@ -86,6 +89,7 @@ export default function InputPage() {
     setSuccess(true)
     setLoading(false)
     setTimeout(() => setSuccess(false), 3000)
+    if (totalActivation > 0) setCelebrationCount(totalActivation)
   }
 
   async function handleAddProduct() {
@@ -166,6 +170,9 @@ export default function InputPage() {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      {celebrationCount > 0 && (
+        <CelebrationOverlay count={celebrationCount} onDone={() => setCelebrationCount(0)} />
+      )}
       <div className="mb-6 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-blue-200 mb-1">Input</p>
         <h1 className="text-2xl font-bold">データ入力</h1>
