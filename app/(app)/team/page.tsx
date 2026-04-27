@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { calcHKR, formatMonth, HKR_TARGET } from '@/lib/hkr'
 import { AlertTriangle, Trophy, TrendingDown } from 'lucide-react'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
+import ActivationBadge from '@/components/ActivationBadge'
 
 export default function TeamPage() {
   const now = new Date()
@@ -184,7 +185,10 @@ export default function TeamPage() {
                           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold">
                             {d.user.name.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                            <ActivationBadge cumulative={d.activation} size="xs" />
+                          </div>
                         </div>
                         <div className="text-right">
                         <span className="text-sm font-bold text-green-600">{d.hkr}%</span>
@@ -210,7 +214,10 @@ export default function TeamPage() {
                           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center text-white text-xs font-semibold">
                             {d.user.name.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
+                            <ActivationBadge cumulative={d.activation} size="xs" />
+                          </div>
                         </div>
                         <div className="text-right">
                           <span className="text-sm font-bold text-red-600">{d.hkr}%</span>
@@ -240,7 +247,10 @@ export default function TeamPage() {
                   {user.name.charAt(0)}
                 </div>
                 <div>
-                  <span className="font-semibold text-gray-900">{user.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-gray-900">{user.name}</span>
+                    <ActivationBadge cumulative={totalActivation} size="xs" />
+                  </div>
                   {totalActivation > 0 && <p className="text-xs text-emerald-600 font-medium">{fmt(totalActivation * COMMISSION)}</p>}
                 </div>
               </div>
@@ -305,7 +315,10 @@ export default function TeamPage() {
                       <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium shrink-0">
                         {user.name.charAt(0)}
                       </div>
-                      <span className="font-medium text-gray-900">{user.name}</span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-gray-900">{user.name}</span>
+                        <ActivationBadge cumulative={totalActivation} size="xs" />
+                      </div>
                     </div>
                   </td>
                   {summaries.map((s) => (
