@@ -160,7 +160,7 @@ export default function ActivationPage() {
     setNotifEnabled(false)
   }
 
-  // ⭕️トグル
+  // FM等 ⭕️トグル
   const toggleDone = async (id: number, field: string, current: number) => {
     const newVal = current === 0 ? 1 : 0
     setRecords((prev) => prev.map((r) => r.id === id ? { ...r, [`${field}_done`]: newVal } : r))
@@ -168,6 +168,25 @@ export default function ActivationPage() {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, field, done: newVal }),
+    })
+  }
+
+  // 開通⭕️トグル
+  const toggleActivation = async (rec: ActivationRecord) => {
+    const newVal = rec.activation ? '' : '○'
+    setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activation: newVal } : r))
+    await fetch('/api/activation', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: rec.id,
+        name: rec.name, date: rec.date, line: rec.line, cancel: rec.cancel,
+        neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
+        week_after: rec.week_after, day_before_construction: rec.day_before_construction,
+        construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
+        delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
+        activation: newVal,
+      }),
     })
   }
 
@@ -345,15 +364,23 @@ export default function ActivationPage() {
                       <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
                       {LIST_COLS.map((c) => {
                         const isNA = c.key !== 'type_label' && naFields.includes(c.key as keyof ActivationRecord)
+                        const isActivation = c.key === 'activation'
                         const val = c.key === 'type_label'
                           ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
                           : rec[c.key as keyof ActivationRecord]
                         return (
-                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''}`}>
-                            {isNA
-                              ? <span className="text-gray-300">-</span>
-                              : val ? <span className="text-gray-700">{val as string}</span> : <span className="text-gray-200">-</span>
-                            }
+                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''}`}>
+                            {isNA ? (
+                              <span className="text-gray-300">-</span>
+                            ) : isActivation ? (
+                              <button onClick={() => toggleActivation(rec)} className="text-lg leading-none" title={rec.activation ? '取り消す' : '開通確認'}>
+                                {rec.activation ? '⭕' : '🔘'}
+                              </button>
+                            ) : val ? (
+                              <span className="text-gray-700">{val as string}</span>
+                            ) : (
+                              <span className="text-gray-200">-</span>
+                            )}
                           </td>
                         )
                       })}
@@ -395,9 +422,18 @@ export default function ActivationPage() {
                     const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
                     const doneKey = `${c.key}_done` as keyof ActivationRecord
                     const isDone = isDoneField && rec[doneKey] === 1
+                    const isActivation = c.key === 'activation'
                     return (
-                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''}`}>
-                        {isDoneField && rec[c.key] ? (
+                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''}`}>
+                        {isActivation ? (
+                          <button
+                            onClick={() => toggleActivation(rec)}
+                            className="text-lg leading-none"
+                            title={rec.activation ? '取り消す' : '開通確認'}
+                          >
+                            {rec.activation ? '⭕' : '🔘'}
+                          </button>
+                        ) : isDoneField && rec[c.key] ? (
                           <div className="flex items-center justify-center gap-1">
                             <span className="text-gray-700">{rec[c.key]}</span>
                             <button
