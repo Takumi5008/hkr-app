@@ -101,7 +101,6 @@ export default function TeamPage() {
   const teamTotal = teamStats.reduce((s, d) => s + d.totalActivation, 0)
 
   const pointsRanking = [...teamData]
-    .filter((d: any) => (d.user.points ?? 0) > 0)
     .sort((a: any, b: any) => (b.user.points ?? 0) - (a.user.points ?? 0))
 
   return (
@@ -245,7 +244,7 @@ export default function TeamPage() {
       )}
 
       {/* ポイントランキング */}
-      {!loading && pointsRanking.length > 0 && (
+      {!loading && pointsRanking.length > 0 && teamData.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
           <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
             ⭐ ポイントランキング
