@@ -99,6 +99,10 @@ export default function TeamPage() {
 
   const teamTotal = teamStats.reduce((s, d) => s + d.totalActivation, 0)
 
+  const pointsRanking = [...teamData]
+    .filter((d: any) => (d.user.points ?? 0) > 0)
+    .sort((a: any, b: any) => (b.user.points ?? 0) - (a.user.points ?? 0))
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-6 bg-gradient-to-r from-teal-600 to-emerald-500 rounded-2xl px-6 py-5 shadow-md text-white">
@@ -240,6 +244,47 @@ export default function TeamPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ポイントランキング */}
+      {!loading && pointsRanking.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+          <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
+            ⭐ ポイントランキング
+            <span className="text-xs font-normal text-gray-400">開通1件 = 10pt（全期間累計）</span>
+          </h2>
+          <div className="space-y-2">
+            {pointsRanking.map((d: any, i: number) => {
+              const pts: number = d.user.points ?? 0
+              const max: number = pointsRanking[0].user.points ?? 1
+              const medals = ['🥇', '🥈', '🥉']
+              return (
+                <div key={d.user.id} className="flex items-center gap-3">
+                  <span className="text-base w-6 text-center shrink-0">
+                    {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                  </span>
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                    {d.user.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm font-medium text-gray-800 truncate">{d.user.name}</span>
+                      <span className="text-sm font-bold text-amber-600 shrink-0 ml-2">
+                        {pts.toLocaleString()}pt
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full"
+                        style={{ width: `${Math.round((pts / max) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

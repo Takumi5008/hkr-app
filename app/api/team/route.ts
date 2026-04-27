@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const year = Number(searchParams.get('year') || new Date().getFullYear())
   const month = Number(searchParams.get('month') || new Date().getMonth() + 1)
 
-  const users = await dbQuery('SELECT id, name, role FROM users ORDER BY name')
+  const users = await dbQuery('SELECT id, name, role, points FROM users ORDER BY name')
   const records = await dbQuery(
     'SELECT * FROM records WHERE year = $1 AND month = $2',
     [year, month]
