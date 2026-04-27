@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, Gift } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getBadge } from '@/components/ActivationBadge'
 import UserAvatar from '@/components/UserAvatar'
@@ -10,6 +10,7 @@ import UserAvatar from '@/components/UserAvatar'
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
+  { href: '/exchange', label: 'ポイント交換', icon: Gift },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/activity', label: '行動表', icon: Table2 },
@@ -135,8 +136,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const bottomNavItems = [
     { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
     { href: '/challenge', label: 'チャレンジ', icon: Trophy },
+    { href: '/exchange', label: '交換', icon: Gift },
     { href: '/tasks', label: 'タスク', icon: CheckSquare },
-    { href: '/schedule', label: '予定', icon: CalendarDays },
     { href: '/mtg', label: 'MTG', icon: ClipboardList },
   ]
 

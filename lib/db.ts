@@ -220,6 +220,23 @@ async function initDb() {
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+    CREATE TABLE IF NOT EXISTS point_items (
+      id          SERIAL PRIMARY KEY,
+      name        TEXT    NOT NULL,
+      description TEXT    NOT NULL DEFAULT '',
+      cost        INTEGER NOT NULL CHECK (cost > 0),
+      is_active   BOOLEAN NOT NULL DEFAULT true,
+      created_at  TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
+    CREATE TABLE IF NOT EXISTS point_exchanges (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      item_id    INTEGER REFERENCES point_items(id) ON DELETE SET NULL,
+      item_name  TEXT    NOT NULL,
+      cost       INTEGER NOT NULL,
+      status     TEXT    NOT NULL DEFAULT 'pending',
+      created_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
   `)
   // ポイントを records の全合計から同期（過去分含む）
   await pool.query(`
