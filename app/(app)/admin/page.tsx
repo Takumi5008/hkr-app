@@ -40,6 +40,8 @@ export default function AdminPage() {
   const [addingProduct, setAddingProduct] = useState(false)
   const [pushSending, setPushSending] = useState(false)
   const [pushResult, setPushResult] = useState<string | null>(null)
+  const [backfillLoading, setBackfillLoading] = useState(false)
+  const [backfillResult, setBackfillResult] = useState<string | null>(null)
 
   // Shifts
   const today = new Date()
@@ -187,6 +189,20 @@ export default function AdminPage() {
     setProducts((prev) => prev.filter((p) => p.name !== name))
   }
 
+  async function handleBackfill() {
+    if (!confirm('全メンバーの過去分ポイントを再集計します。よろしいですか？')) return
+    setBackfillLoading(true)
+    setBackfillResult(null)
+    try {
+      const res = await fetch('/api/admin/backfill-points', { method: 'POST' })
+      const data = await res.json()
+      setBackfillResult(`完了：${data.applied}件のボーナスを適用しました`)
+    } catch {
+      setBackfillResult('エラーが発生しました')
+    }
+    setBackfillLoading(false)
+  }
+
   async function handleSendTestPush() {
     setPushSending(true)
     setPushResult(null)
@@ -315,6 +331,16 @@ export default function AdminPage() {
       {/* ===== ユーザー・商材タブ ===== */}
       {adminTab === 'users' && (
         <>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">⭐ 過去分ポイントを反映</h3>
+            <p className="text-xs text-gray-400 mb-4">全メンバーの過去月の開通ボーナス（7・15・20件）を遡って付与し、ポイントを再集計します。</p>
+            <button onClick={handleBackfill} disabled={backfillLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-rose-500 text-white text-sm font-medium rounded-lg hover:bg-rose-600 disabled:opacity-50 transition-colors">
+              {backfillLoading ? '処理中...' : '過去分を反映する'}
+            </button>
+            {backfillResult && <p className="mt-3 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{backfillResult}</p>}
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
             <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2"><Bell size={16} className="text-amber-500" />開通フォロー通知を今すぐ送信</h3>
             <p className="text-xs text-gray-400 mb-4">通知が届くか確認したいときに使えます。今日の未確認フォロー項目がある場合のみ送信されます。</p>
