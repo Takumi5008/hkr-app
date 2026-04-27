@@ -258,7 +258,7 @@ async function initDb() {
   await pool.query(`
     UPDATE users u
     SET points = (
-      COALESCE((SELECT SUM(r.activation_count) * 10 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
+      COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
       + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0)
     )
   `)

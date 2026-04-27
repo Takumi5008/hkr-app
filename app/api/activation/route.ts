@@ -79,22 +79,11 @@ export async function PATCH(req: NextRequest) {
      id, session.userId]
   )
 
-  // ⭕️が新規に付いた場合のポイント処理
-  const recordDate = (date as string) || prev?.date || ''
+  // ⭕️が新規に付いたら +5pt
   if (activation && !prev?.activation) {
-    // ⭕️をつけたこと自体で +1pt
     await addPointTransaction(
-      session.userId as number, 1, '開通確認', 'activation_mark', String(id)
+      session.userId as number, 5, '開通確認', 'activation_mark', String(id)
     )
-    // さらに日付の21時(JST=12:00 UTC)前なら追加 +3pt
-    if (recordDate) {
-      const deadline21 = new Date(recordDate + 'T12:00:00Z')
-      if (new Date() < deadline21) {
-        await addPointTransaction(
-          session.userId as number, 3, 'HKR日付21時前に開通確認', 'activation_ontime', String(id)
-        )
-      }
-    }
   }
 
   return NextResponse.json({ ok: true })
