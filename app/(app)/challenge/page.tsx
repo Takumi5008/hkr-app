@@ -24,7 +24,6 @@ export default async function ChallengePage() {
     `SELECT u.name, COALESCE(SUM(r.activation_count), 0)::int AS activation
      FROM users u
      LEFT JOIN records r ON r.user_id = u.id AND r.year = $1 AND r.month = $2
-     WHERE u.is_active = true
      GROUP BY u.id, u.name
      HAVING COALESCE(SUM(r.activation_count), 0) > 0
      ORDER BY activation DESC`,
