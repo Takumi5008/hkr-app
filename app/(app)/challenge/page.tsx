@@ -101,11 +101,12 @@ export default async function ChallengePage() {
         <h2 className="text-sm font-bold text-gray-700 mb-3">🎖️ 称号バッジ一覧</h2>
         <div className="grid grid-cols-1 gap-2">
           {[
-            { min: 20, emoji: '👑', label: '開通マスター', desc: '累計20件以上' },
-            { min: 15, emoji: '💎', label: '開通職人',   desc: '累計15件以上' },
-            { min: 10, emoji: '🔥', label: '開通師',     desc: '累計10件以上' },
-            { min: 7,  emoji: '⚡', label: '開通士',     desc: '累計7件以上' },
-            { min: 4,  emoji: '🌱', label: '見習い',     desc: '累計4件以上' },
+            { min: 20, emoji: '🏆', label: '開通レジェンド', desc: '累計20件以上' },
+            { min: 15, emoji: '👑', label: '開通マスター',   desc: '累計15件以上' },
+            { min: 10, emoji: '💎', label: '開通職人',       desc: '累計10件以上' },
+            { min: 7,  emoji: '🔥', label: '開通師',         desc: '累計7件以上' },
+            { min: 4,  emoji: '⚡', label: '開通士',         desc: '累計4件以上' },
+            { min: 1,  emoji: '🌱', label: '見習い',         desc: '累計1件以上' },
           ].map((b) => (
             <div key={b.min} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
               <span className="text-xl w-7 text-center">{b.emoji}</span>
