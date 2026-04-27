@@ -61,7 +61,15 @@ export default function ActivityPage() {
   const [tab, setTab] = useState<'activity' | 'conversion'>('activity')
   const [myRole, setMyRole] = useState<string>('')
   const [members, setMembers] = useState<User[]>([])
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<number | null | 'all'>(null)
+
+  type AllMemberRow = {
+    user_id: number; name: string; work_days: number; work_hours: number
+    pin_count: number; pingpong_count: number; intercom_count: number
+    face_other: number; face_unused: number; hearing_sheet: number
+    consent_form: number; wimax: number; sonet: number; cancel: number
+  }
+  const [allData, setAllData] = useState<AllMemberRow[]>([])
 
   useEffect(() => {
     fetch('/api/progress').then((r) => r.json()).then((data) => {
@@ -76,9 +84,14 @@ export default function ActivityPage() {
   }, [])
 
   useEffect(() => {
-    const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
-    fetch(`/api/daily-activity?year=${year}&month=${month}${userParam}`)
-      .then((r) => r.json()).then(setRecords)
+    if (selectedUserId === 'all') {
+      fetch(`/api/daily-activity?year=${year}&month=${month}&userId=all`)
+        .then((r) => r.json()).then((d) => { if (Array.isArray(d)) setAllData(d) })
+    } else {
+      const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
+      fetch(`/api/daily-activity?year=${year}&month=${month}${userParam}`)
+        .then((r) => r.json()).then(setRecords)
+    }
   }, [year, month, selectedUserId])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
@@ -178,10 +191,14 @@ export default function ActivityPage() {
           <span className="text-sm text-gray-500 shrink-0">メンバー</span>
           <select
             value={selectedUserId ?? ''}
-            onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+            onChange={(e) => {
+              const v = e.target.value
+              setSelectedUserId(v === 'all' ? 'all' : v ? Number(v) : null)
+            }}
             className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
           >
             <option value="">自分</option>
+            <option value="all">全員</option>
             {members.map((u) => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
@@ -215,7 +232,103 @@ export default function ActivityPage() {
         </button>
       </div>
 
-      {tab === 'conversion' && (() => {
+      {/* ===== 全員サマリーテーブル ===== */}
+      {selectedUserId === 'all' && (() => {
+        const ALL_COLS = [
+          { label: '稼働日数',        key: 'work_days' as const },
+          { label: '稼働時間',        key: 'work_hours' as const },
+          { label: 'ピン数',          key: 'pin_count' as const },
+          { label: 'PP数',            key: 'pingpong_count' as const },
+          { label: 'IH突破',          key: 'intercom_count' as const },
+          { label: '対面(他)',        key: 'face_other' as const },
+          { label: '対面(未)',        key: 'face_unused' as const },
+          { label: 'HS',             key: 'hearing_sheet' as const },
+          { label: '同意書',          key: 'consent_form' as const },
+          { label: '件数',            key: '_total' as const },
+          { label: 'WiMAX',          key: 'wimax' as const },
+          { label: 'So-net',         key: 'sonet' as const },
+          { label: '解除',            key: 'cancel' as const },
+          { label: '生産性',          key: '_productivity' as const },
+          { label: '転換率',          key: '_conversion' as const },
+        ] as const
+
+        const fmt = (v: number | string) => (v === 0 || v === '' || v === '-') ? <span className="text-gray-200">-</span> : <span>{v}</span>
+
+        const totals = allData.reduce((acc, r) => ({
+          work_days: acc.work_days + r.work_days,
+          work_hours: Math.round((acc.work_hours + r.work_hours) * 10) / 10,
+          pin_count: acc.pin_count + r.pin_count,
+          pingpong_count: acc.pingpong_count + r.pingpong_count,
+          intercom_count: acc.intercom_count + r.intercom_count,
+          face_other: acc.face_other + r.face_other,
+          face_unused: acc.face_unused + r.face_unused,
+          hearing_sheet: acc.hearing_sheet + r.hearing_sheet,
+          consent_form: acc.consent_form + r.consent_form,
+          wimax: acc.wimax + r.wimax,
+          sonet: acc.sonet + r.sonet,
+          cancel: acc.cancel + r.cancel,
+        }), { work_days:0, work_hours:0, pin_count:0, pingpong_count:0, intercom_count:0, face_other:0, face_unused:0, hearing_sheet:0, consent_form:0, wimax:0, sonet:0, cancel:0 })
+
+        const getCell = (r: typeof allData[0], key: typeof ALL_COLS[number]['key']): number | string => {
+          if (key === '_total') return r.wimax + r.sonet
+          if (key === '_productivity') {
+            if (r.work_days === 0) return '-'
+            return Math.round((r.wimax + r.sonet) / r.work_days * 100) / 100
+          }
+          if (key === '_conversion') {
+            if (r.consent_form === 0) return '-'
+            return `${Math.round((r.wimax + r.sonet) / r.consent_form * 1000) / 10}%`
+          }
+          return r[key]
+        }
+
+        return (
+          <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="text-xs border-collapse w-full">
+                <thead>
+                  <tr>
+                    <th className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-left sticky left-0 z-10 text-gray-600 font-semibold whitespace-nowrap">名前</th>
+                    {ALL_COLS.map((c) => (
+                      <th key={c.label} className="border border-gray-100 px-2 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold whitespace-nowrap">{c.label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allData.map((r, i) => (
+                    <tr key={r.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
+                      <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit whitespace-nowrap">{r.name}</td>
+                      {ALL_COLS.map((c) => (
+                        <td key={c.label} className="border border-gray-100 px-2 py-2 text-center">
+                          {fmt(getCell(r, c.key))}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {/* 合計行 */}
+                  <tr className="bg-teal-50/60">
+                    <td className="border border-gray-100 px-3 py-2.5 font-bold text-teal-700 sticky left-0 bg-teal-50/60">合計</td>
+                    {ALL_COLS.map((c) => {
+                      let v: number | string = 0
+                      if (c.key === '_total') v = totals.wimax + totals.sonet
+                      else if (c.key === '_productivity') v = totals.work_days > 0 ? Math.round((totals.wimax + totals.sonet) / totals.work_days * 100) / 100 : '-'
+                      else if (c.key === '_conversion') v = totals.consent_form > 0 ? `${Math.round((totals.wimax + totals.sonet) / totals.consent_form * 1000) / 10}%` : '-'
+                      else v = totals[c.key as keyof typeof totals]
+                      return (
+                        <td key={c.label} className="border border-gray-100 px-2 py-2.5 text-center font-bold text-teal-700">
+                          {v === 0 || v === '-' ? <span className="text-gray-300 font-normal">-</span> : v}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })()}
+
+      {selectedUserId !== 'all' && tab === 'conversion' && (() => {
         const face = totals.face_other + totals.face_unused
         const ratio = (num: number, den: number) =>
           den > 0 ? `${Math.round(num / den * 1000) / 10}%` : '-'
@@ -237,7 +350,7 @@ export default function ActivityPage() {
         )
       })()}
 
-      {tab === 'activity' && (
+      {selectedUserId !== 'all' && tab === 'activity' && (
       <>{/* テーブル */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
