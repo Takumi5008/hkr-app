@@ -267,6 +267,22 @@ async function initDb() {
   if (parseInt(rows[0].cnt) === 0) {
     await pool.query("INSERT INTO products (name, sort_order) VALUES ('So-net光', 0), ('WiMAX', 1) ON CONFLICT DO NOTHING")
   }
+  // 初期ポイントルール
+  const { rows: ruleRows } = await pool.query('SELECT COUNT(*) as cnt FROM point_rules')
+  if (parseInt(ruleRows[0].cnt) === 0) {
+    await pool.query(`
+      INSERT INTO point_rules (action, points) VALUES
+        ('開通1件（HKR入力）', 5),
+        ('解除1件（HKR入力）', 1),
+        ('開通表で開通⭕️', 5),
+        ('開通表で解除⭕️', 1),
+        ('開通表で申込時ネガキャン⭕️', 1),
+        ('開通表で解除時ネガキャン⭕️', 1),
+        ('シフトを期限内に提出', 1),
+        ('MTG出欠を期限内に提出', 1),
+        ('日付の21時を過ぎて開通⭕️なし', -5)
+    `)
+  }
 }
 
 export async function dbQuery<T = any>(sql: string, params?: any[]): Promise<T[]> {
