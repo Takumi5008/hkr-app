@@ -62,8 +62,8 @@ export async function PATCH(req: NextRequest) {
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
   // 更新前の状態を取得
-  const prev = await dbQueryOne<{ activation: string; cancel: string; date: string }>(
-    'SELECT activation, cancel, date FROM activation_records WHERE id=$1 AND user_id=$2',
+  const prev = await dbQueryOne<{ activation: string; cancel: string; neg_apply: string; neg_cancel: string; date: string }>(
+    'SELECT activation, cancel, neg_apply, neg_cancel, date FROM activation_records WHERE id=$1 AND user_id=$2',
     [id, session.userId]
   )
 
@@ -93,6 +93,22 @@ export async function PATCH(req: NextRequest) {
     await addPointTransaction(session.userId as number, 1, '解除確認', 'cancel_mark', String(id))
   } else if (!cancel && prev?.cancel) {
     await removePointTransaction(session.userId as number, 'cancel_mark', String(id))
+  }
+
+  // 申込時ネガキャン⭕️トグル: +1pt / -1pt
+  if (neg_apply && !prev?.neg_apply) {
+    await removePointTransaction(session.userId as number, 'neg_apply_mark', String(id))
+    await addPointTransaction(session.userId as number, 1, '申込時ネガキャン確認', 'neg_apply_mark', String(id))
+  } else if (!neg_apply && prev?.neg_apply) {
+    await removePointTransaction(session.userId as number, 'neg_apply_mark', String(id))
+  }
+
+  // 解除時ネガキャン⭕️トグル: +1pt / -1pt
+  if (neg_cancel && !prev?.neg_cancel) {
+    await removePointTransaction(session.userId as number, 'neg_cancel_mark', String(id))
+    await addPointTransaction(session.userId as number, 1, '解除時ネガキャン確認', 'neg_cancel_mark', String(id))
+  } else if (!neg_cancel && prev?.neg_cancel) {
+    await removePointTransaction(session.userId as number, 'neg_cancel_mark', String(id))
   }
 
   return NextResponse.json({ ok: true })

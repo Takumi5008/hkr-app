@@ -175,38 +175,42 @@ export default function ActivationPage() {
   const toggleActivation = async (rec: ActivationRecord) => {
     const newVal = rec.activation ? '' : '○'
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activation: newVal } : r))
-    await fetch('/api/activation', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: rec.id,
-        name: rec.name, date: rec.date, line: rec.line, cancel: rec.cancel,
-        neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
-        week_after: rec.week_after, day_before_construction: rec.day_before_construction,
-        construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
-        delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
-        activation: newVal,
-      }),
-    })
+    await patchRecord(buildPatch(rec, { activation: newVal }))
   }
+
+  const buildPatch = (rec: ActivationRecord, overrides: Partial<ActivationRecord>) => ({
+    id: rec.id,
+    name: rec.name, date: rec.date, line: rec.line, cancel: rec.cancel,
+    neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
+    week_after: rec.week_after, day_before_construction: rec.day_before_construction,
+    construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
+    delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
+    activation: rec.activation,
+    ...overrides,
+  })
+
+  const patchRecord = (body: object) =>
+    fetch('/api/activation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
   // 解除⭕️トグル
   const toggleCancel = async (rec: ActivationRecord) => {
     const newVal = rec.cancel ? '' : '○'
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, cancel: newVal } : r))
-    await fetch('/api/activation', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: rec.id,
-        name: rec.name, date: rec.date, line: rec.line, cancel: newVal,
-        neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
-        week_after: rec.week_after, day_before_construction: rec.day_before_construction,
-        construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
-        delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
-        activation: rec.activation,
-      }),
-    })
+    await patchRecord(buildPatch(rec, { cancel: newVal }))
+  }
+
+  // 申込時ネガキャン⭕️トグル
+  const toggleNegApply = async (rec: ActivationRecord) => {
+    const newVal = rec.neg_apply ? '' : '○'
+    setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, neg_apply: newVal } : r))
+    await patchRecord(buildPatch(rec, { neg_apply: newVal }))
+  }
+
+  // 解除時ネガキャン⭕️トグル
+  const toggleNegCancel = async (rec: ActivationRecord) => {
+    const newVal = rec.neg_cancel ? '' : '○'
+    setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, neg_cancel: newVal } : r))
+    await patchRecord(buildPatch(rec, { neg_cancel: newVal }))
   }
 
   useEffect(() => {
@@ -385,11 +389,13 @@ export default function ActivationPage() {
                         const isNA = c.key !== 'type_label' && naFields.includes(c.key as keyof ActivationRecord)
                         const isActivation = c.key === 'activation'
                         const isCancel = c.key === 'cancel'
+                        const isNegApply = c.key === 'neg_apply'
+                        const isNegCancel = c.key === 'neg_cancel'
                         const val = c.key === 'type_label'
                           ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
                           : rec[c.key as keyof ActivationRecord]
                         return (
-                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${isCancel && rec.cancel ? 'bg-red-50' : ''}`}>
+                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${(isCancel || isNegApply || isNegCancel) && rec[c.key as keyof ActivationRecord] ? 'bg-red-50' : ''}`}>
                             {isNA ? (
                               <span className="text-gray-300">-</span>
                             ) : isActivation ? (
@@ -399,6 +405,14 @@ export default function ActivationPage() {
                             ) : isCancel ? (
                               <button onClick={() => toggleCancel(rec)} className="text-lg leading-none" title={rec.cancel ? '取り消す' : '解除確認'}>
                                 {rec.cancel ? '⭕' : '🔘'}
+                              </button>
+                            ) : isNegApply ? (
+                              <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none" title={rec.neg_apply ? '取り消す' : '申込時ネガキャン確認'}>
+                                {rec.neg_apply ? '⭕' : '🔘'}
+                              </button>
+                            ) : isNegCancel ? (
+                              <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none" title={rec.neg_cancel ? '取り消す' : '解除時ネガキャン確認'}>
+                                {rec.neg_cancel ? '⭕' : '🔘'}
                               </button>
                             ) : val ? (
                               <span className="text-gray-700">{val as string}</span>
@@ -448,23 +462,25 @@ export default function ActivationPage() {
                     const isDone = isDoneField && rec[doneKey] === 1
                     const isActivation = c.key === 'activation'
                     const isCancel = c.key === 'cancel'
+                    const isNegApply = c.key === 'neg_apply'
+                    const isNegCancel = c.key === 'neg_cancel'
                     return (
-                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${isCancel && rec.cancel ? 'bg-red-50' : ''}`}>
+                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${(isCancel || isNegApply || isNegCancel) && rec[c.key] ? 'bg-red-50' : ''}`}>
                         {isActivation ? (
-                          <button
-                            onClick={() => toggleActivation(rec)}
-                            className="text-lg leading-none"
-                            title={rec.activation ? '取り消す' : '開通確認'}
-                          >
+                          <button onClick={() => toggleActivation(rec)} className="text-lg leading-none" title={rec.activation ? '取り消す' : '開通確認'}>
                             {rec.activation ? '⭕' : '🔘'}
                           </button>
                         ) : isCancel ? (
-                          <button
-                            onClick={() => toggleCancel(rec)}
-                            className="text-lg leading-none"
-                            title={rec.cancel ? '取り消す' : '解除確認'}
-                          >
+                          <button onClick={() => toggleCancel(rec)} className="text-lg leading-none" title={rec.cancel ? '取り消す' : '解除確認'}>
                             {rec.cancel ? '⭕' : '🔘'}
+                          </button>
+                        ) : isNegApply ? (
+                          <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none" title={rec.neg_apply ? '取り消す' : '申込時ネガキャン確認'}>
+                            {rec.neg_apply ? '⭕' : '🔘'}
+                          </button>
+                        ) : isNegCancel ? (
+                          <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none" title={rec.neg_cancel ? '取り消す' : '解除時ネガキャン確認'}>
+                            {rec.neg_cancel ? '⭕' : '🔘'}
                           </button>
                         ) : isDoneField && rec[c.key] ? (
                           <div className="flex items-center justify-center gap-1">
