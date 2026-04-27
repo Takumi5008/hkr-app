@@ -56,7 +56,7 @@ export default function TableScrollContainer({
   }, [])
 
   return (
-    <div ref={ref} className={`overflow-x-auto overscroll-x-contain ${className}`}>
+    <div ref={ref} data-table-scroll className={`overflow-x-auto overscroll-x-contain ${className}`}>
       {children}
     </div>
   )
