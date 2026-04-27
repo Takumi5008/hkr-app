@@ -249,6 +249,10 @@ export default function ActivityPage() {
           { label: 'So-net',         key: 'sonet' as const },
           { label: '解除',            key: 'cancel' as const },
           { label: '生産性',          key: '_productivity' as const },
+          { label: 'PP→対面',         key: '_r_pp_face' as const },
+          { label: '対面→HS',         key: '_r_face_hs' as const },
+          { label: 'HS→同意書',       key: '_r_hs_consent' as const },
+          { label: '同意書→件数',     key: '_r_consent_total' as const },
         ] as const
 
         const fmt = (v: number | string) => (v === 0 || v === '' || v === '-') ? <span className="text-gray-200">-</span> : <span>{v}</span>
@@ -268,12 +272,20 @@ export default function ActivityPage() {
           cancel: acc.cancel + r.cancel,
         }), { work_days:0, work_hours:0, pin_count:0, pingpong_count:0, intercom_count:0, face_other:0, face_unused:0, hearing_sheet:0, consent_form:0, wimax:0, sonet:0, cancel:0 })
 
+        const pct = (num: number, den: number) =>
+          den > 0 ? `${Math.round(num / den * 1000) / 10}%` : '-'
+
         const getCell = (r: typeof allData[0], key: typeof ALL_COLS[number]['key']): number | string => {
           if (key === '_total') return r.wimax + r.sonet
           if (key === '_productivity') {
             if (r.work_days === 0) return '-'
             return Math.round((r.wimax + r.sonet) / r.work_days * 100) / 100
           }
+          const face = r.face_other + r.face_unused
+          if (key === '_r_pp_face')       return pct(face, r.pingpong_count)
+          if (key === '_r_face_hs')       return pct(r.hearing_sheet, face)
+          if (key === '_r_hs_consent')    return pct(r.consent_form, r.hearing_sheet)
+          if (key === '_r_consent_total') return pct(r.wimax + r.sonet, r.consent_form)
           return r[key]
         }
 
@@ -307,6 +319,10 @@ export default function ActivityPage() {
                       let v: number | string = 0
                       if (c.key === '_total') v = totals.wimax + totals.sonet
                       else if (c.key === '_productivity') v = totals.work_days > 0 ? Math.round((totals.wimax + totals.sonet) / totals.work_days * 100) / 100 : '-'
+                      else if (c.key === '_r_pp_face')       v = pct(totals.face_other + totals.face_unused, totals.pingpong_count)
+                      else if (c.key === '_r_face_hs')       v = pct(totals.hearing_sheet, totals.face_other + totals.face_unused)
+                      else if (c.key === '_r_hs_consent')    v = pct(totals.consent_form, totals.hearing_sheet)
+                      else if (c.key === '_r_consent_total') v = pct(totals.wimax + totals.sonet, totals.consent_form)
                       else v = totals[c.key as keyof typeof totals]
                       return (
                         <td key={c.label} className="border border-gray-100 px-2 py-2.5 text-center font-bold text-teal-700">
