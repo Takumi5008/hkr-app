@@ -273,7 +273,7 @@ export default function ActivityPage() {
 
         const totals = allData.reduce((acc, r) => ({
           work_days: acc.work_days + r.work_days,
-          work_hours: Math.round((acc.work_hours + r.work_hours) * 10) / 10,
+          work_hours: Math.round((acc.work_hours + Number(r.work_hours)) * 10) / 10,
           pin_count: acc.pin_count + r.pin_count,
           pingpong_count: acc.pingpong_count + r.pingpong_count,
           intercom_count: acc.intercom_count + r.intercom_count,
@@ -300,6 +300,7 @@ export default function ActivityPage() {
           if (key === '_r_face_hs')       return pct(r.hearing_sheet, face)
           if (key === '_r_hs_consent')    return pct(r.consent_form, r.hearing_sheet)
           if (key === '_r_consent_total') return pct(r.wimax + r.sonet, r.consent_form)
+          if (key === 'work_hours') return Number(r.work_hours)
           return r[key]
         }
 
