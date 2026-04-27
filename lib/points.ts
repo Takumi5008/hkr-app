@@ -10,7 +10,6 @@ export async function syncUserPoints(userId: number): Promise<void> {
   )
 }
 
-// refType + refId の組み合わせでユニーク制約があるため、2重付与されない
 export async function addPointTransaction(
   userId: number, delta: number, reason: string, refType: string, refId: string
 ): Promise<void> {
@@ -19,6 +18,17 @@ export async function addPointTransaction(
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (user_id, ref_type, ref_id) DO NOTHING`,
     [userId, delta, reason, refType, refId]
+  )
+  await syncUserPoints(userId)
+}
+
+// トランザクションを削除してポイントを戻す（トグルOFF用）
+export async function removePointTransaction(
+  userId: number, refType: string, refId: string
+): Promise<void> {
+  await dbRun(
+    `DELETE FROM point_transactions WHERE user_id = $1 AND ref_type = $2 AND ref_id = $3`,
+    [userId, refType, refId]
   )
   await syncUserPoints(userId)
 }

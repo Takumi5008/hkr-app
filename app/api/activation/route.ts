@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
-import { addPointTransaction } from '@/lib/points'
+import { addPointTransaction, removePointTransaction } from '@/lib/points'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -79,11 +79,14 @@ export async function PATCH(req: NextRequest) {
      id, session.userId]
   )
 
-  // ⭕️が新規に付いたら +5pt
+  // ⭕️トグルに応じてポイント加減
   if (activation && !prev?.activation) {
-    await addPointTransaction(
-      session.userId as number, 5, '開通確認', 'activation_mark', String(id)
-    )
+    // 空 → ⭕️: +5pt（削除済みなら再追加も可）
+    await removePointTransaction(session.userId as number, 'activation_mark', String(id))
+    await addPointTransaction(session.userId as number, 5, '開通確認', 'activation_mark', String(id))
+  } else if (!activation && prev?.activation) {
+    // ⭕️ → 空: ポイントを戻す
+    await removePointTransaction(session.userId as number, 'activation_mark', String(id))
   }
 
   return NextResponse.json({ ok: true })
