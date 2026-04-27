@@ -294,7 +294,7 @@ export default function ExchangePage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800">{r.action}</p>
                   </div>
-                  <p className="text-base font-black text-amber-600 shrink-0">+{r.points.toLocaleString()}pt</p>
+                  <p className={`text-base font-black shrink-0 ${r.points < 0 ? 'text-red-500' : 'text-amber-600'}`}>{r.points > 0 ? '+' : ''}{r.points.toLocaleString()}pt</p>
                   {isManager && (
                     <button onClick={() => handleDeleteRule(r.id)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
                       <Trash2 size={15} />
