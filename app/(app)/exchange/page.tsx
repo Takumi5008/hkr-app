@@ -41,6 +41,13 @@ export default function ExchangePage() {
   const [exchangeMsg, setExchangeMsg] = useState('')
   const [ranking, setRanking] = useState<RankUser[]>([])
 
+  // 手動ポイント付与フォーム
+  const [grantUserId, setGrantUserId] = useState('')
+  const [grantDelta, setGrantDelta] = useState('')
+  const [grantReason, setGrantReason] = useState('')
+  const [grantMsg, setGrantMsg] = useState('')
+  const [grantLoading, setGrantLoading] = useState(false)
+
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.role); setMyPoints(d.points ?? 0) })
     fetch('/api/points/items').then(r => r.json()).then(d => { if (Array.isArray(d)) setItems(d) })
@@ -104,6 +111,21 @@ export default function ExchangePage() {
   async function handleDeleteRule(id: number) {
     await fetch('/api/points/rules', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setRules(prev => prev.filter(r => r.id !== id))
+  }
+
+  async function handleGrant() {
+    if (!grantUserId || !grantDelta || Number(grantDelta) === 0) { setGrantMsg('メンバーとポイントを入力してください'); return }
+    setGrantLoading(true)
+    const res = await fetch('/api/points/grant', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: Number(grantUserId), delta: Number(grantDelta), reason: grantReason || '管理者による付与' }),
+    })
+    if (!res.ok) { const d = await res.json(); setGrantMsg(d.error); setGrantLoading(false); return }
+    setGrantMsg(`付与しました！`)
+    setGrantDelta(''); setGrantReason('')
+    fetch('/api/points/ranking').then(r => r.json()).then(d => { if (Array.isArray(d)) setRanking(d) })
+    setTimeout(() => setGrantMsg(''), 3000)
+    setGrantLoading(false)
   }
 
   async function handleUpdateStatus(id: number, status: 'approved' | 'rejected') {
@@ -280,6 +302,33 @@ export default function ExchangePage() {
               )}
             </div>
           )}
+          {/* 手動ポイント付与（マネージャーのみ） */}
+          {isManager && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><Plus size={15} />ポイントを手動付与</h2>
+              <div className="space-y-2">
+                <select value={grantUserId} onChange={e => setGrantUserId(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+                  <option value="">メンバーを選択</option>
+                  {ranking.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}（現在 {u.points}pt）</option>
+                  ))}
+                </select>
+                <input type="number" placeholder="ポイント（マイナス可）" value={grantDelta}
+                  onChange={e => setGrantDelta(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                <input type="text" placeholder="理由（例：5月シフト提出）" value={grantReason}
+                  onChange={e => setGrantReason(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                {grantMsg && <p className={`text-xs font-medium ${grantMsg.includes('付与') ? 'text-green-600' : 'text-red-600'}`}>{grantMsg}</p>}
+                <button onClick={handleGrant} disabled={grantLoading}
+                  className="w-full py-2.5 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 disabled:opacity-50 transition-colors">
+                  {grantLoading ? '処理中...' : '付与する'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ポイントランキング（マネージャーのみ） */}
           {isManager && ranking.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4">
