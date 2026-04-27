@@ -9,6 +9,7 @@ type Tab = 'items' | 'rules'
 interface Item { id: number; name: string; description: string; cost: number }
 interface Exchange { id: number; item_name: string; cost: number; status: string; created_at: string; user_name?: string; user_avatar?: string }
 interface Rule { id: number; action: string; points: number }
+interface RankUser { id: number; name: string; avatar: string | null; points: number }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending:  { label: '処理中', color: 'bg-yellow-100 text-yellow-700' },
@@ -38,12 +39,14 @@ export default function ExchangePage() {
   const [addRuleLoading, setAddRuleLoading] = useState(false)
 
   const [exchangeMsg, setExchangeMsg] = useState('')
+  const [ranking, setRanking] = useState<RankUser[]>([])
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.role); setMyPoints(d.points ?? 0) })
     fetch('/api/points/items').then(r => r.json()).then(d => { if (Array.isArray(d)) setItems(d) })
     fetch('/api/points/exchanges').then(r => r.json()).then(d => { if (Array.isArray(d)) setExchanges(d) })
     fetch('/api/points/rules').then(r => r.json()).then(d => { if (Array.isArray(d)) setRules(d) })
+    fetch('/api/points/ranking').then(r => r.json()).then(d => { if (Array.isArray(d)) setRanking(d) })
   }, [])
 
   const isManager = role === 'manager' || role === 'viewer'
@@ -275,6 +278,42 @@ export default function ExchangePage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+          {/* ポイントランキング */}
+          {ranking.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+                ⭐ ポイントランキング
+              </h2>
+              <div className="space-y-2">
+                {ranking.map((u, i) => {
+                  const max = Math.max(ranking[0].points, 1)
+                  const medals = ['🥇', '🥈', '🥉']
+                  return (
+                    <div key={u.id} className="flex items-center gap-3">
+                      <span className="text-base w-6 text-center shrink-0">
+                        {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                      </span>
+                      <UserAvatar name={u.name} avatar={u.avatar} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-sm font-medium text-gray-800 truncate">{u.name}</span>
+                          <span className={`text-sm font-bold shrink-0 ml-2 ${u.points < 0 ? 'text-red-500' : 'text-amber-600'}`}>
+                            {u.points.toLocaleString()}pt
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full"
+                            style={{ width: `${Math.max(0, Math.round((u.points / max) * 100))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </>
