@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, Plus, Trash2, Gift, Check, X } from 'lucide-react'
+import { CheckCircle, Plus, Trash2, Gift, Check, X, Pencil, Save } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
 
 type Tab = 'items' | 'rules'
@@ -37,6 +37,11 @@ export default function ExchangePage() {
   const [newPoints, setNewPoints] = useState('')
   const [addRuleError, setAddRuleError] = useState('')
   const [addRuleLoading, setAddRuleLoading] = useState(false)
+
+  // ルール編集
+  const [editRuleId, setEditRuleId] = useState<number | null>(null)
+  const [editRuleAction, setEditRuleAction] = useState('')
+  const [editRulePoints, setEditRulePoints] = useState('')
 
   const [exchangeMsg, setExchangeMsg] = useState('')
   const [ranking, setRanking] = useState<RankUser[]>([])
@@ -111,6 +116,23 @@ export default function ExchangePage() {
   async function handleDeleteRule(id: number) {
     await fetch('/api/points/rules', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setRules(prev => prev.filter(r => r.id !== id))
+  }
+
+  function startEditRule(r: Rule) {
+    setEditRuleId(r.id)
+    setEditRuleAction(r.action)
+    setEditRulePoints(String(r.points))
+  }
+
+  async function handleSaveRule() {
+    if (!editRuleId || !editRuleAction.trim() || !editRulePoints || Number(editRulePoints) === 0) return
+    const res = await fetch('/api/points/rules', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editRuleId, action: editRuleAction.trim(), points: Number(editRulePoints) }),
+    })
+    const data = await res.json()
+    if (Array.isArray(data)) setRules(data)
+    setEditRuleId(null)
   }
 
   async function handleGrant() {
@@ -378,15 +400,29 @@ export default function ExchangePage() {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               {rules.map((r, i) => (
-                <div key={r.id} className={`flex items-center gap-4 px-5 py-3.5 ${i !== rules.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{r.action}</p>
-                  </div>
-                  <p className={`text-base font-black shrink-0 ${r.points < 0 ? 'text-red-500' : 'text-amber-600'}`}>{r.points > 0 ? '+' : ''}{r.points.toLocaleString()}pt</p>
-                  {isManager && (
-                    <button onClick={() => handleDeleteRule(r.id)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
-                      <Trash2 size={15} />
-                    </button>
+                <div key={r.id} className={`px-4 py-3 ${i !== rules.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                  {isManager && editRuleId === r.id ? (
+                    <div className="flex items-center gap-2">
+                      <input type="text" value={editRuleAction} onChange={e => setEditRuleAction(e.target.value)}
+                        className="flex-1 px-2 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <input type="number" value={editRulePoints} onChange={e => setEditRulePoints(e.target.value)}
+                        className="w-24 px-2 py-1.5 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                      <button onClick={handleSaveRule} className="text-amber-500 hover:text-amber-700 transition-colors shrink-0"><Save size={15} /></button>
+                      <button onClick={() => setEditRuleId(null)} className="text-gray-300 hover:text-gray-500 transition-colors shrink-0"><X size={15} /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{r.action}</p>
+                      </div>
+                      <p className={`text-base font-black shrink-0 ${r.points < 0 ? 'text-red-500' : 'text-amber-600'}`}>{r.points > 0 ? '+' : ''}{r.points.toLocaleString()}pt</p>
+                      {isManager && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => startEditRule(r)} className="text-gray-300 hover:text-amber-400 transition-colors"><Pencil size={14} /></button>
+                          <button onClick={() => handleDeleteRule(r.id)} className="text-gray-300 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}

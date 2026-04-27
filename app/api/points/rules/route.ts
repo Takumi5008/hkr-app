@@ -23,6 +23,20 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(rows)
 }
 
+export async function PATCH(req: NextRequest) {
+  const session = await getSession()
+  if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+
+  const { id, action, points } = await req.json()
+  if (!id || !action?.trim() || points === undefined || points === null || points === 0) {
+    return NextResponse.json({ error: '内容とポイント（0以外）は必須です' }, { status: 400 })
+  }
+  await dbRun('UPDATE point_rules SET action = $1, points = $2 WHERE id = $3', [action.trim(), points, id])
+  const rows = await dbQuery('SELECT * FROM point_rules ORDER BY points DESC, id ASC')
+  return NextResponse.json(rows)
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
