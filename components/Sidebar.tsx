@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
+  { href: '/challenge', label: 'チャレンジ', icon: Trophy },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/activity', label: '行動表', icon: Table2 },
@@ -106,13 +107,13 @@ export default function Sidebar({ name, role }: SidebarProps) {
     setPushLoading(false)
   }
 
-  // ボトムナビは共通4項目のみ（管理者専用メニューはハンバーガーから）
+  // ボトムナビは共通5項目（管理者専用メニューはハンバーガーから）
   const bottomNavItems = [
     { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
+    { href: '/challenge', label: 'チャレンジ', icon: Trophy },
     { href: '/tasks', label: 'タスク', icon: CheckSquare },
     { href: '/schedule', label: '予定', icon: CalendarDays },
     { href: '/mtg', label: 'MTG', icon: ClipboardList },
-    { href: '/settings', label: '設定', icon: Settings },
   ]
 
   const NavContent = () => (
