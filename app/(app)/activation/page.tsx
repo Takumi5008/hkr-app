@@ -535,7 +535,7 @@ export default function ActivationPage() {
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
           <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {cols.map((c) => {
+            {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel'].includes(c.key)).map((c) => {
               const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'].includes(c.key)
               const isUndecided = isDateField && form[c.key] === '未定'
               return (
