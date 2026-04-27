@@ -228,6 +228,12 @@ async function initDb() {
       is_active   BOOLEAN NOT NULL DEFAULT true,
       created_at  TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
+    CREATE TABLE IF NOT EXISTS point_rules (
+      id         SERIAL PRIMARY KEY,
+      action     TEXT    NOT NULL,
+      points     INTEGER NOT NULL,
+      created_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
     CREATE TABLE IF NOT EXISTS point_exchanges (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
