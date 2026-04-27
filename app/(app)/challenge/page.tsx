@@ -105,7 +105,7 @@ export default async function ChallengePage() {
             { min: 60,  emoji: '💎', label: '開通職人',   desc: '累計60件以上' },
             { min: 30,  emoji: '🔥', label: '開通師',     desc: '累計30件以上' },
             { min: 10,  emoji: '⚡', label: '開通士',     desc: '累計10件以上' },
-            { min: 0,   emoji: '🌱', label: '見習い',     desc: '累計0件〜' },
+            { min: 1,   emoji: '🌱', label: '見習い',     desc: '累計1件〜' },
           ].map((b) => (
             <div key={b.min} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
               <span className="text-xl w-7 text-center">{b.emoji}</span>
