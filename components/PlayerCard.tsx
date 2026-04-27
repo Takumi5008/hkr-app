@@ -6,7 +6,7 @@ export type FormResult = 'W' | 'D' | 'L'
 export interface PlayerCardData {
   userId: number
   name: string
-  position: string
+  rank: number
   ovr: number
   tier: CardTier
   isTotw: boolean
@@ -87,7 +87,7 @@ export default function PlayerCard({ card }: { card: PlayerCardData }) {
       <div className="relative px-3 pt-3 flex items-start justify-between">
         <div>
           <p className={`text-3xl font-black leading-none ${t.ovr}`}>{card.ovr}</p>
-          <p className={`text-[11px] font-bold mt-0.5 ${t.sub}`}>{card.position}</p>
+          <p className={`text-[11px] font-bold mt-0.5 ${t.sub}`}>#{card.rank}</p>
         </div>
         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${t.labelBg}`}>
           {t.label}

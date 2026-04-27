@@ -5,6 +5,8 @@ import { calcHKR, formatMonth, HKR_TARGET } from '@/lib/hkr'
 import { AlertTriangle, Trophy, TrendingDown } from 'lucide-react'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
 import ActivationBadge from '@/components/ActivationBadge'
+import PlayerCardsSection from '@/components/PlayerCardsSection'
+import { type PlayerCardData } from '@/components/PlayerCard'
 
 export default function TeamPage() {
   const now = new Date()
@@ -13,6 +15,7 @@ export default function TeamPage() {
   const [teamData, setTeamData] = useState<any[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [cards, setCards] = useState<PlayerCardData[]>([])
 
   useEffect(() => {
     fetch('/api/products')
@@ -28,6 +31,10 @@ export default function TeamPage() {
         return r.json()
       })
       .then((d) => { setTeamData(d); setLoading(false) })
+    fetch(`/api/challenge/cards?year=${year}&month=${month}`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setCards(d) })
+      .catch(() => {})
   }, [year, month])
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
@@ -103,6 +110,7 @@ export default function TeamPage() {
       {!loading && (
         <div className="mb-6">
           <TeamChallengeCard total={teamTotal} year={year} month={month} />
+          <PlayerCardsSection cards={cards} />
         </div>
       )}
 
