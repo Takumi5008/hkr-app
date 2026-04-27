@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
   if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { action, points } = await req.json()
-  if (!action?.trim() || !points || points <= 0) {
-    return NextResponse.json({ error: '内容とポイントは必須です' }, { status: 400 })
+  if (!action?.trim() || points === undefined || points === null || points === 0) {
+    return NextResponse.json({ error: '内容とポイント（0以外）は必須です' }, { status: 400 })
   }
   await dbRun('INSERT INTO point_rules (action, points) VALUES ($1, $2)', [action.trim(), points])
   const rows = await dbQuery('SELECT * FROM point_rules ORDER BY points DESC, id ASC')

@@ -313,7 +313,7 @@ export default function ExchangePage() {
                 <input type="text" placeholder="内容（例：開通1件につき）" value={newAction}
                   onChange={e => { setNewAction(e.target.value); setAddRuleError('') }}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                <input type="number" placeholder="付加ポイント" value={newPoints} min={1}
+                <input type="number" placeholder="ポイント（マイナス可）" value={newPoints}
                   onChange={e => { setNewPoints(e.target.value); setAddRuleError('') }}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
                 {addRuleError && <p className="text-xs text-red-600">{addRuleError}</p>}
