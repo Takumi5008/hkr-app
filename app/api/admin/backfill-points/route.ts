@@ -43,5 +43,37 @@ export async function POST() {
     results.push({ type: 'mtg', userId: m.user_id, name: m.name, ref: m.date })
   }
 
+  // 全ユーザーの全月開通数マイルストーンボーナス
+  const milestones = [
+    { threshold: 7,  bonus: 20  },
+    { threshold: 15, bonus: 50  },
+    { threshold: 20, bonus: 100 },
+  ]
+  const monthlyTotals = await dbQuery<{ user_id: number; year: number; month: number; total: number }>(
+    `SELECT user_id, year, month, COALESCE(SUM(activation_count), 0)::int AS total
+     FROM records
+     GROUP BY user_id, year, month`
+  )
+  for (const row of monthlyTotals) {
+    for (const { threshold, bonus } of milestones) {
+      if (row.total >= threshold) {
+        await addPointTransaction(
+          row.user_id, bonus,
+          `月${threshold}開通ボーナス`,
+          'milestone',
+          `${row.user_id}-${row.year}-${row.month}-${threshold}`
+        )
+        results.push({ type: `milestone_${threshold}`, userId: row.user_id, name: '', ref: `${row.year}-${row.month}` })
+      }
+    }
+  }
+
+  // 全ユーザーのポイントを再集計
+  const users = await dbQuery<{ id: number }>('SELECT id FROM users')
+  const { syncUserPoints } = await import('@/lib/points')
+  for (const u of users) {
+    await syncUserPoints(u.id)
+  }
+
   return NextResponse.json({ ok: true, applied: results.length, results })
 }
