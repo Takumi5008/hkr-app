@@ -280,8 +280,8 @@ export default function ExchangePage() {
               )}
             </div>
           )}
-          {/* ポイントランキング */}
-          {ranking.length > 0 && (
+          {/* ポイントランキング（マネージャーのみ） */}
+          {isManager && ranking.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4">
               <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
                 ⭐ ポイントランキング
