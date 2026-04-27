@@ -7,12 +7,12 @@ const BADGES = [
   { min: 1,  emoji: '🌱', label: '見習い',         color: 'bg-green-100 text-green-700 border-green-200' },
 ]
 
-export function getBadge(cumulative: number) {
-  return BADGES.find((b) => cumulative >= b.min) ?? null
+export function getBadge(monthly: number) {
+  return BADGES.find((b) => monthly >= b.min) ?? null
 }
 
-export default function ActivationBadge({ cumulative, size = 'sm' }: { cumulative: number; size?: 'sm' | 'xs' }) {
-  const badge = getBadge(cumulative)
+export default function ActivationBadge({ cumulative: monthly, size = 'sm' }: { cumulative: number; size?: 'sm' | 'xs' }) {
+  const badge = getBadge(monthly)
   if (!badge) return null
   return (
     <span className={`inline-flex items-center gap-0.5 font-bold rounded-full border shrink-0 ${
