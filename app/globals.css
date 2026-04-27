@@ -18,12 +18,3 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* スマホ: ボトムナビ + safe area 分の余白を確保 */
-@media (max-width: 639px) {
-  #main-content {
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
-  }
-  #bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-}

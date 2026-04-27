@@ -132,15 +132,6 @@ export default function Sidebar({ name, role }: SidebarProps) {
     setPushLoading(false)
   }
 
-  // ボトムナビは共通5項目（管理者専用メニューはハンバーガーから）
-  const bottomNavItems = [
-    { href: '/dashboard', label: 'ホーム', icon: LayoutDashboard },
-    { href: '/challenge', label: 'チャレンジ', icon: Trophy },
-    { href: '/exchange', label: '交換', icon: Gift },
-    { href: '/tasks', label: 'タスク', icon: CheckSquare },
-    { href: '/mtg', label: 'MTG', icon: ClipboardList },
-  ]
-
   const NavContent = () => (
     <>
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto min-h-0">
@@ -291,23 +282,6 @@ export default function Sidebar({ name, role }: SidebarProps) {
         </div>
       )}
 
-      {/* スマホ ボトムナビ */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 shadow-lg" id="bottom-nav">
-        <div className="flex items-center justify-around px-2 py-1">
-          {bottomNavItems.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors ${
-                pathname === href ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-xs font-medium">{label.length > 4 ? label.slice(0, 4) : label}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
     </>
   )
 }

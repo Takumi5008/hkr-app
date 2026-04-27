@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <NotificationBanner />
       <VirtualKeyboardFix />
       {/* PC: サイドバー分マージン / スマホ: トップバー+ボトムナビ分パディング */}
-      <main className="sm:ml-60 flex-1 min-h-screen pt-14 pb-24 sm:pt-0 sm:pb-0" id="main-content">{children}</main>
+      <main className="sm:ml-60 flex-1 min-h-screen pt-14 sm:pt-0">{children}</main>
     </div>
   )
 }
