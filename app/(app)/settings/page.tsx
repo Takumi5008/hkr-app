@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle, ShieldAlert } from 'lucide-react'
+import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
+import UserAvatar from '@/components/UserAvatar'
 
 function SettingsContent() {
   const searchParams = useSearchParams()
@@ -15,6 +16,11 @@ function SettingsContent() {
   const [profileError, setProfileError] = useState('')
   const [profileLoading, setProfileLoading] = useState(false)
 
+  // アバター
+  const [avatar, setAvatar] = useState<string | null>(null)
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   // パスワード
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -26,8 +32,47 @@ function SettingsContent() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => { setName(d.name); setEmail(d.email) })
+      .then((d) => { setName(d.name); setEmail(d.email); setAvatar(d.avatar ?? null) })
   }, [])
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const canvas = document.createElement('canvas')
+    const img = document.createElement('img')
+    img.onload = () => {
+      const size = 150
+      canvas.width = size
+      canvas.height = size
+      const ctx = canvas.getContext('2d')!
+      const min = Math.min(img.width, img.height)
+      const sx = (img.width - min) / 2
+      const sy = (img.height - min) / 2
+      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+      setAvatar(dataUrl)
+      uploadAvatar(dataUrl)
+    }
+    img.src = URL.createObjectURL(file)
+    e.target.value = ''
+  }
+
+  async function uploadAvatar(dataUrl: string) {
+    setAvatarLoading(true)
+    await fetch('/api/auth/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatar: dataUrl }),
+    })
+    setAvatarLoading(false)
+  }
+
+  async function handleDeleteAvatar() {
+    setAvatarLoading(true)
+    await fetch('/api/auth/avatar', { method: 'DELETE' })
+    setAvatar(null)
+    setAvatarLoading(false)
+  }
 
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
@@ -90,6 +135,41 @@ function SettingsContent() {
           </div>
         </div>
       )}
+
+      {/* アバター */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">プロフィール写真</h2>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <UserAvatar name={name || '?'} avatar={avatar} size="xl" />
+            {avatarLoading && (
+              <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={avatarLoading}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              <Camera size={15} />写真を変更
+            </button>
+            {avatar && (
+              <button
+                onClick={handleDeleteAvatar}
+                disabled={avatarLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+              >
+                <Trash2 size={15} />削除
+              </button>
+            )}
+            <p className="text-xs text-gray-400">JPG・PNG・最大400KB</p>
+          </div>
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      </div>
 
       {/* プロフィール変更 */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">

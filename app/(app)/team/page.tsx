@@ -7,6 +7,7 @@ import TeamChallengeCard from '@/components/TeamChallengeCard'
 import ActivationBadge from '@/components/ActivationBadge'
 import PlayerCardsSection from '@/components/PlayerCardsSection'
 import { type PlayerCardData } from '@/components/PlayerCard'
+import UserAvatar from '@/components/UserAvatar'
 
 export default function TeamPage() {
   const now = new Date()
@@ -194,9 +195,7 @@ export default function TeamPage() {
                       <div key={d.user.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${bgColors[i]}`}>
                         <div className="flex items-center gap-2">
                           <span className="text-base">{medals[i]}</span>
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold">
-                            {d.user.name.charAt(0)}
-                          </div>
+                          <UserAvatar name={d.user.name} avatar={d.user.avatar} size="sm" />
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
                             <ActivationBadge cumulative={d.activation} size="xs" />
@@ -223,9 +222,7 @@ export default function TeamPage() {
                       <div key={d.user.id} className="flex items-center justify-between px-3 py-2 rounded-lg border bg-red-50 border-red-200">
                         <div className="flex items-center gap-2">
                           <AlertTriangle size={13} className="text-red-500 shrink-0" />
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center text-white text-xs font-semibold">
-                            {d.user.name.charAt(0)}
-                          </div>
+                          <UserAvatar name={d.user.name} avatar={d.user.avatar} size="sm" />
                           <div className="flex flex-col gap-0.5">
                             <span className="text-sm font-medium text-gray-800">{d.user.name}</span>
                             <ActivationBadge cumulative={d.activation} size="xs" />
@@ -264,9 +261,7 @@ export default function TeamPage() {
                   <span className="text-base w-6 text-center shrink-0">
                     {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
                   </span>
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-semibold shrink-0">
-                    {d.user.name.charAt(0)}
-                  </div>
+                  <UserAvatar name={d.user.name} avatar={d.user.avatar} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-sm font-medium text-gray-800 truncate">{d.user.name}</span>
@@ -296,9 +291,7 @@ export default function TeamPage() {
           <div key={user.id} className={`bg-white rounded-xl border p-4 ${allHkr !== null && allHkr < HKR_TARGET ? 'border-red-200' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-sm font-semibold">
-                  {user.name.charAt(0)}
-                </div>
+                <UserAvatar name={user.name} avatar={user.avatar} size="md" />
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-gray-900">{user.name}</span>
@@ -365,9 +358,7 @@ export default function TeamPage() {
                 <tr key={user.id} className={`hover:bg-gray-50 ${allHkr !== null && allHkr < HKR_TARGET ? 'bg-red-50/30' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium shrink-0">
-                        {user.name.charAt(0)}
-                      </div>
+                      <UserAvatar name={user.name} avatar={user.avatar} size="sm" />
                       <div className="flex flex-col gap-0.5">
                         <span className="font-medium text-gray-900">{user.name}</span>
                         <ActivationBadge cumulative={totalActivation} size="xs" />

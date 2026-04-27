@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getBadge } from '@/components/ActivationBadge'
+import UserAvatar from '@/components/UserAvatar'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
@@ -50,6 +51,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const [pushLoading, setPushLoading] = useState(false)
   const [myActivation, setMyActivation] = useState(0)
   const [myPoints, setMyPoints] = useState<number | null>(null)
+  const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
     const now = new Date()
@@ -58,14 +60,15 @@ export default function Sidebar({ name, role }: SidebarProps) {
     fetch(`/api/records?year=${y}&month=${m}`)
       .then((r) => r.json())
       .then((data: { activation_count: number }[]) => {
-        if (Array.isArray(data)) {
-          setMyActivation(data.reduce((s, r) => s + (r.activation_count ?? 0), 0))
-        }
+        if (Array.isArray(data)) setMyActivation(data.reduce((s, r) => s + (r.activation_count ?? 0), 0))
       })
       .catch(() => {})
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => { if (typeof d.points === 'number') setMyPoints(d.points) })
+      .then((d) => {
+        if (typeof d.points === 'number') setMyPoints(d.points)
+        if (d.avatar) setMyAvatar(d.avatar)
+      })
       .catch(() => {})
   }, [])
 
@@ -188,9 +191,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
             pathname === '/settings' ? 'bg-white/15' : 'hover:bg-white/10'
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center text-white text-sm font-semibold shrink-0 shadow">
-            {name.charAt(0)}
-          </div>
+          <UserAvatar name={name} avatar={myAvatar} size="md" className="shadow" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <p className="text-sm font-medium text-white truncate">{name}</p>
