@@ -3,6 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
+import TableScrollContainer from '@/components/TableScrollContainer'
 
 type Role = 'member' | 'viewer' | 'manager'
 const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー' }
@@ -459,7 +460,7 @@ export default function AdminPage() {
             {shiftsLoading ? (
               <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
             ) : (
-              <div className="overflow-x-auto overscroll-x-contain touch-pan-x -mx-2 px-2">
+              <TableScrollContainer className="-mx-2 px-2">
                 <table className="text-xs border-collapse w-full">
                   <thead>
                     <tr>
@@ -532,7 +533,7 @@ export default function AdminPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollContainer>
             )}
           </div>
         </>
@@ -622,7 +623,7 @@ export default function AdminPage() {
             ) : mtgData.dates.length === 0 ? (
               <p className="text-gray-400 text-sm py-4 text-center">この月に金曜日はありません</p>
             ) : (
-              <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+              <TableScrollContainer>
                 <table className="text-xs border-collapse w-full">
                   <thead>
                     <tr>
@@ -686,7 +687,7 @@ export default function AdminPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </TableScrollContainer>
             )}
           </div>
         </>

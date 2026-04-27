@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil, X, Save } from 'lucide-react'
+import TableScrollContainer from '@/components/TableScrollContainer'
 
 type DailyActivity = {
   id: number
@@ -306,7 +307,7 @@ export default function ActivityPage() {
 
         return (
           <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-            <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+            <TableScrollContainer>
               <table className="text-xs border-collapse w-full">
                 <thead>
                   <tr>
@@ -358,7 +359,7 @@ export default function ActivityPage() {
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </TableScrollContainer>
           </div>
         )
       })()}
@@ -388,7 +389,7 @@ export default function ActivityPage() {
       {selectedUserId !== 'all' && tab === 'activity' && (
       <>{/* テーブル */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+        <TableScrollContainer>
           <table className="text-xs border-collapse" style={{ minWidth: '700px', width: '100%' }}>
             <thead>
               <tr>
@@ -510,7 +511,7 @@ export default function ActivityPage() {
               </tr>
             </tbody>
           </table>
-        </div>
+        </TableScrollContainer>
       </div>
       </>)}
     </div>

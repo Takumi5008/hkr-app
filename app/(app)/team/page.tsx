@@ -8,6 +8,7 @@ import ActivationBadge from '@/components/ActivationBadge'
 import PlayerCardsSection from '@/components/PlayerCardsSection'
 import { type PlayerCardData } from '@/components/PlayerCard'
 import UserAvatar from '@/components/UserAvatar'
+import TableScrollContainer from '@/components/TableScrollContainer'
 
 export default function TeamPage() {
   const now = new Date()
@@ -327,7 +328,7 @@ export default function TeamPage() {
 
       {/* PC: テーブル表示 */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
+        <TableScrollContainer>
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
@@ -404,7 +405,7 @@ export default function TeamPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScrollContainer>
       </div>
     </div>
   )
