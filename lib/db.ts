@@ -220,6 +220,13 @@ async function initDb() {
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
   `)
+  // ポイントを records の全合計から同期（過去分含む）
+  await pool.query(`
+    UPDATE users u
+    SET points = COALESCE((
+      SELECT SUM(r.activation_count) * 10 FROM records r WHERE r.user_id = u.id
+    ), 0)
+  `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
   if (parseInt(rows[0].cnt) === 0) {
