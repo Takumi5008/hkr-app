@@ -292,7 +292,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
       )}
 
       {/* スマホ ボトムナビ */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 shadow-lg">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-200 shadow-lg pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around px-2 py-1">
           {bottomNavItems.map(({ href, label, icon: Icon }) => (
             <Link
