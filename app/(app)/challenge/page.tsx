@@ -33,13 +33,6 @@ export default async function ChallengePage() {
     [year, month]
   )
 
-  // 累計開通数（バッジ用）
-  const cumulativeRows = await dbQuery(
-    `SELECT user_id, COALESCE(SUM(activation_count), 0)::int AS cumulative
-     FROM records
-     GROUP BY user_id`
-  )
-  const cumulativeMap = new Map(cumulativeRows.map((r: any) => [r.user_id, r.cumulative]))
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -67,7 +60,6 @@ export default async function ChallengePage() {
             {memberRows.map((m: any, i: number) => {
               const pct = total > 0 ? Math.round((m.activation / total) * 100) : 0
               const medals = ['🥇', '🥈', '🥉']
-              const cumulative = cumulativeMap.get(m.id) ?? 0
               return (
                 <div key={m.id} className="flex items-center gap-3">
                   <span className="text-base w-6 text-center shrink-0">
@@ -77,7 +69,7 @@ export default async function ChallengePage() {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
-                        <ActivationBadge cumulative={cumulative} size="xs" />
+                        <ActivationBadge cumulative={m.activation} size="xs" />
                       </div>
                       <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
                     </div>

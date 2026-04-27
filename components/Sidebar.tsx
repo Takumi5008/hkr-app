@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { getBadge } from '@/components/ActivationBadge'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
@@ -47,6 +48,21 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
+  const [myActivation, setMyActivation] = useState(0)
+
+  useEffect(() => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = now.getMonth() + 1
+    fetch(`/api/records?year=${y}&month=${m}`)
+      .then((r) => r.json())
+      .then((data: { activation_count: number }[]) => {
+        if (Array.isArray(data)) {
+          setMyActivation(data.reduce((s, r) => s + (r.activation_count ?? 0), 0))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (role !== 'manager') return
@@ -171,8 +187,11 @@ export default function Sidebar({ name, role }: SidebarProps) {
             {name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">{name}</p>
-            <p className="text-xs text-indigo-400">{roleLabel}</p>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{name}</p>
+              {(() => { const b = getBadge(myActivation); return b ? <span className="text-[10px] font-bold shrink-0 opacity-90">{b.emoji}</span> : null })()}
+            </div>
+            <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
           </div>
         </Link>
 
