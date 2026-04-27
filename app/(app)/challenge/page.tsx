@@ -41,6 +41,8 @@ export default async function ChallengePage() {
   )
   const total: number = row?.total ?? 0
 
+  const isManager = session.role === 'manager' || session.role === 'viewer'
+
   // 個人別月次ランキング（今月）
   const memberRows = await dbQuery(
     `SELECT u.id, u.name,
@@ -54,98 +56,62 @@ export default async function ChallengePage() {
     [year, month]
   )
 
-  // 今月の行動量（pingpong+face）
-  const monthStr = `${year}-${String(month).padStart(2, '0')}-%`
-  const activityRows = await dbQuery(
-    `SELECT user_id,
-            COALESCE(SUM(pingpong_count + intercom_count), 0)::int AS action_total,
-            COUNT(DISTINCT date)::int AS active_days
-     FROM daily_activity
-     WHERE date LIKE $1
-     GROUP BY user_id`,
-    [monthStr]
-  )
-  const activityMap = new Map(activityRows.map((r: any) => [r.user_id, r]))
-
-  // 先週 TOTW
-  const lastWeek = getWeekBounds(1)
-  const totwRows = await dbQuery(
-    `SELECT user_id, COALESCE(SUM(wimax + sonet), 0)::int AS weekly
-     FROM daily_activity
-     WHERE date >= $1 AND date <= $2
-     GROUP BY user_id
-     ORDER BY weekly DESC LIMIT 1`,
-    [lastWeek.from, lastWeek.to]
-  )
-  const totwUserId: number | null = (totwRows[0]?.weekly ?? 0) > 0 ? totwRows[0].user_id : null
-
-  // 直近4週フォーム per user
-  const formWeeks = [0, 1, 2, 3].map((w) => getWeekBounds(w))
-  const earliestDate = formWeeks[formWeeks.length - 1].from
-  const formActivityRows = await dbQuery(
-    `SELECT user_id, date, (wimax + sonet)::int AS activation
-     FROM daily_activity WHERE date >= $1 ORDER BY date`,
-    [earliestDate]
-  )
-  const formMap = new Map<number, FormResult[]>()
-  for (const m of memberRows as any[]) {
-    const userDays = formActivityRows.filter((r: any) => r.user_id === m.id)
-    const weekResults: FormResult[] = formWeeks.map(({ from, to }) => {
-      const sum = userDays
-        .filter((r: any) => r.date >= from && r.date <= to)
-        .reduce((s: number, r: any) => s + r.activation, 0)
-      return sum >= 4 ? 'W' : sum >= 1 ? 'D' : 'L'
-    })
-    formMap.set(m.id, weekResults)
-  }
-
-  // プレイヤーカード構築
-  const totalMembers = memberRows.length
-  const cards: PlayerCardData[] = (memberRows as any[]).map((m, idx) => {
-    const hkr = calcHKR(m.activation, m.cancel) ?? 50
-    const act = activityMap.get(m.id)
-    const actionScore = statScore(act?.action_total ?? 0, 150)
-    const consistScore = statScore(act?.active_days ?? 0, 20)
-    const activationScore = statScore(m.activation, 20)
-    const hkrScore = Math.min(hkr, 99)
-    const form = formMap.get(m.id) ?? ['L', 'L', 'L', 'L']
-    const formScore = Math.round((form.filter((f) => f === 'W').length * 2 + form.filter((f) => f === 'D').length) / (form.length * 2) * 99)
-
-    const ovr = Math.round(
-      activationScore * 0.40 +
-      hkrScore * 0.30 +
-      actionScore * 0.15 +
-      consistScore * 0.10 +
-      formScore * 0.05
+  // プレイヤーカード（管理者のみ）
+  let cards: PlayerCardData[] = []
+  if (isManager && memberRows.length > 0) {
+    const monthStr = `${year}-${String(month).padStart(2, '0')}-%`
+    const activityRows = await dbQuery(
+      `SELECT user_id,
+              COALESCE(SUM(pingpong_count + intercom_count), 0)::int AS action_total,
+              COUNT(DISTINCT date)::int AS active_days
+       FROM daily_activity WHERE date LIKE $1 GROUP BY user_id`,
+      [monthStr]
     )
+    const activityMap = new Map(activityRows.map((r: any) => [r.user_id, r]))
 
-    const isTotw = m.id === totwUserId
-    let tier: CardTier = ovr >= 85 ? 'elite' : ovr >= 72 ? 'gold' : ovr >= 55 ? 'silver' : 'bronze'
-    if (isTotw) tier = 'totw'
+    const lastWeek = getWeekBounds(1)
+    const totwRows = await dbQuery(
+      `SELECT user_id, COALESCE(SUM(wimax + sonet), 0)::int AS weekly
+       FROM daily_activity WHERE date >= $1 AND date <= $2
+       GROUP BY user_id ORDER BY weekly DESC LIMIT 1`,
+      [lastWeek.from, lastWeek.to]
+    )
+    const totwUserId: number | null = (totwRows[0]?.weekly ?? 0) > 0 ? totwRows[0].user_id : null
 
-    const rank = idx + 1
-    const position = rank <= Math.ceil(totalMembers * 0.25) ? 'FW'
-      : rank <= Math.ceil(totalMembers * 0.65) ? 'MF' : 'DF'
-
-    return {
-      userId: m.id,
-      name: m.name,
-      position,
-      ovr,
-      tier,
-      isTotw,
-      stats: [
-        { label: '開通', value: activationScore },
-        { label: 'HKR', value: hkrScore },
-        { label: '行動', value: actionScore },
-        { label: '継続', value: consistScore },
-      ],
-      form: form as FormResult[],
+    const formWeeks = [0, 1, 2, 3].map((w) => getWeekBounds(w))
+    const formActivityRows = await dbQuery(
+      `SELECT user_id, date, (wimax + sonet)::int AS activation
+       FROM daily_activity WHERE date >= $1 ORDER BY date`,
+      [formWeeks[3].from]
+    )
+    const formMap = new Map<number, FormResult[]>()
+    for (const m of memberRows as any[]) {
+      const userDays = formActivityRows.filter((r: any) => r.user_id === m.id)
+      formMap.set(m.id, formWeeks.map(({ from, to }) => {
+        const sum = userDays.filter((r: any) => r.date >= from && r.date <= to).reduce((s: number, r: any) => s + r.activation, 0)
+        return sum >= 4 ? 'W' : sum >= 1 ? 'D' : 'L'
+      }))
     }
-  })
 
-  // TOTW を先頭に
-  cards.sort((a, b) => (b.isTotw ? 1 : 0) - (a.isTotw ? 1 : 0) || b.ovr - a.ovr)
+    const totalMembers = memberRows.length
+    cards = (memberRows as any[]).map((m, idx) => {
+      const hkr = calcHKR(m.activation, m.cancel) ?? 50
+      const act = activityMap.get(m.id)
+      const activationScore = statScore(m.activation, 20)
+      const hkrScore = Math.min(hkr, 99)
+      const actionScore = statScore(act?.action_total ?? 0, 150)
+      const consistScore = statScore(act?.active_days ?? 0, 20)
+      const form = formMap.get(m.id) ?? (['L', 'L', 'L', 'L'] as FormResult[])
+      const formScore = Math.round((form.filter((f) => f === 'W').length * 2 + form.filter((f) => f === 'D').length) / (form.length * 2) * 99)
+      const ovr = Math.round(activationScore * 0.40 + hkrScore * 0.30 + actionScore * 0.15 + consistScore * 0.10 + formScore * 0.05)
+      const isTotw = m.id === totwUserId
+      const tier: CardTier = isTotw ? 'totw' : ovr >= 85 ? 'elite' : ovr >= 72 ? 'gold' : ovr >= 55 ? 'silver' : 'bronze'
+      const rank = idx + 1
+      const position = rank <= Math.ceil(totalMembers * 0.25) ? 'FW' : rank <= Math.ceil(totalMembers * 0.65) ? 'MF' : 'DF'
+      return { userId: m.id, name: m.name, position, ovr, tier, isTotw, stats: [{ label: '開通', value: activationScore }, { label: 'HKR', value: hkrScore }, { label: '行動', value: actionScore }, { label: '継続', value: consistScore }], form }
+    })
+    cards.sort((a, b) => (b.isTotw ? 1 : 0) - (a.isTotw ? 1 : 0) || b.ovr - a.ovr)
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -157,8 +123,8 @@ export default async function ChallengePage() {
 
       <TeamChallengeCard total={total} year={year} month={month} />
 
-      {/* プレイヤーカード */}
-      <PlayerCardsSection cards={cards} />
+      {/* プレイヤーカード（管理者のみ） */}
+      {isManager && <PlayerCardsSection cards={cards} />}
 
       {/* 本日の開通速報 */}
       <RecentActivationFeed />
