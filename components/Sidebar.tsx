@@ -49,6 +49,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
   const [myActivation, setMyActivation] = useState(0)
+  const [myPoints, setMyPoints] = useState<number | null>(null)
 
   useEffect(() => {
     const now = new Date()
@@ -61,6 +62,10 @@ export default function Sidebar({ name, role }: SidebarProps) {
           setMyActivation(data.reduce((s, r) => s + (r.activation_count ?? 0), 0))
         }
       })
+      .catch(() => {})
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.points === 'number') setMyPoints(d.points) })
       .catch(() => {})
   }, [])
 
@@ -191,7 +196,14 @@ export default function Sidebar({ name, role }: SidebarProps) {
               <p className="text-sm font-medium text-white truncate">{name}</p>
               {(() => { const b = getBadge(myActivation); return b ? <span className="text-[10px] font-bold shrink-0 opacity-90">{b.emoji}</span> : null })()}
             </div>
-            <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
+              {myPoints !== null && (
+                <span className="text-[10px] font-bold text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded-full shrink-0">
+                  ⭐ {myPoints.toLocaleString()}pt
+                </span>
+              )}
+            </div>
           </div>
         </Link>
 

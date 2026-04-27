@@ -27,11 +27,20 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(records)
 }
 
+const POINTS_PER_ACTIVATION = 10
+
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { year, month, product, cancel_count, activation_count } = await req.json()
+
+  const oldRecord = await dbQueryOne(
+    'SELECT activation_count FROM records WHERE user_id = $1 AND year = $2 AND month = $3 AND product = $4',
+    [session.userId, year, month, product]
+  )
+  const oldActivation: number = (oldRecord as any)?.activation_count ?? 0
+  const delta = (activation_count ?? 0) - oldActivation
 
   await dbRun(`
     INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, updated_at)
@@ -41,6 +50,13 @@ export async function POST(req: NextRequest) {
                   activation_count = EXCLUDED.activation_count,
                   updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
   `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0])
+
+  if (delta !== 0) {
+    await dbRun(
+      `UPDATE users SET points = GREATEST(0, points + $1) WHERE id = $2`,
+      [delta * POINTS_PER_ACTIVATION, session.userId]
+    )
+  }
 
   const record = await dbQueryOne(
     'SELECT * FROM records WHERE user_id = $1 AND year = $2 AND month = $3 AND product = $4',

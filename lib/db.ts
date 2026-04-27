@@ -218,6 +218,7 @@ async function initDb() {
     );
     ALTER TABLE shift_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
