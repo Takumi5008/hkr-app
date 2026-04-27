@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
-import { syncUserPoints } from '@/lib/points'
+import { syncUserPoints, addPointTransaction } from '@/lib/points'
+
+const ACTIVATION_MILESTONES: { threshold: number; bonus: number }[] = [
+  { threshold: 7,  bonus: 20  },
+  { threshold: 15, bonus: 50  },
+  { threshold: 20, bonus: 100 },
+]
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -43,7 +49,24 @@ export async function POST(req: NextRequest) {
                   updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
   `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0])
 
-  // 開通 ×10pt + 解除 ×1pt + トランザクション合計
+  // 月合計開通数を集計してマイルストーンボーナスを付与
+  const totals = await dbQueryOne<{ total: number }>(
+    `SELECT COALESCE(SUM(activation_count), 0)::int AS total
+     FROM records WHERE user_id = $1 AND year = $2 AND month = $3`,
+    [session.userId, year, month]
+  )
+  const total = totals?.total ?? 0
+  for (const { threshold, bonus } of ACTIVATION_MILESTONES) {
+    if (total >= threshold) {
+      await addPointTransaction(
+        session.userId as number, bonus,
+        `月${threshold}開通ボーナス`,
+        'milestone',
+        `${session.userId}-${year}-${month}-${threshold}`
+      )
+    }
+  }
+
   await syncUserPoints(session.userId as number)
 
   const record = await dbQueryOne(
