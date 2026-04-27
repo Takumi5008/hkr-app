@@ -8,7 +8,7 @@ export async function GET() {
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role === 'member') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const users = await dbQuery('SELECT id, name, email, role, created_at FROM users ORDER BY name')
+  const users = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
   return NextResponse.json(users)
 }
 
@@ -39,9 +39,14 @@ export async function PATCH(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role !== 'manager') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { id, role } = await req.json()
-  if (id === session.userId) return NextResponse.json({ error: '自分のロールは変更できません' }, { status: 400 })
+  const { id, role, display_order } = await req.json()
 
+  if (display_order !== undefined) {
+    await dbRun('UPDATE users SET display_order = $1 WHERE id = $2', [display_order, id])
+    return NextResponse.json({ ok: true })
+  }
+
+  if (id === session.userId) return NextResponse.json({ error: '自分のロールは変更できません' }, { status: 400 })
   await dbRun('UPDATE users SET role = $1 WHERE id = $2', [role, id])
   return NextResponse.json({ ok: true })
 }

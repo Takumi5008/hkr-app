@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { ChevronLeft, ChevronRight, Pencil, X, Save } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil, X, Save } from 'lucide-react'
 
 type DailyActivity = {
   id: number
@@ -70,6 +70,20 @@ export default function ActivityPage() {
     consent_form: number; wimax: number; sonet: number; cancel: number
   }
   const [allData, setAllData] = useState<AllMemberRow[]>([])
+
+  const moveRow = async (index: number, dir: -1 | 1) => {
+    const next = index + dir
+    if (next < 0 || next >= allData.length) return
+    const a = allData[index], b = allData[next]
+    const newData = [...allData]
+    newData[index] = { ...b }
+    newData[next] = { ...a }
+    setAllData(newData)
+    await Promise.all([
+      fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: a.user_id, display_order: next }) }),
+      fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: b.user_id, display_order: index }) }),
+    ])
+  }
 
   useEffect(() => {
     fetch('/api/progress').then((r) => r.json()).then((data) => {
@@ -304,7 +318,17 @@ export default function ActivityPage() {
                 <tbody>
                   {allData.map((r, i) => (
                     <tr key={r.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
-                      <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit whitespace-nowrap">{r.name}</td>
+                      <td className="border border-gray-100 px-2 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          {myRole === 'manager' && (
+                            <div className="flex flex-col shrink-0">
+                              <button onClick={() => moveRow(i, -1)} disabled={i === 0} className="text-gray-300 hover:text-teal-500 disabled:opacity-0 transition leading-none"><ChevronUp size={12} /></button>
+                              <button onClick={() => moveRow(i, 1)} disabled={i === allData.length - 1} className="text-gray-300 hover:text-teal-500 disabled:opacity-0 transition leading-none"><ChevronDown size={12} /></button>
+                            </div>
+                          )}
+                          {r.name}
+                        </div>
+                      </td>
                       {ALL_COLS.map((c) => (
                         <td key={c.label} className="border border-gray-100 px-2 py-2 text-center">
                           {fmt(getCell(r, c.key))}

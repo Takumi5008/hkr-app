@@ -35,8 +35,8 @@ export async function GET(req: NextRequest) {
        FROM users u
        LEFT JOIN daily_activity da ON da.user_id = u.id AND da.date LIKE $1
        WHERE u.role != 'viewer'
-       GROUP BY u.id, u.name
-       ORDER BY u.name ASC`,
+       GROUP BY u.id, u.name, u.display_order
+       ORDER BY u.display_order ASC, u.name ASC`,
       [`${year}-${String(month).padStart(2, '0')}-%`]
     )
     return NextResponse.json(rows)
