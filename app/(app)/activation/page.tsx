@@ -362,7 +362,7 @@ export default function ActivationPage() {
       {/* 一覧タブ */}
       {type === 'all' && (
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-          <div className="overflow-x-auto overscroll-x-contain">
+          <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
             <table className="text-xs border-collapse w-full">
               <thead>
                 <tr>
@@ -434,7 +434,7 @@ export default function ActivationPage() {
       {/* 個別タイプのテーブル */}
       {type !== 'all' && (
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
           <table className="text-xs border-collapse w-full">
             <thead>
               <tr>

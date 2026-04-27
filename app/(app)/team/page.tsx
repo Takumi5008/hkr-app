@@ -327,7 +327,7 @@ export default function TeamPage() {
 
       {/* PC: テーブル表示 */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">

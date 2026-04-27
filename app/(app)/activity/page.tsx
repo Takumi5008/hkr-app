@@ -306,7 +306,7 @@ export default function ActivityPage() {
 
         return (
           <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-            <div className="overflow-x-auto overscroll-x-contain">
+            <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
               <table className="text-xs border-collapse w-full">
                 <thead>
                   <tr>
@@ -388,7 +388,7 @@ export default function ActivityPage() {
       {selectedUserId !== 'all' && tab === 'activity' && (
       <>{/* テーブル */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-        <div className="overflow-x-auto overscroll-x-contain">
+        <div className="overflow-x-auto overscroll-x-contain touch-pan-x">
           <table className="text-xs border-collapse" style={{ minWidth: '700px', width: '100%' }}>
             <thead>
               <tr>

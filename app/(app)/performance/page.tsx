@@ -475,7 +475,7 @@ export default function PerformancePage() {
 
       {/* 個人タブ：名前選択バー */}
       {tab === 'personal' && (
-        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain pb-1 items-center">
+        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 items-center">
           {records.map((r) => (
             <button key={r.id} onClick={() => { setSelectedName(r.name); setPersonalTab('view') }}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
@@ -516,7 +516,7 @@ export default function PerformancePage() {
 
       {/* 個人タブ：年選択バー（名前選択後に表示） */}
       {tab === 'personal' && selectedName && (
-        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain pb-1 items-center">
+        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 items-center">
           {personalYears.map((y) => (
             <button key={y} onClick={() => setSelectedPersonalYear(y)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
@@ -555,7 +555,7 @@ export default function PerformancePage() {
 
       {/* 全体タブ：暦年選択バー */}
       {tab === 'team' && (
-        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain pb-1 items-center">
+        <div className="flex gap-2 mb-4 overflow-x-auto overscroll-x-contain touch-pan-x pb-1 items-center">
           {teamYears.map((y) => (
             <button key={y} onClick={() => setSelectedYear(y)}
               className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition
