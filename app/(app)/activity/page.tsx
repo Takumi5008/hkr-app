@@ -249,7 +249,6 @@ export default function ActivityPage() {
           { label: 'So-net',         key: 'sonet' as const },
           { label: '解除',            key: 'cancel' as const },
           { label: '生産性',          key: '_productivity' as const },
-          { label: '転換率',          key: '_conversion' as const },
         ] as const
 
         const fmt = (v: number | string) => (v === 0 || v === '' || v === '-') ? <span className="text-gray-200">-</span> : <span>{v}</span>
@@ -274,10 +273,6 @@ export default function ActivityPage() {
           if (key === '_productivity') {
             if (r.work_days === 0) return '-'
             return Math.round((r.wimax + r.sonet) / r.work_days * 100) / 100
-          }
-          if (key === '_conversion') {
-            if (r.consent_form === 0) return '-'
-            return `${Math.round((r.wimax + r.sonet) / r.consent_form * 1000) / 10}%`
           }
           return r[key]
         }
@@ -312,7 +307,6 @@ export default function ActivityPage() {
                       let v: number | string = 0
                       if (c.key === '_total') v = totals.wimax + totals.sonet
                       else if (c.key === '_productivity') v = totals.work_days > 0 ? Math.round((totals.wimax + totals.sonet) / totals.work_days * 100) / 100 : '-'
-                      else if (c.key === '_conversion') v = totals.consent_form > 0 ? `${Math.round((totals.wimax + totals.sonet) / totals.consent_form * 1000) / 10}%` : '-'
                       else v = totals[c.key as keyof typeof totals]
                       return (
                         <td key={c.label} className="border border-gray-100 px-2 py-2.5 text-center font-bold text-teal-700">
