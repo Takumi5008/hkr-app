@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, Fragment } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Pencil, X, Save } from 'lucide-react'
 import TableScrollContainer from '@/components/TableScrollContainer'
 
@@ -112,33 +112,6 @@ export default function ActivityPage() {
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
 
-  const contentRef = useRef<HTMLDivElement>(null)
-  const ymRef = useRef({ year, month })
-  useEffect(() => { ymRef.current = { year, month } }, [year, month])
-  useEffect(() => {
-    const el = contentRef.current
-    if (!el) return
-    let sx = 0, sy = 0
-    const onStart = (e: TouchEvent) => {
-      if ((e.target as HTMLElement).closest('[data-table-scroll]')) { sx = 0; return }
-      sx = e.touches[0].clientX; sy = e.touches[0].clientY
-    }
-    const onEnd = (e: TouchEvent) => {
-      if (!sx) return
-      const dx = e.changedTouches[0].clientX - sx
-      const dy = e.changedTouches[0].clientY - sy
-      if (Math.abs(dx) > 80 && Math.abs(dy) < 50) {
-        const { year: y, month: m } = ymRef.current
-        if (dx < 0) { if (m === 12) { setYear(y + 1); setMonth(1) } else setMonth(m + 1) }
-        else         { if (m === 1)  { setYear(y - 1); setMonth(12) } else setMonth(m - 1) }
-      }
-      sx = 0
-    }
-    el.addEventListener('touchstart', onStart, { passive: true })
-    el.addEventListener('touchend', onEnd, { passive: true })
-    return () => { el.removeEventListener('touchstart', onStart); el.removeEventListener('touchend', onEnd) }
-  }, [])
-
   const daysInMonth = new Date(year, month, 0).getDate()
   const dataMap = new Map(records.map((r) => [parseInt(r.date.slice(8, 10)), r]))
 
@@ -220,7 +193,7 @@ export default function ActivityPage() {
     val === 0 ? <span className="text-gray-300">-</span> : <span className="text-teal-700 font-bold">{val}</span>
 
   return (
-    <div ref={contentRef} className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-6 bg-gradient-to-r from-teal-600 to-emerald-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-teal-200 mb-1">Activity</p>
         <h1 className="text-2xl font-bold">行動表</h1>

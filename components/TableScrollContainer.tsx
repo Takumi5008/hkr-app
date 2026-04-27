@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
 export default function TableScrollContainer({
   children,
@@ -9,10 +9,18 @@ export default function TableScrollContainer({
   className?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [scrollable, setScrollable] = useState(false)
+  const [scrollPct, setScrollPct] = useState(0)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
+
+    const updateBar = () => {
+      const maxScroll = el.scrollWidth - el.clientWidth
+      setScrollable(maxScroll > 1)
+      setScrollPct(maxScroll > 1 ? (el.scrollLeft / maxScroll) * 100 : 0)
+    }
 
     let startX = 0
     let startY = 0
@@ -48,16 +56,45 @@ export default function TableScrollContainer({
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
     el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('scroll', updateBar, { passive: true })
+
+    updateBar()
+    const observer = new ResizeObserver(updateBar)
+    observer.observe(el)
 
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('scroll', updateBar)
+      observer.disconnect()
     }
   }, [])
 
+  const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const el = ref.current
+    if (!el) return
+    const maxScroll = el.scrollWidth - el.clientWidth
+    el.scrollLeft = (Number(e.target.value) / 100) * maxScroll
+  }
+
   return (
-    <div ref={ref} data-table-scroll className={`overflow-x-auto overscroll-x-contain ${className}`}>
-      {children}
+    <div data-table-scroll className="flex flex-col">
+      <div ref={ref} className={`overflow-x-auto overscroll-x-contain ${className}`}>
+        {children}
+      </div>
+      {scrollable && (
+        <div className="sm:hidden px-3 py-1.5 bg-gray-50 border-t border-gray-100">
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={0.5}
+            value={scrollPct}
+            onChange={handleSlider}
+            className="w-full h-1 cursor-ew-resize accent-teal-500"
+          />
+        </div>
+      )}
     </div>
   )
 }
