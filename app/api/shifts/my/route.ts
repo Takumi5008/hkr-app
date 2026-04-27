@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQueryOne, dbRun } from '@/lib/db'
+import { addPointTransaction } from '@/lib/points'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -33,5 +34,13 @@ export async function POST(req: NextRequest) {
      ON CONFLICT (user_id, year, month) DO UPDATE SET work_dates = $4, submitted = $5, updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
     [session.userId, year, month, JSON.stringify(workDates), submitted ? 1 : 0]
   )
+
+  // 期限内に提出完了したら +1pt（月ごとに1回のみ）
+  if (submitted) {
+    await addPointTransaction(
+      session.userId as number, 1, 'シフト時間内提出', 'shift_submit', `${year}-${month}`
+    )
+  }
+
   return NextResponse.json({ ok: true })
 }

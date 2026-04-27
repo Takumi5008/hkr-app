@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { syncUserPoints } from '@/lib/points'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -27,8 +28,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(records)
 }
 
-const POINTS_PER_ACTIVATION = 10
-
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -44,10 +43,8 @@ export async function POST(req: NextRequest) {
                   updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
   `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0])
 
-  await dbRun(
-    `UPDATE users SET points = COALESCE((SELECT SUM(activation_count) * $1 FROM records WHERE user_id = $2), 0) WHERE id = $2`,
-    [POINTS_PER_ACTIVATION, session.userId]
-  )
+  // 開通 ×10pt + 解除 ×1pt + トランザクション合計
+  await syncUserPoints(session.userId as number)
 
   const record = await dbQueryOne(
     'SELECT * FROM records WHERE user_id = $1 AND year = $2 AND month = $3 AND product = $4',

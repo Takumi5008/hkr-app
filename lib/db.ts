@@ -243,13 +243,24 @@ async function initDb() {
       status     TEXT    NOT NULL DEFAULT 'pending',
       created_at TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
+    CREATE TABLE IF NOT EXISTS point_transactions (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      delta      INTEGER NOT NULL,
+      reason     TEXT NOT NULL DEFAULT '',
+      ref_type   TEXT NOT NULL DEFAULT '',
+      ref_id     TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, ref_type, ref_id)
+    );
   `)
   // ポイントを records の全合計から同期（過去分含む）
   await pool.query(`
     UPDATE users u
-    SET points = COALESCE((
-      SELECT SUM(r.activation_count) * 10 FROM records r WHERE r.user_id = u.id
-    ), 0)
+    SET points = (
+      COALESCE((SELECT SUM(r.activation_count) * 10 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
+      + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0)
+    )
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')

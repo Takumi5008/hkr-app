@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
+import { addPointTransaction } from '@/lib/points'
 
 function getFridays(weeks = 8): string[] {
   const fridays: string[] = []
@@ -44,5 +45,11 @@ export async function POST(req: NextRequest) {
      ON CONFLICT (user_id, date) DO UPDATE SET status = $3, reason = $4, late_time = $5, updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
     [session.userId, date, status, reason ?? '', lateTime ?? '']
   )
+
+  // 期限内に提出完了したら +1pt（日付ごとに1回のみ）
+  await addPointTransaction(
+    session.userId as number, 1, 'MTG出欠時間内提出', 'mtg_submit', date
+  )
+
   return NextResponse.json({ ok: true })
 }

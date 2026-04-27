@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { dbQuery, dbRun } from '@/lib/db'
+import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
+import { addPointTransaction } from '@/lib/points'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -60,6 +61,12 @@ export async function PATCH(req: NextRequest) {
   const { id, name, date, line, cancel, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
+  // 更新前の activation 状態を取得
+  const prev = await dbQueryOne<{ activation: string; date: string }>(
+    'SELECT activation, date FROM activation_records WHERE id=$1 AND user_id=$2',
+    [id, session.userId]
+  )
+
   await dbRun(
     `UPDATE activation_records SET
      name=$1, date=$2, line=$3, cancel=$4, neg_apply=$5, neg_cancel=$6, fm=$7,
@@ -71,6 +78,18 @@ export async function PATCH(req: NextRequest) {
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
      id, session.userId]
   )
+
+  // ⭕️が新規に付いた かつ 日付の21時(JST=12:00 UTC)前なら +3pt
+  const recordDate = (date as string) || prev?.date || ''
+  if (activation && !prev?.activation && recordDate) {
+    const deadline21 = new Date(recordDate + 'T12:00:00Z') // 21:00 JST
+    if (new Date() < deadline21) {
+      await addPointTransaction(
+        session.userId as number, 3, 'HKR日付21時前に開通確認', 'activation_ontime', String(id)
+      )
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
 

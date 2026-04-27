@@ -7,6 +7,10 @@
     {
       "path": "/api/reminders/cron",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/points/penalty-cron",
+      "schedule": "0 12 * * *"
     }
   ]
 }
