@@ -537,15 +537,31 @@ export default function ActivationPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {cols.map((c) => {
               const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'].includes(c.key)
+              const isUndecided = isDateField && form[c.key] === '未定'
               return (
                 <div key={c.key}>
-                  <label className="text-xs text-gray-500 mb-0.5 block">{c.label}</label>
-                  <input
-                    type={isDateField ? 'date' : 'text'}
-                    value={form[c.key]}
-                    onChange={f(c.key)}
-                    className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
-                  />
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label className="text-xs text-gray-500">{c.label}</label>
+                    {isDateField && (
+                      <button
+                        type="button"
+                        onClick={() => setForm(p => ({ ...p, [c.key]: isUndecided ? '' : '未定' }))}
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${isUndecided ? 'bg-gray-400 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                      >
+                        未定
+                      </button>
+                    )}
+                  </div>
+                  {isDateField && isUndecided ? (
+                    <div className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">未定</div>
+                  ) : (
+                    <input
+                      type={isDateField ? 'date' : 'text'}
+                      value={form[c.key]}
+                      onChange={f(c.key)}
+                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
+                    />
+                  )}
                 </div>
               )
             })}
