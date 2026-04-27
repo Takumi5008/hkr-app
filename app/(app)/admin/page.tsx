@@ -459,7 +459,7 @@ export default function AdminPage() {
             {shiftsLoading ? (
               <p className="text-gray-400 text-sm py-4 text-center">読み込み中...</p>
             ) : (
-              <div className="overflow-x-auto -mx-2 px-2">
+              <div className="overflow-x-auto overscroll-x-contain -mx-2 px-2">
                 <table className="text-xs border-collapse w-full">
                   <thead>
                     <tr>
@@ -622,7 +622,7 @@ export default function AdminPage() {
             ) : mtgData.dates.length === 0 ? (
               <p className="text-gray-400 text-sm py-4 text-center">この月に金曜日はありません</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overscroll-x-contain">
                 <table className="text-xs border-collapse w-full">
                   <thead>
                     <tr>
