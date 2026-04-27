@@ -88,6 +88,16 @@ export default function TeamPage() {
   const top3 = ranked.slice(0, 3)
   const bottom3 = ranked.slice(-3).reverse().filter((d) => d.hkr < HKR_TARGET)
 
+  const CHALLENGE_GOAL = 200
+  const teamTotal = teamStats.reduce((s, d) => s + d.totalActivation, 0)
+  const progress = Math.min((teamTotal / CHALLENGE_GOAL) * 100, 100)
+  const milestones = [50, 100, 150, 200]
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const today = now.getDate()
+  const paceTarget = isCurrentMonth ? Math.round(CHALLENGE_GOAL * (today / daysInMonth)) : null
+  const paceStatus = paceTarget !== null ? teamTotal - paceTarget : null
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-6 bg-gradient-to-r from-teal-600 to-emerald-500 rounded-2xl px-6 py-5 shadow-md text-white">
@@ -95,6 +105,77 @@ export default function TeamPage() {
         <h1 className="text-2xl font-bold">チーム全体</h1>
         <p className="text-sm text-teal-100 mt-0.5">{formatMonth(year, month)}のHKR一覧</p>
       </div>
+
+      {/* 200開通チャレンジ */}
+      {!loading && (
+        <div className={`mb-6 rounded-2xl p-5 shadow-sm border ${teamTotal >= CHALLENGE_GOAL ? 'bg-gradient-to-br from-yellow-400 to-amber-500 border-yellow-300' : 'bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-500'} text-white`}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">{teamTotal >= CHALLENGE_GOAL ? '🏆' : '🎯'}</span>
+              <span className="text-sm font-bold tracking-wide">チーム200開通チャレンジ</span>
+            </div>
+            <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
+              {formatMonth(year, month)}
+            </span>
+          </div>
+
+          <div className="flex items-end gap-2 mb-4 mt-3">
+            <span className="text-5xl font-black leading-none">{teamTotal}</span>
+            <span className="text-lg font-bold opacity-70 mb-1">/ {CHALLENGE_GOAL} 開通</span>
+            {teamTotal >= CHALLENGE_GOAL && (
+              <span className="mb-1 ml-auto text-sm font-bold bg-white text-yellow-600 px-3 py-1 rounded-full shadow">🎉 達成！</span>
+            )}
+          </div>
+
+          {/* プログレスバー */}
+          <div className="relative mb-3">
+            <div className="h-4 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${teamTotal >= CHALLENGE_GOAL ? 'bg-white' : 'bg-gradient-to-r from-emerald-300 to-cyan-300'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {/* マイルストーンマーカー */}
+            {milestones.slice(0, -1).map((m) => (
+              <div
+                key={m}
+                className="absolute top-0 h-4 w-0.5 bg-white/40"
+                style={{ left: `${(m / CHALLENGE_GOAL) * 100}%` }}
+              />
+            ))}
+          </div>
+
+          {/* マイルストーン */}
+          <div className="flex justify-between mb-3">
+            {milestones.map((m) => {
+              const reached = teamTotal >= m
+              return (
+                <div key={m} className="flex flex-col items-center gap-1">
+                  <span className={`text-lg ${reached ? 'grayscale-0' : 'grayscale opacity-40'}`}>
+                    {m === 50 ? '🌱' : m === 100 ? '🔥' : m === 150 ? '⚡' : '🏆'}
+                  </span>
+                  <span className={`text-xs font-bold ${reached ? 'text-white' : 'text-white/40'}`}>{m}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* ペース表示（当月のみ） */}
+          {paceStatus !== null && teamTotal < CHALLENGE_GOAL && (
+            <div className={`text-xs font-semibold px-3 py-1.5 rounded-xl inline-flex items-center gap-1.5 ${paceStatus >= 0 ? 'bg-emerald-400/30' : 'bg-red-400/30'}`}>
+              <span>{paceStatus >= 0 ? '📈' : '📉'}</span>
+              <span>
+                ペース目標 {paceTarget}件 に対して{' '}
+                <span className="font-black">{paceStatus >= 0 ? `+${paceStatus}` : paceStatus} 件</span>
+                {paceStatus >= 0 ? '　先行中' : '　ビハインド'}
+              </span>
+            </div>
+          )}
+          {teamTotal < CHALLENGE_GOAL && (
+            <p className="text-xs text-white/60 mt-2">あと <span className="text-white font-bold">{CHALLENGE_GOAL - teamTotal} 件</span> で達成</p>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-end mb-4">
         <select
