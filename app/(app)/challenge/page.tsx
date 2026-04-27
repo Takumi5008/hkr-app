@@ -5,8 +5,27 @@ import TeamChallengeCard from '@/components/TeamChallengeCard'
 import ActivationBadge from '@/components/ActivationBadge'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
+import PlayerCardsSection from '@/components/PlayerCardsSection'
+import { type PlayerCardData, type CardTier, type FormResult } from '@/components/PlayerCard'
+import { calcHKR } from '@/lib/hkr'
 
 export const dynamic = 'force-dynamic'
+
+function getWeekBounds(weeksAgo: number): { from: string; to: string } {
+  const now = new Date()
+  const day = now.getDay()
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  const monday = new Date(now)
+  monday.setDate(now.getDate() + diffToMonday - weeksAgo * 7)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  const fmt = (d: Date) => d.toISOString().slice(0, 10)
+  return { from: fmt(monday), to: fmt(sunday) }
+}
+
+function statScore(value: number, max: number): number {
+  return Math.min(Math.round((value / max) * 99), 99)
+}
 
 export default async function ChallengePage() {
   const session = await getSession()
@@ -24,7 +43,9 @@ export default async function ChallengePage() {
 
   // 個人別月次ランキング（今月）
   const memberRows = await dbQuery(
-    `SELECT u.id, u.name, COALESCE(SUM(r.activation_count), 0)::int AS activation
+    `SELECT u.id, u.name,
+            COALESCE(SUM(r.activation_count), 0)::int AS activation,
+            COALESCE(SUM(r.cancel_count), 0)::int AS cancel
      FROM users u
      LEFT JOIN records r ON r.user_id = u.id AND r.year = $1 AND r.month = $2
      GROUP BY u.id, u.name
@@ -33,6 +54,98 @@ export default async function ChallengePage() {
     [year, month]
   )
 
+  // 今月の行動量（pingpong+face）
+  const monthStr = `${year}-${String(month).padStart(2, '0')}-%`
+  const activityRows = await dbQuery(
+    `SELECT user_id,
+            COALESCE(SUM(pingpong_count + intercom_count), 0)::int AS action_total,
+            COUNT(DISTINCT date)::int AS active_days
+     FROM daily_activity
+     WHERE date LIKE $1
+     GROUP BY user_id`,
+    [monthStr]
+  )
+  const activityMap = new Map(activityRows.map((r: any) => [r.user_id, r]))
+
+  // 先週 TOTW
+  const lastWeek = getWeekBounds(1)
+  const totwRows = await dbQuery(
+    `SELECT user_id, COALESCE(SUM(wimax + sonet), 0)::int AS weekly
+     FROM daily_activity
+     WHERE date >= $1 AND date <= $2
+     GROUP BY user_id
+     ORDER BY weekly DESC LIMIT 1`,
+    [lastWeek.from, lastWeek.to]
+  )
+  const totwUserId: number | null = (totwRows[0]?.weekly ?? 0) > 0 ? totwRows[0].user_id : null
+
+  // 直近4週フォーム per user
+  const formWeeks = [0, 1, 2, 3].map((w) => getWeekBounds(w))
+  const earliestDate = formWeeks[formWeeks.length - 1].from
+  const formActivityRows = await dbQuery(
+    `SELECT user_id, date, (wimax + sonet)::int AS activation
+     FROM daily_activity WHERE date >= $1 ORDER BY date`,
+    [earliestDate]
+  )
+  const formMap = new Map<number, FormResult[]>()
+  for (const m of memberRows as any[]) {
+    const userDays = formActivityRows.filter((r: any) => r.user_id === m.id)
+    const weekResults: FormResult[] = formWeeks.map(({ from, to }) => {
+      const sum = userDays
+        .filter((r: any) => r.date >= from && r.date <= to)
+        .reduce((s: number, r: any) => s + r.activation, 0)
+      return sum >= 4 ? 'W' : sum >= 1 ? 'D' : 'L'
+    })
+    formMap.set(m.id, weekResults)
+  }
+
+  // プレイヤーカード構築
+  const totalMembers = memberRows.length
+  const cards: PlayerCardData[] = (memberRows as any[]).map((m, idx) => {
+    const hkr = calcHKR(m.activation, m.cancel) ?? 50
+    const act = activityMap.get(m.id)
+    const actionScore = statScore(act?.action_total ?? 0, 150)
+    const consistScore = statScore(act?.active_days ?? 0, 20)
+    const activationScore = statScore(m.activation, 20)
+    const hkrScore = Math.min(hkr, 99)
+    const form = formMap.get(m.id) ?? ['L', 'L', 'L', 'L']
+    const formScore = Math.round((form.filter((f) => f === 'W').length * 2 + form.filter((f) => f === 'D').length) / (form.length * 2) * 99)
+
+    const ovr = Math.round(
+      activationScore * 0.40 +
+      hkrScore * 0.30 +
+      actionScore * 0.15 +
+      consistScore * 0.10 +
+      formScore * 0.05
+    )
+
+    const isTotw = m.id === totwUserId
+    let tier: CardTier = ovr >= 85 ? 'elite' : ovr >= 72 ? 'gold' : ovr >= 55 ? 'silver' : 'bronze'
+    if (isTotw) tier = 'totw'
+
+    const rank = idx + 1
+    const position = rank <= Math.ceil(totalMembers * 0.25) ? 'FW'
+      : rank <= Math.ceil(totalMembers * 0.65) ? 'MF' : 'DF'
+
+    return {
+      userId: m.id,
+      name: m.name,
+      position,
+      ovr,
+      tier,
+      isTotw,
+      stats: [
+        { label: '開通', value: activationScore },
+        { label: 'HKR', value: hkrScore },
+        { label: '行動', value: actionScore },
+        { label: '継続', value: consistScore },
+      ],
+      form: form as FormResult[],
+    }
+  })
+
+  // TOTW を先頭に
+  cards.sort((a, b) => (b.isTotw ? 1 : 0) - (a.isTotw ? 1 : 0) || b.ovr - a.ovr)
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
@@ -44,7 +157,10 @@ export default async function ChallengePage() {
 
       <TeamChallengeCard total={total} year={year} month={month} />
 
-      {/* 本日の開通速報（全員に表示） */}
+      {/* プレイヤーカード */}
+      <PlayerCardsSection cards={cards} />
+
+      {/* 本日の開通速報 */}
       <RecentActivationFeed />
 
       {/* 今週の開通ランキング */}
@@ -57,7 +173,7 @@ export default async function ChallengePage() {
             🏅 今月の個人別開通数
           </h2>
           <div className="space-y-3">
-            {memberRows.map((m: any, i: number) => {
+            {(memberRows as any[]).map((m, i) => {
               const pct = total > 0 ? Math.round((m.activation / total) * 100) : 0
               const medals = ['🥇', '🥈', '🥉']
               return (
