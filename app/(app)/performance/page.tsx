@@ -147,6 +147,7 @@ export default function PerformancePage() {
   const monthsWithCancel = yearMonthly.filter((r) => r.total_cancel > 0)
   const monthsWithWork = yearMonthly.filter((r) => r.work_days > 0)
   const monthsWithWorkHours = yearMonthly.filter((r) => (r.work_hours ?? 0) > 0)
+  const monthsWithOpening = yearMonthly.filter((r) => (r.opening_count ?? 0) > 0)
   const allMonthsTotal = {
     activation: yearMonthly.reduce((s, r) => s + r.total_activation, 0),
     cancel: yearMonthly.reduce((s, r) => s + r.total_cancel, 0),
@@ -156,14 +157,18 @@ export default function PerformancePage() {
   }
   const memberAvg = {
     activation: monthsWithActivation.length > 0
-      ? Math.round(allMonthsTotal.activation / monthsWithActivation.length) : 0,
+      ? Math.round(allMonthsTotal.activation / monthsWithActivation.length * 10) / 10 : 0,
     cancel: monthsWithCancel.length > 0
-      ? Math.round(allMonthsTotal.cancel / monthsWithCancel.length) : 0,
+      ? Math.round(allMonthsTotal.cancel / monthsWithCancel.length * 10) / 10 : 0,
     workDays: monthsWithWork.length > 0
       ? Math.round(allMonthsTotal.workDays / monthsWithWork.length) : 0,
     workHours: monthsWithWorkHours.length > 0
       ? Math.round(allMonthsTotal.workHours / monthsWithWorkHours.length * 10) / 10 : 0,
+    opening: monthsWithOpening.length > 0
+      ? Math.round(allMonthsTotal.openingCount / monthsWithOpening.length * 10) / 10 : 0,
   }
+  const avgHKR = memberAvg.cancel > 0
+    ? Math.round((memberAvg.opening / memberAvg.cancel) * 1000) / 10 : null
   const hasMonthlyData = yearMonthly.length > 0
 
   // 個人タブ：年一覧（2022〜当年 + 追加分）
@@ -792,42 +797,17 @@ export default function PerformancePage() {
                     </div>
                   </div>
                   <div className="px-5 py-4">
-                    <div className="flex gap-4 mb-3">
-                      <div className="text-center flex-1">
-                        <p className="text-xs text-gray-400 mb-0.5">獲得平均/月</p>
-                        <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.activation : '-'}
-                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>}
-                        </p>
-                      </div>
-                      <div className="w-px bg-gray-100" />
-                      <div className="text-center flex-1">
-                        <p className="text-xs text-gray-400 mb-0.5">解除平均/月</p>
-                        <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.cancel : '-'}
-                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">件</span>}
-                        </p>
-                      </div>
-                      <div className="w-px bg-gray-100" />
-                      <div className="text-center flex-1">
-                        <p className="text-xs text-gray-400 mb-0.5">稼働日/月</p>
-                        <p className="text-lg font-black text-violet-600">
-                          {hasMonthlyData ? memberAvg.workDays : '-'}
-                          {hasMonthlyData && <span className="text-xs font-normal text-gray-400 ml-0.5">日</span>}
-                        </p>
-                      </div>
-                    </div>
                     <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-xl p-3">
-                      <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">総稼働時間</p>
-                        <p className="text-sm font-bold text-gray-700">
-                          {allMonthsTotal.workHours > 0 ? <>{allMonthsTotal.workHours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
-                        </p>
-                      </div>
                       <div className="text-center">
                         <p className="text-xs text-gray-400 mb-0.5">総獲得数</p>
                         <p className="text-sm font-bold text-gray-700">
                           {hasMonthlyData ? <>{allMonthsTotal.activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総解除数</p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {hasMonthlyData ? <>{allMonthsTotal.cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
@@ -837,21 +817,39 @@ export default function PerformancePage() {
                         </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">開通平均/月</p>
+                        <p className="text-xs text-gray-400 mb-0.5">平均獲得数/月</p>
                         <p className="text-sm font-bold text-violet-600">
                           {hasMonthlyData ? <>{memberAvg.activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">総解除</p>
-                        <p className="text-sm font-bold text-gray-700">
-                          {hasMonthlyData ? <>{allMonthsTotal.cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                        <p className="text-xs text-gray-400 mb-0.5">平均解除数/月</p>
+                        <p className="text-sm font-bold text-violet-600">
+                          {hasMonthlyData ? <>{memberAvg.cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">解除率</p>
-                        <p className="text-sm font-bold text-emerald-600">
-                          {hasMonthlyData ? cancelRate(allMonthsTotal.activation, allMonthsTotal.cancel) : '-'}
+                        <p className="text-xs text-gray-400 mb-0.5">平均開通数/月</p>
+                        <p className="text-sm font-bold text-violet-600">
+                          {monthsWithOpening.length > 0 ? <>{memberAvg.opening}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総稼働時間</p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {allMonthsTotal.workHours > 0 ? <>{allMonthsTotal.workHours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">平均稼働時間/月</p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {allMonthsTotal.workHours > 0 ? <>{memberAvg.workHours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">平均HKR</p>
+                        <p className={`text-sm font-bold ${avgHKR == null ? 'text-gray-300' : avgHKR >= 80 ? 'text-emerald-600' : 'text-red-500'}`}>
+                          {avgHKR != null ? <>{avgHKR}<span className="text-xs font-normal ml-0.5">%</span></> : '-'}
                         </p>
                       </div>
                     </div>
