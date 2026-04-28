@@ -70,9 +70,9 @@ export default function PerformancePage() {
   const [selectedYear, setSelectedYear] = useState<number>(0)
   const [selectedName, setSelectedName] = useState<string>('')
   const [selectedPersonalYear, setSelectedPersonalYear] = useState<number>(0)
-  const [memberMonthly, setMemberMonthly] = useState<{member_name:string;year:number;month:number;total_activation:number;total_cancel:number;work_days:number}[]>([])
+  const [memberMonthly, setMemberMonthly] = useState<{member_name:string;year:number;month:number;total_activation:number;total_cancel:number;work_days:number;work_hours:number}[]>([])
   const [editingPersonalMonth, setEditingPersonalMonth] = useState<number | null>(null)
-  const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '' })
+  const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '', workHours: '' })
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
   const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete' | 'sort'>('view')
@@ -202,12 +202,13 @@ export default function PerformancePage() {
       { activation: 0, cancel: 0 }
     )
 
-  const openEditPersonalMonth = (month: number, data?: { total_activation: number; total_cancel: number; work_days: number }) => {
+  const openEditPersonalMonth = (month: number, data?: { total_activation: number; total_cancel: number; work_days: number; work_hours: number }) => {
     setEditingPersonalMonth(month)
     setPersonalMonthForm({
       totalActivation: data && data.total_activation > 0 ? String(data.total_activation) : '',
       totalCancel: data && data.total_cancel > 0 ? String(data.total_cancel) : '',
       workDays: data && data.work_days > 0 ? String(data.work_days) : '',
+      workHours: data && data.work_hours > 0 ? String(data.work_hours) : '',
     })
   }
 
@@ -225,6 +226,7 @@ export default function PerformancePage() {
         totalActivation: parseInt(personalMonthForm.totalActivation) || 0,
         totalCancel: parseInt(personalMonthForm.totalCancel) || 0,
         workDays: parseInt(personalMonthForm.workDays) || 0,
+        workHours: parseFloat(personalMonthForm.workHours) || 0,
       }),
     })
     if (res.ok) setMemberMonthly(await res.json())
@@ -840,10 +842,11 @@ export default function PerformancePage() {
                   <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                     <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
                       <span className="text-xs font-semibold text-gray-400 w-8">月</span>
-                      <div className="flex-1 grid grid-cols-5 gap-1 text-right">
+                      <div className="flex-1 grid grid-cols-6 gap-1 text-right">
                         <span className="text-xs font-semibold text-gray-400">獲得数</span>
                         <span className="text-xs font-semibold text-gray-400">解除数</span>
                         <span className="text-xs font-semibold text-gray-400">稼働日数</span>
+                        <span className="text-xs font-semibold text-gray-400">稼働時間</span>
                         <span className="text-xs font-semibold text-gray-400">解除率</span>
                         <span className="text-xs font-semibold text-gray-400">解除生産性</span>
                       </div>
@@ -858,7 +861,7 @@ export default function PerformancePage() {
                           <div key={r.month}>
                             <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
                               <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
-                              <div className="flex-1 grid grid-cols-5 gap-1 text-right">
+                              <div className="flex-1 grid grid-cols-6 gap-1 text-right">
                                 <span className="text-sm font-bold text-violet-600">
                                   {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                                 </span>
@@ -867,6 +870,9 @@ export default function PerformancePage() {
                                 </span>
                                 <span className="text-sm font-bold text-gray-600">
                                   {hasData ? <>{r.work_days}<span className="text-xs font-normal text-gray-400">日</span></> : '-'}
+                                </span>
+                                <span className="text-sm font-bold text-gray-600">
+                                  {r.work_hours > 0 ? <>{r.work_hours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
                                 </span>
                                 <span className="text-sm font-semibold text-emerald-600">
                                   {hasData ? cancelRate(r.total_activation, r.total_cancel) : '-'}
@@ -891,7 +897,7 @@ export default function PerformancePage() {
 
                             {isEditing && (
                               <form onSubmit={handleSavePersonalMonth} className="px-4 pb-4 bg-violet-50/40 space-y-2">
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 gap-2">
                                   <div>
                                     <label className="text-xs text-gray-500 mb-0.5 block">獲得数</label>
                                     <input type="number" min={0} value={personalMonthForm.totalActivation}
@@ -910,6 +916,13 @@ export default function PerformancePage() {
                                     <label className="text-xs text-gray-500 mb-0.5 block">稼働日数</label>
                                     <input type="number" min={0} value={personalMonthForm.workDays}
                                       onChange={(e) => setPersonalMonthForm((p) => ({ ...p, workDays: e.target.value }))}
+                                      placeholder="0"
+                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                                  </div>
+                                  <div>
+                                    <label className="text-xs text-gray-500 mb-0.5 block">稼働時間（h）</label>
+                                    <input type="number" min={0} step="0.5" value={personalMonthForm.workHours}
+                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, workHours: e.target.value }))}
                                       placeholder="0"
                                       className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
                                   </div>

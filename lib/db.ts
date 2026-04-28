@@ -145,6 +145,7 @@ async function initDb() {
       UNIQUE(member_name, year, month)
     );
     ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_days INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_hours REAL NOT NULL DEFAULT 0;
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date TEXT NOT NULL DEFAULT '';
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS fm_done INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_done INTEGER NOT NULL DEFAULT 0;
