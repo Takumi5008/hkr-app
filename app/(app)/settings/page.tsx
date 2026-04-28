@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
 import AccountCard from '@/components/AccountCard'
-import { calcHKR } from '@/lib/hkr'
+import { calcHKR, HKR_TARGET } from '@/lib/hkr'
 
 function SettingsContent() {
   const searchParams = useSearchParams()
@@ -130,30 +130,41 @@ function SettingsContent() {
     setTimeout(() => setPasswordSuccess(false), 3000)
   }
 
-  return (
-    <div className="p-6 max-w-lg mx-auto">
-      {myCard && myCardStats && (() => {
-        const totalActivation = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
-        const totalCancel     = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.cancel_count ?? 0), 0)
-        const hkr = calcHKR(totalActivation, totalCancel)
-        return (
-          <div className="mb-6 flex justify-center">
-            <AccountCard
-              user={myCard}
-              hkr={hkr}
-              totalActivation={totalActivation}
-              totalCancel={totalCancel}
-              loginCount={myCard.loginCount}
-              entryDays={myCardStats.activity?.entry_days ?? 0}
-              mtgAbsent={myCardStats.mtg?.absent_count ?? 0}
-              strengths={[]}
-              improvements={[]}
-              compact
-            />
-          </div>
-        )
-      })()}
+  const cardData = (() => {
+    if (!myCard || !myCardStats) return null
+    const totalActivation = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
+    const totalCancel     = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.cancel_count ?? 0), 0)
+    const hkr = calcHKR(totalActivation, totalCancel)
+    const entryDays  = myCardStats.activity?.entry_days  ?? 0
+    const mtgAbsent  = myCardStats.mtg?.absent_count     ?? 0
+    const mtgTotal   = (myCardStats.mtg?.present_count ?? 0) + (myCardStats.mtg?.absent_count ?? 0) + (myCardStats.mtg?.late_count ?? 0)
+    const loginCount = myCard.loginCount ?? 0
 
+    const strengths: string[] = []
+    if (hkr != null) {
+      if (hkr >= 90) strengths.push(`高HKRを維持（${hkr}%）`)
+      else if (hkr >= HKR_TARGET) strengths.push(`目標HKRを達成（${hkr}%）`)
+    }
+    if (mtgTotal > 0 && mtgAbsent === 0) strengths.push('MTG皆勤')
+    if (totalActivation > 0) strengths.push(`今月${totalActivation}件の開通実績`)
+    if (entryDays >= 10) strengths.push(`行動表を${entryDays}日記入`)
+    if (loginCount >= 5) strengths.push('アプリを積極的に活用')
+
+    const improvements: string[] = []
+    if (hkr == null) improvements.push('HKRデータの入力が必要')
+    else if (hkr < HKR_TARGET) {
+      improvements.push(`HKR改善が必要（現在${hkr}%）`)
+      improvements.push(`あと${Math.round((HKR_TARGET - hkr) * 10) / 10}%で目標達成`)
+    }
+    if (mtgAbsent > 0) improvements.push(`MTG欠席あり（${mtgAbsent}回）`)
+    if (totalActivation === 0) improvements.push('今月の開通実績なし')
+    if (entryDays === 0) improvements.push('行動表の記入がない')
+
+    return { hkr, totalActivation, totalCancel, entryDays, mtgAbsent, loginCount, strengths: strengths.slice(0, 3), improvements: improvements.slice(0, 3) }
+  })()
+
+  return (
+    <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 bg-gradient-to-r from-gray-700 to-gray-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Settings</p>
         <h1 className="text-2xl font-bold">アカウント設定</h1>
@@ -169,6 +180,9 @@ function SettingsContent() {
           </div>
         </div>
       )}
+
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex-1 min-w-0 w-full">
 
       {/* アバター */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
@@ -292,6 +306,28 @@ function SettingsContent() {
           </button>
         </form>
       </div>
+
+      </div>{/* end left column */}
+
+      {/* 右カラム：アカウントカード */}
+      {cardData && myCard && (
+        <div className="lg:sticky lg:top-6 shrink-0">
+          <p className="text-xs font-semibold text-gray-500 mb-2 px-1">👤 マイカード</p>
+          <AccountCard
+            user={myCard}
+            hkr={cardData.hkr}
+            totalActivation={cardData.totalActivation}
+            totalCancel={cardData.totalCancel}
+            loginCount={cardData.loginCount}
+            entryDays={cardData.entryDays}
+            mtgAbsent={cardData.mtgAbsent}
+            strengths={cardData.strengths}
+            improvements={cardData.improvements}
+          />
+        </div>
+      )}
+
+      </div>{/* end flex row */}
     </div>
   )
 }
