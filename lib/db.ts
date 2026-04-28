@@ -263,6 +263,18 @@ async function initDb() {
       created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
       UNIQUE(user_id, ref_type, ref_id)
     );
+    CREATE TABLE IF NOT EXISTS opening_calendar (
+      id               SERIAL PRIMARY KEY,
+      user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year             INTEGER NOT NULL,
+      month            INTEGER NOT NULL,
+      activation_date  TEXT    NOT NULL DEFAULT '',
+      customer_name    TEXT    NOT NULL DEFAULT '',
+      line_type        TEXT    NOT NULL DEFAULT '',
+      has_construction BOOLEAN NOT NULL DEFAULT FALSE,
+      status           TEXT    NOT NULL DEFAULT '',
+      created_at       TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    );
   `)
   // ポイントを records の全合計から同期（過去分含む）
   await pool.query(`

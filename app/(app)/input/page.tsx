@@ -1,12 +1,26 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { calcHKR, formatMonth } from '@/lib/hkr'
-import { CheckCircle, X, Plus, Pencil } from 'lucide-react'
+import { CheckCircle, X, Plus, Pencil, Trash2, Save } from 'lucide-react'
 import CelebrationOverlay from '@/components/CelebrationOverlay'
 
 type FormData = { [K: string]: { cancel: string; activation: string; remaining: string; expected: string } }
-type Tab = 'input' | 'products'
+type Tab = 'input' | 'calendar' | 'products'
+
+type CalendarEntry = {
+  id: number
+  activation_date: string
+  customer_name: string
+  line_type: string
+  has_construction: boolean
+  status: string
+}
+
+const COMMISSION = 15000
+const fmt = (n: number) => `¥${n.toLocaleString()}`
+const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
+const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
 
 export default function InputPage() {
   const now = new Date()
@@ -22,6 +36,11 @@ export default function InputPage() {
   const [role, setRole] = useState<string>('')
   const [tab, setTab] = useState<Tab>('input')
 
+  // 開通カレンダー
+  const [calEntries, setCalEntries] = useState<CalendarEntry[]>([])
+  const [calEditingId, setCalEditingId] = useState<number | 'new' | null>(null)
+  const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', has_construction: false, status: '' })
+
   // 回線管理
   const [productItems, setProductItems] = useState<{ id: number; name: string }[]>([])
   const [newProduct, setNewProduct] = useState('')
@@ -36,6 +55,14 @@ export default function InputPage() {
       .then((r) => r.json())
       .then((d) => setRole(d.role))
   }, [])
+
+  const fetchCalendar = () => {
+    fetch(`/api/opening-calendar?year=${year}&month=${month}`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setCalEntries(data) })
+  }
+
+  useEffect(() => { if (tab === 'calendar') fetchCalendar() }, [year, month, tab])
 
   useEffect(() => {
     fetch('/api/products')
@@ -97,6 +124,40 @@ export default function InputPage() {
     setLoading(false)
     setTimeout(() => setSuccess(false), 3000)
     if (totalActivation > 0) setCelebrationCount(totalActivation)
+  }
+
+  async function handleCalSave() {
+    if (calEditingId === 'new') {
+      const res = await fetch('/api/opening-calendar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, ...calForm }),
+      })
+      if (res.ok) fetchCalendar()
+    } else if (calEditingId !== null) {
+      await fetch('/api/opening-calendar', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: calEditingId, ...calForm }),
+      })
+      fetchCalendar()
+    }
+    setCalEditingId(null)
+  }
+
+  async function handleCalToggleStatus(entry: CalendarEntry) {
+    const newStatus = cycleStatus(entry.status)
+    setCalEntries((prev) => prev.map((e) => e.id === entry.id ? { ...e, status: newStatus } : e))
+    await fetch('/api/opening-calendar', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...entry, status: newStatus }),
+    })
+  }
+
+  async function handleCalDelete(id: number) {
+    await fetch(`/api/opening-calendar?id=${id}`, { method: 'DELETE' })
+    setCalEntries((prev) => prev.filter((e) => e.id !== id))
   }
 
   async function handleAddProduct() {
@@ -186,22 +247,28 @@ export default function InputPage() {
         <p className="text-sm text-blue-100 mt-0.5">月別・商材別の解除数・開通数を入力</p>
       </div>
 
-      {isManager && (
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-          <button
-            onClick={() => setTab('input')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'input' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            データ入力
-          </button>
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
+        <button
+          onClick={() => setTab('input')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'input' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          データ入力
+        </button>
+        <button
+          onClick={() => setTab('calendar')}
+          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'calendar' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          開通カレンダー
+        </button>
+        {isManager && (
           <button
             onClick={() => setTab('products')}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'products' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
           >
             回線管理
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* データ入力タブ */}
       {tab === 'input' && (
@@ -301,6 +368,228 @@ export default function InputPage() {
           </button>
         </>
       )}
+
+      {/* 開通カレンダータブ */}
+      {tab === 'calendar' && (() => {
+        const confirmed = calEntries.filter((e) => e.status === '○').length
+        const remaining = calEntries.filter((e) => e.status === '').length
+        const forecast  = confirmed + remaining
+        return (
+          <>
+            {/* 月選択 */}
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
+              <select
+                value={`${year}-${month}`}
+                onChange={(e) => {
+                  const [y, m] = e.target.value.split('-').map(Number)
+                  setYear(y); setMonth(m)
+                }}
+                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                {monthOptions.map(({ year: y, month: m }) => (
+                  <option key={`${y}-${m}`} value={`${y}-${m}`}>{formatMonth(y, m)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* エントリ一覧 */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-10">状態</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-20">開通日</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">お客様名</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-24">回線</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-12">工事</th>
+                    <th className="px-3 py-2.5 w-12" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {calEntries.length === 0 && calEditingId !== 'new' && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">データがありません</td>
+                    </tr>
+                  )}
+                  {calEntries.map((entry) => {
+                    const isEditing = calEditingId === entry.id
+                    const bg = entry.status === '○' ? 'bg-green-50/40' : entry.status === '×' ? 'bg-red-50/40' : ''
+                    return (
+                      <tr key={entry.id} className={bg}>
+                        <td className="px-2 py-2 text-center">
+                          <button onClick={() => handleCalToggleStatus(entry)} className="text-lg leading-none">
+                            {statusEmoji(entry.status)}
+                          </button>
+                        </td>
+                        {isEditing ? (
+                          <>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text" value={calForm.activation_date}
+                                onChange={(e) => setCalForm((p) => ({ ...p, activation_date: e.target.value }))}
+                                placeholder="3/1"
+                                className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text" value={calForm.customer_name}
+                                onChange={(e) => setCalForm((p) => ({ ...p, customer_name: e.target.value }))}
+                                placeholder="お客様名"
+                                className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <input
+                                type="text" value={calForm.line_type}
+                                onChange={(e) => setCalForm((p) => ({ ...p, line_type: e.target.value }))}
+                                placeholder="🏠 / 🌏"
+                                className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => setCalForm((p) => ({ ...p, has_construction: !p.has_construction }))}
+                                className={`w-7 h-7 rounded text-xs font-bold transition-colors ${calForm.has_construction ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'}`}
+                              >
+                                🔨
+                              </button>
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <div className="flex items-center gap-1">
+                                <button onClick={handleCalSave} className="text-blue-600 hover:text-blue-800">
+                                  <Save size={14} />
+                                </button>
+                                <button onClick={() => setCalEditingId(null)} className="text-gray-400 hover:text-gray-600">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-2 text-gray-700 text-xs">{entry.activation_date || '-'}</td>
+                            <td className="px-3 py-2 text-gray-800 text-xs font-medium">{entry.customer_name || '-'}</td>
+                            <td className="px-3 py-2 text-gray-600 text-xs">{entry.line_type || '-'}</td>
+                            <td className="px-3 py-2 text-center">
+                              {entry.has_construction && <span className="text-base leading-none">🔨</span>}
+                            </td>
+                            <td className="px-2 py-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => { setCalEditingId(entry.id); setCalForm({ activation_date: entry.activation_date, customer_name: entry.customer_name, line_type: entry.line_type, has_construction: entry.has_construction, status: entry.status }) }}
+                                  className="text-gray-300 hover:text-blue-500 transition"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                                <button onClick={() => handleCalDelete(entry.id)} className="text-gray-300 hover:text-red-400 transition">
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    )
+                  })}
+                  {/* 新規追加行 */}
+                  {calEditingId === 'new' && (
+                    <tr>
+                      <td className="px-2 py-1.5 text-center">
+                        <button
+                          onClick={() => setCalForm((p) => ({ ...p, status: cycleStatus(p.status) }))}
+                          className="text-lg leading-none"
+                        >
+                          {statusEmoji(calForm.status)}
+                        </button>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          autoFocus
+                          type="text" value={calForm.activation_date}
+                          onChange={(e) => setCalForm((p) => ({ ...p, activation_date: e.target.value }))}
+                          placeholder="3/1"
+                          className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="text" value={calForm.customer_name}
+                          onChange={(e) => setCalForm((p) => ({ ...p, customer_name: e.target.value }))}
+                          placeholder="お客様名"
+                          className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          type="text" value={calForm.line_type}
+                          onChange={(e) => setCalForm((p) => ({ ...p, line_type: e.target.value }))}
+                          placeholder="🏠 / 🌏"
+                          className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 text-center">
+                        <button
+                          onClick={() => setCalForm((p) => ({ ...p, has_construction: !p.has_construction }))}
+                          className={`w-7 h-7 rounded text-xs font-bold transition-colors ${calForm.has_construction ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'}`}
+                        >
+                          🔨
+                        </button>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <div className="flex items-center gap-1">
+                          <button onClick={handleCalSave} className="text-blue-600 hover:text-blue-800">
+                            <Save size={14} />
+                          </button>
+                          <button onClick={() => setCalEditingId(null)} className="text-gray-400 hover:text-gray-600">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 追加ボタン */}
+            {calEditingId === null && (
+              <button
+                onClick={() => { setCalEditingId('new'); setCalForm({ activation_date: '', customer_name: '', line_type: '', has_construction: false, status: '' }) }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow mb-5"
+              >
+                <Plus size={15} />行を追加
+              </button>
+            )}
+
+            {/* サマリー */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <p className="text-xs font-semibold text-gray-500 mb-3">{formatMonth(year, month)} まとめ</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { label: '開通数', value: confirmed, color: 'text-emerald-600' },
+                  { label: '残り', value: remaining, color: 'text-indigo-600' },
+                  { label: '見込み', value: forecast, color: 'text-blue-600' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-gray-50 rounded-lg px-4 py-3 text-center">
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                  </div>
+                ))}
+                <div className="bg-indigo-50 rounded-lg px-4 py-3 text-center sm:col-span-1">
+                  <p className="text-lg font-bold text-indigo-600">{fmt(forecast * COMMISSION)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">見込み委託費</p>
+                </div>
+                <div className="bg-emerald-50 rounded-lg px-4 py-3 text-center sm:col-span-2">
+                  <p className="text-lg font-bold text-emerald-600">{fmt(confirmed * COMMISSION)}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">確定委託費</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* 回線管理タブ（マネージャーのみ） */}
       {tab === 'products' && isManager && (
