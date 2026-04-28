@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, CheckCircle2, Circle, AlertCircle, Clock, CalendarCheck } from 'lucide-react'
+import { useConfirm } from '@/components/useConfirm'
 
 type Task = {
   id: number
@@ -13,6 +14,7 @@ type Task = {
 }
 
 export default function TasksPage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [newDueDate, setNewDueDate] = useState('')
@@ -71,6 +73,7 @@ export default function TasksPage() {
   }
 
   const handleDelete = async (id: number) => {
+    if (!await confirm('このタスクを削除しますか？')) return
     await fetch(`/api/tasks/${id}`, { method: 'DELETE' })
     setTasks((prev) => prev.filter((t) => t.id !== id))
   }
@@ -130,6 +133,7 @@ export default function TasksPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-purple-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Tasks</p>
         <h1 className="text-2xl font-bold">タスク管理</h1>

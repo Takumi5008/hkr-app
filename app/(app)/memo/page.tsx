@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Plus, Trash2, FileText, ChevronLeft } from 'lucide-react'
+import { useConfirm } from '@/components/useConfirm'
 
 type Memo = {
   id: number
@@ -11,6 +12,7 @@ type Memo = {
 }
 
 export default function MemoPage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const [memos, setMemos] = useState<Memo[]>([])
   const [selected, setSelected] = useState<Memo | null>(null)
   const [title, setTitle] = useState('')
@@ -72,6 +74,7 @@ export default function MemoPage() {
   }
 
   const handleDelete = async (id: number) => {
+    if (!await confirm('このメモを削除しますか？')) return
     await fetch(`/api/memos/${id}`, { method: 'DELETE' })
     setMemos((prev) => prev.filter((m) => m.id !== id))
     if (selected?.id === id) setSelected(null)
@@ -124,6 +127,7 @@ export default function MemoPage() {
   // メモ一覧画面
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-yellow-500 to-amber-400 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-yellow-100 mb-1">Memo</p>
         <h1 className="text-2xl font-bold">メモ</h1>

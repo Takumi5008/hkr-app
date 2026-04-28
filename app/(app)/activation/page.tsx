@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Save, X } from 'lucide-react'
 import TableScrollContainer from '@/components/TableScrollContainer'
+import { useConfirm } from '@/components/useConfirm'
 
 type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'all'
 
@@ -118,6 +119,7 @@ const TYPE_NA_FIELDS: Record<Exclude<ActivationType, 'all'>, (keyof ActivationRe
 type User = { id: number; name: string; role: string }
 
 export default function ActivationPage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
@@ -298,7 +300,7 @@ export default function ActivationPage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('削除しますか？')) return
+    if (!await confirm('このレコードを削除しますか？')) return
     await fetch(`/api/activation?id=${id}`, { method: 'DELETE' })
     setRecords((prev) => prev.filter((r) => r.id !== id))
   }
@@ -311,6 +313,7 @@ export default function ActivationPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-purple-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Activation</p>
         <h1 className="text-2xl font-bold">開通表</h1>

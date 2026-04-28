@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown } from 'lucide-react'
+import { useConfirm } from '@/components/useConfirm'
 
 type MemberPerformance = {
   id: number
@@ -52,6 +53,7 @@ function monthlyFiscalYear(year: number, month: number): number {
 }
 
 export default function PerformancePage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const [records, setRecords] = useState<MemberPerformance[]>([])
   const [monthly, setMonthly] = useState<MonthlyRecord[]>([])
   const [role, setRole] = useState<string>('member')
@@ -265,7 +267,7 @@ export default function PerformancePage() {
   }
 
   const handleSeedMonthly = async () => {
-    if (!confirm('月次データ（2022〜2026）を一括登録しますか？')) return
+    if (!await confirm('月次データ（2022〜2026）を一括登録しますか？')) return
     setSeedingMonthly(true)
     const res = await fetch('/api/performance/monthly/seed', { method: 'POST' })
     const data = await res.json()
@@ -280,7 +282,7 @@ export default function PerformancePage() {
   }
 
   const handleSeed = async () => {
-    if (!confirm('初期データ（21名）を一括登録しますか？')) return
+    if (!await confirm('初期データ（21名）を一括登録しますか？')) return
     setSeeding(true)
     const res = await fetch('/api/performance/seed', { method: 'POST' })
     const data = await res.json()
@@ -351,7 +353,7 @@ export default function PerformancePage() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!confirm('削除しますか？')) return
+    if (!await confirm('削除しますか？')) return
     await fetch(`/api/performance/${id}`, { method: 'DELETE' })
     setRecords((prev) => prev.filter((r) => r.id !== id))
   }
@@ -456,6 +458,7 @@ export default function PerformancePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-purple-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Performance</p>
         <h1 className="text-2xl font-bold">実績</h1>

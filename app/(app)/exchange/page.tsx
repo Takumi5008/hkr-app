@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, Plus, Trash2, Gift, Check, X, Pencil, Save } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
+import { useConfirm } from '@/components/useConfirm'
 
 type Tab = 'items' | 'rules'
 
@@ -18,6 +19,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 }
 
 export default function ExchangePage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const [tab, setTab] = useState<Tab>('items')
   const [role, setRole] = useState('')
   const [myPoints, setMyPoints] = useState(0)
@@ -66,7 +68,7 @@ export default function ExchangePage() {
 
   async function handleExchange(item: Item) {
     if (myPoints < item.cost) { setExchangeMsg('ポイントが不足しています'); return }
-    if (!confirm(`「${item.name}」を ${item.cost}pt で交換しますか？`)) return
+    if (!await confirm(`「${item.name}」を ${item.cost}pt で交換しますか？`)) return
     const res = await fetch('/api/points/exchanges', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ itemId: item.id }),
@@ -94,7 +96,7 @@ export default function ExchangePage() {
   }
 
   async function handleDeleteItem(id: number) {
-    if (!confirm('このアイテムを非表示にしますか？')) return
+    if (!await confirm('このアイテムを非表示にしますか？')) return
     await fetch('/api/points/items', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setItems(prev => prev.filter(i => i.id !== id))
   }
@@ -114,6 +116,7 @@ export default function ExchangePage() {
   }
 
   async function handleDeleteRule(id: number) {
+    if (!await confirm('このルールを削除しますか？')) return
     await fetch('/api/points/rules', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setRules(prev => prev.filter(r => r.id !== id))
   }
@@ -160,6 +163,7 @@ export default function ExchangePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+      {ConfirmDialog}
       {/* Header */}
       <div className="mb-6 bg-gradient-to-r from-rose-500 to-pink-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-rose-200 mb-1">Exchange</p>

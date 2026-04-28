@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, X } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
+import { useConfirm } from '@/components/useConfirm'
 
 type Schedule = {
   id: number
@@ -14,6 +15,7 @@ type Schedule = {
 }
 
 export default function SchedulePage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
@@ -74,6 +76,7 @@ export default function SchedulePage() {
   }
 
   const handleDelete = async (id: number) => {
+    if (!await confirm('このスケジュールを削除しますか？')) return
     await fetch(`/api/schedules/${id}`, { method: 'DELETE' })
     setSchedules((prev) => prev.filter((s) => s.id !== id))
   }
@@ -96,6 +99,7 @@ export default function SchedulePage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-sky-600 to-cyan-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-sky-200 mb-1">Schedule</p>
         <h1 className="text-2xl font-bold">スケジュール</h1>

@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 import TableScrollContainer from '@/components/TableScrollContainer'
+import { useConfirm } from '@/components/useConfirm'
 
 type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer'
 const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー', shift_viewer: 'シフト管理者' }
@@ -25,6 +26,7 @@ const WorkCell = ({ type }: { type: string | null }) => {
 }
 
 export default function AdminPage() {
+  const { confirm, ConfirmDialog } = useConfirm()
   const [myRole, setMyRole] = useState<string>('')
   const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg' | 'progress'>('users')
 
@@ -136,6 +138,7 @@ export default function AdminPage() {
   }
 
   async function handleDeleteDeadline() {
+    if (!await confirm('シフト締切を削除しますか？')) return
     await fetch('/api/deadlines', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -156,6 +159,7 @@ export default function AdminPage() {
   }
 
   async function handleDeleteMtgDeadline() {
+    if (!await confirm('MTG締切を削除しますか？')) return
     await fetch('/api/mtg/deadlines', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -191,12 +195,13 @@ export default function AdminPage() {
   }
 
   async function handleDeleteProduct(name: string) {
+    if (!await confirm(`商材「${name}」を削除しますか？`)) return
     await fetch('/api/products', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
     setProducts((prev) => prev.filter((p) => p.name !== name))
   }
 
   async function handleBackfill() {
-    if (!confirm('全メンバーの過去分ポイントを再集計します。よろしいですか？')) return
+    if (!await confirm('全メンバーの過去分ポイントを再集計します。よろしいですか？')) return
     setBackfillLoading(true)
     setBackfillResult(null)
     try {
@@ -313,6 +318,7 @@ export default function AdminPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+      {ConfirmDialog}
       <div className="mb-6 bg-gradient-to-r from-slate-700 to-slate-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Admin</p>
         <h1 className="text-2xl font-bold">管理</h1>
