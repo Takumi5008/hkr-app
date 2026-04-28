@@ -16,6 +16,7 @@ export default function TeamPage() {
   const [teamData, setTeamData] = useState<any[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [memberStats, setMemberStats] = useState<any>(null)
 
   useEffect(() => {
     fetch('/api/products')
@@ -25,12 +26,14 @@ export default function TeamPage() {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/team?year=${year}&month=${month}`)
-      .then((r) => {
-        if (r.status === 403) return []
-        return r.json()
-      })
-      .then((d) => { setTeamData(d); setLoading(false) })
+    Promise.all([
+      fetch(`/api/team?year=${year}&month=${month}`).then((r) => r.status === 403 ? [] : r.json()),
+      fetch(`/api/team/member-stats?year=${year}&month=${month}`).then((r) => r.ok ? r.json() : null),
+    ]).then(([d, ms]) => {
+      setTeamData(d)
+      setMemberStats(ms)
+      setLoading(false)
+    })
   }, [year, month])
 
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
@@ -124,7 +127,7 @@ export default function TeamPage() {
       {!loading && (
         <div className="mb-6">
           <TeamChallengeCard total={teamTotal} year={year} month={month} />
-          <AccountCardsSection stats={teamStats} products={products} />
+          <AccountCardsSection stats={teamStats} products={products} memberStats={memberStats} />
         </div>
       )}
 

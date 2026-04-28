@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
-import { dbQueryOne } from '@/lib/db'
+import { dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
   session.email = user.email
   session.role = user.role
   await session.save()
+
+  await dbRun(
+    'UPDATE users SET login_count = login_count + 1, last_login_at = $1 WHERE id = $2',
+    [new Date().toISOString(), user.id]
+  )
 
   const requirePasswordChange = isTempValid && !isPasswordValid
   return NextResponse.json({ ok: true, name: user.name, role: user.role, requirePasswordChange })

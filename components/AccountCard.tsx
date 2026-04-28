@@ -8,11 +8,14 @@ interface AccountCardProps {
   hkr: number | null
   totalActivation: number
   totalCancel: number
+  loginCount: number
+  entryDays: number
+  mtgAbsent: number
   strengths: string[]
   improvements: string[]
 }
 
-export default function AccountCard({ user, hkr, strengths, improvements }: AccountCardProps) {
+export default function AccountCard({ user, hkr, totalActivation, totalCancel, loginCount, entryDays, mtgAbsent, strengths, improvements }: AccountCardProps) {
   const hkrColor = hkr == null ? 'text-teal-200' : hkr >= HKR_TARGET ? 'text-emerald-200' : 'text-rose-200'
 
   return (
@@ -24,6 +27,28 @@ export default function AccountCard({ user, hkr, strengths, improvements }: Acco
           <p className={`text-xs font-semibold ${hkrColor}`}>
             HKR {hkr != null ? `${hkr}%` : '未入力'}
           </p>
+        </div>
+      </div>
+
+      {/* mini stats bar */}
+      <div className="flex border-b border-gray-100 text-center">
+        <div className="flex-1 py-2 border-r border-gray-100">
+          <p className="text-xs font-bold text-gray-700">{totalActivation}</p>
+          <p className="text-[10px] text-gray-400">開通</p>
+        </div>
+        <div className="flex-1 py-2 border-r border-gray-100">
+          <p className={`text-xs font-bold ${entryDays === 0 ? 'text-gray-300' : 'text-gray-700'}`}>{entryDays}</p>
+          <p className="text-[10px] text-gray-400">行動表</p>
+        </div>
+        <div className="flex-1 py-2 border-r border-gray-100">
+          <p className={`text-xs font-bold ${mtgAbsent > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>
+            {mtgAbsent > 0 ? `欠${mtgAbsent}` : '皆勤'}
+          </p>
+          <p className="text-[10px] text-gray-400">MTG</p>
+        </div>
+        <div className="flex-1 py-2">
+          <p className={`text-xs font-bold ${loginCount === 0 ? 'text-gray-300' : 'text-indigo-600'}`}>{loginCount}</p>
+          <p className="text-[10px] text-gray-400">ログイン</p>
         </div>
       </div>
 
