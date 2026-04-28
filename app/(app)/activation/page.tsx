@@ -400,12 +400,16 @@ export default function ActivationPage() {
                         const isCancel = c.key === 'cancel'
                         const isNegApply = c.key === 'neg_apply'
                         const isNegCancel = c.key === 'neg_cancel'
+                        const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
+                        const doneKey = `${c.key}_done` as keyof ActivationRecord
+                        const doneVal = isDoneField ? (rec[doneKey] as number) : 0
                         const val = c.key === 'type_label'
                           ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
                           : rec[c.key as keyof ActivationRecord]
                         const cellBg = isNA ? 'bg-gray-50/50'
                           : isActivation ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
                           : (isCancel || isNegApply || isNegCancel) ? (rec[c.key as keyof ActivationRecord] === '○' ? 'bg-red-50' : rec[c.key as keyof ActivationRecord] === '×' ? 'bg-amber-50' : '')
+                          : isDoneField ? (doneVal === 1 ? 'bg-green-50' : doneVal === 2 ? 'bg-red-50' : '')
                           : ''
                         return (
                           <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${cellBg}`}>
@@ -427,6 +431,13 @@ export default function ActivationPage() {
                               <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none">
                                 {textEmoji(rec.neg_cancel)}
                               </button>
+                            ) : isDoneField && val ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-gray-700">{val as string}</span>
+                                <button onClick={() => toggleDone(rec.id, c.key, doneVal)} className="text-lg leading-none">
+                                  {doneEmoji(doneVal)}
+                                </button>
+                              </div>
                             ) : val ? (
                               <span className="text-gray-700">{val as string}</span>
                             ) : (
