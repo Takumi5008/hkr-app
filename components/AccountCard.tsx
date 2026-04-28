@@ -21,7 +21,6 @@ export default function AccountCard({
 }: AccountCardProps) {
   const hkrColor = hkr == null ? 'text-teal-200' : hkr >= HKR_TARGET ? 'text-emerald-200' : 'text-rose-200'
   const badge = getBadge(totalActivation)
-  const cancelRate = totalActivation > 0 ? Math.round((totalCancel / totalActivation) * 100) : null
 
   return (
     <div className="flex-shrink-0 w-64 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -53,12 +52,6 @@ export default function AccountCard({
         <div className="flex-1 py-2 border-r border-gray-100">
           <p className="text-xs font-bold text-gray-700">{totalActivation}</p>
           <p className="text-[10px] text-gray-400">開通</p>
-        </div>
-        <div className="flex-1 py-2 border-r border-gray-100">
-          <p className={`text-xs font-bold ${cancelRate == null ? 'text-gray-300' : cancelRate >= 80 ? 'text-emerald-600' : 'text-gray-700'}`}>
-            {cancelRate != null ? `${cancelRate}%` : '-'}
-          </p>
-          <p className="text-[10px] text-gray-400">解除率</p>
         </div>
         <div className="flex-1 py-2 border-r border-gray-100">
           <p className={`text-xs font-bold ${mtgAbsent > 0 ? 'text-rose-500' : 'text-emerald-600'}`}>

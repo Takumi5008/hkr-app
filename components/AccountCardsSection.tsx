@@ -31,7 +31,6 @@ interface Props {
 interface TeamAvgs {
   hkr: number | null
   activation: number
-  cancelRate: number
   points: number
   workHours: number
   entryDays: number
@@ -50,13 +49,8 @@ function computeTeamAvgs(stats: MemberStat[], rawStats: RawMemberStats | null): 
   const activation = stats.reduce((s, d) => s + d.totalActivation, 0) / n
   const points = stats.reduce((s, d) => s + (d.user.points ?? 0), 0) / n
 
-  const membersWithAct = stats.filter((m) => m.totalActivation > 0)
-  const cancelRate = membersWithAct.length > 0
-    ? membersWithAct.reduce((s, m) => s + m.totalCancel / m.totalActivation, 0) / membersWithAct.length
-    : 0
-
   if (!rawStats) {
-    return { hkr, activation, cancelRate, points, workHours: 0, entryDays: 0, pinCount: 0, pingpongCount: 0, openingPerHour: 0, cancelPerHour: 0 }
+    return { hkr, activation, points, workHours: 0, entryDays: 0, pinCount: 0, pingpongCount: 0, openingPerHour: 0, cancelPerHour: 0 }
   }
 
   const an = rawStats.activity.length || 1
@@ -81,7 +75,7 @@ function computeTeamAvgs(stats: MemberStat[], rawStats: RawMemberStats | null): 
     return s + m.totalCancel / act.work_hours
   }, 0) / mhN
 
-  return { hkr, activation, cancelRate, points, workHours, entryDays, pinCount, pingpongCount, openingPerHour, cancelPerHour }
+  return { hkr, activation, points, workHours, entryDays, pinCount, pingpongCount, openingPerHour, cancelPerHour }
 }
 
 function round1(n: number) { return Math.round(n * 10) / 10 }
@@ -101,15 +95,6 @@ function buildStrengths(
     if (allHkr >= 90) result.push(`高HKRを維持（${allHkr}%）`)
     else if (allHkr >= HKR_TARGET) result.push(`目標HKRを達成（${allHkr}%）`)
     if (avgs.hkr != null && allHkr > avgs.hkr + 3) result.push(`チーム平均HKR（${avgs.hkr}%）を上回る`)
-  }
-
-  // 解除率（高い方が良い）
-  if (totalActivation > 0) {
-    const cancelRate = totalCancel / totalActivation
-    if (avgs.cancelRate > 0 && cancelRate >= avgs.cancelRate * 1.2)
-      result.push(`解除率が高い（${Math.round(cancelRate * 100)}%）`)
-    else if (cancelRate >= 1.0)
-      result.push(`開通と同等の解除を達成（${totalCancel}件）`)
   }
 
   // 行動表：時間あたりの生産性
@@ -179,13 +164,6 @@ function buildImprovements(
     result.push(`あと${round1(HKR_TARGET - allHkr)}%で目標達成`)
   } else if (avgs.hkr != null && allHkr < avgs.hkr - 3) {
     result.push(`チーム平均HKR（${avgs.hkr}%）に届いていない`)
-  }
-
-  // 解除率（低い方が改善点）
-  if (totalActivation > 0) {
-    const cancelRate = totalCancel / totalActivation
-    if (avgs.cancelRate > 0 && cancelRate < avgs.cancelRate * 0.8)
-      result.push(`解除率を上げる余地あり（現在${Math.round(cancelRate * 100)}%）`)
   }
 
   // MTG
