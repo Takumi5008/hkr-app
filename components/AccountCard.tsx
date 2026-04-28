@@ -14,10 +14,11 @@ interface AccountCardProps {
   mtgAbsent: number
   strengths: string[]
   improvements: string[]
+  compact?: boolean
 }
 
 export default function AccountCard({
-  user, hkr, totalActivation, totalCancel, loginCount, entryDays, mtgAbsent, strengths, improvements
+  user, hkr, totalActivation, totalCancel, loginCount, entryDays, mtgAbsent, strengths, improvements, compact = false
 }: AccountCardProps) {
   const hkrColor = hkr == null ? 'text-teal-200' : hkr >= HKR_TARGET ? 'text-emerald-200' : 'text-rose-200'
   const badge = getBadge(totalActivation)
@@ -69,37 +70,39 @@ export default function AccountCard({
         </div>
       </div>
 
-      {/* 特徴 */}
-      <div className="px-4 py-3 border-b border-gray-100 flex-1">
-        <p className="text-xs font-semibold text-gray-500 mb-2">✨ 特徴</p>
-        {strengths.length > 0 ? (
-          <ul className="space-y-1.5">
-            {strengths.map((s, i) => (
-              <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                <span className="text-emerald-400 shrink-0 mt-0.5">●</span>{s}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-gray-300">データなし</p>
-        )}
-      </div>
-
-      {/* 改善点 */}
-      <div className="px-4 py-3">
-        <p className="text-xs font-semibold text-gray-500 mb-2">⚡ 改善すべき点</p>
-        {improvements.length > 0 ? (
-          <ul className="space-y-1.5">
-            {improvements.map((s, i) => (
-              <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
-                <span className="text-amber-400 shrink-0 mt-0.5">●</span>{s}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs text-emerald-600 font-medium">改善点なし 🎉</p>
-        )}
-      </div>
+      {/* 特徴・改善点 */}
+      {!compact && (
+        <>
+          <div className="px-4 py-3 border-b border-gray-100 flex-1">
+            <p className="text-xs font-semibold text-gray-500 mb-2">✨ 特徴</p>
+            {strengths.length > 0 ? (
+              <ul className="space-y-1.5">
+                {strengths.map((s, i) => (
+                  <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                    <span className="text-emerald-400 shrink-0 mt-0.5">●</span>{s}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-gray-300">データなし</p>
+            )}
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs font-semibold text-gray-500 mb-2">⚡ 改善すべき点</p>
+            {improvements.length > 0 ? (
+              <ul className="space-y-1.5">
+                {improvements.map((s, i) => (
+                  <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                    <span className="text-amber-400 shrink-0 mt-0.5">●</span>{s}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-emerald-600 font-medium">改善点なし 🎉</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

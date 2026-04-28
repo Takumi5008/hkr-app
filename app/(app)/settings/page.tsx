@@ -4,10 +4,15 @@ import { useState, useEffect, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
+import AccountCard from '@/components/AccountCard'
+import { calcHKR } from '@/lib/hkr'
 
 function SettingsContent() {
   const searchParams = useSearchParams()
   const isTempLogin = searchParams.get('reason') === 'temp'
+
+  const [myCard, setMyCard] = useState<any>(null)
+  const [myCardStats, setMyCardStats] = useState<any>(null)
 
   // プロフィール
   const [name, setName] = useState('')
@@ -30,9 +35,16 @@ function SettingsContent() {
   const [passwordLoading, setPasswordLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((d) => { setName(d.name); setEmail(d.email); setAvatar(d.avatar ?? null) })
+    Promise.all([
+      fetch('/api/auth/me').then((r) => r.json()),
+      fetch('/api/my/card-stats').then((r) => r.json()),
+    ]).then(([me, stats]) => {
+      setName(me.name)
+      setEmail(me.email)
+      setAvatar(me.avatar ?? null)
+      setMyCard({ id: me.id ?? me.userId, name: me.name, avatar: me.avatar ?? null, points: me.points ?? 0, loginCount: me.loginCount ?? 0, lastLoginAt: me.lastLoginAt ?? null })
+      setMyCardStats(stats)
+    })
   }, [])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -120,6 +132,28 @@ function SettingsContent() {
 
   return (
     <div className="p-6 max-w-lg mx-auto">
+      {myCard && myCardStats && (() => {
+        const totalActivation = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
+        const totalCancel     = (myCardStats.records ?? []).reduce((s: number, r: any) => s + (r.cancel_count ?? 0), 0)
+        const hkr = calcHKR(totalActivation, totalCancel)
+        return (
+          <div className="mb-6 flex justify-center">
+            <AccountCard
+              user={myCard}
+              hkr={hkr}
+              totalActivation={totalActivation}
+              totalCancel={totalCancel}
+              loginCount={myCard.loginCount}
+              entryDays={myCardStats.activity?.entry_days ?? 0}
+              mtgAbsent={myCardStats.mtg?.absent_count ?? 0}
+              strengths={[]}
+              improvements={[]}
+              compact
+            />
+          </div>
+        )
+      })()}
+
       <div className="mb-6 bg-gradient-to-r from-gray-700 to-gray-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">Settings</p>
         <h1 className="text-2xl font-bold">アカウント設定</h1>
