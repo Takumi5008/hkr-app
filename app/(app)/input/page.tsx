@@ -5,7 +5,7 @@ import { calcHKR, formatMonth } from '@/lib/hkr'
 import { CheckCircle, X, Plus, Pencil } from 'lucide-react'
 import CelebrationOverlay from '@/components/CelebrationOverlay'
 
-type FormData = { [K: string]: { cancel: string; activation: string; remaining: string; expected: string; confirmed: string } }
+type FormData = { [K: string]: { cancel: string; activation: string; remaining: string; expected: string } }
 type Tab = 'input' | 'products'
 
 export default function InputPage() {
@@ -44,7 +44,7 @@ export default function InputPage() {
         setProductItems(data)
         const names = data.map((p) => p.name)
         setProducts(names)
-        setForm(Object.fromEntries(names.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '', confirmed: '' }])))
+        setForm(Object.fromEntries(names.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }])))
       })
   }, [])
 
@@ -54,7 +54,7 @@ export default function InputPage() {
       const res = await fetch(`/api/records?year=${year}&month=${month}`)
       if (!res.ok) return
       const data = await res.json()
-      const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '', confirmed: '' }]))
+      const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }]))
       for (const r of data) {
         if (next[r.product] !== undefined) {
           next[r.product] = {
@@ -62,7 +62,6 @@ export default function InputPage() {
             activation: String(r.activation_count),
             remaining: r.remaining_opening > 0 ? String(r.remaining_opening) : '',
             expected:  r.expected_opening  > 0 ? String(r.expected_opening)  : '',
-            confirmed: r.confirmed_opening > 0 ? String(r.confirmed_opening) : '',
           }
         }
       }
@@ -71,7 +70,7 @@ export default function InputPage() {
     load()
   }, [year, month, products])
 
-  function handleChange(product: string, field: 'cancel' | 'activation' | 'remaining' | 'expected' | 'confirmed', value: string) {
+  function handleChange(product: string, field: 'cancel' | 'activation' | 'remaining' | 'expected', value: string) {
     if (value !== '' && !/^\d+$/.test(value)) return
     setForm((prev) => ({ ...prev, [product]: { ...prev[product], [field]: value } }))
   }
@@ -90,7 +89,6 @@ export default function InputPage() {
           activation_count:  parseInt(form[product].activation || '0', 10),
           remaining_opening: parseInt(form[product].remaining  || '0', 10),
           expected_opening:  parseInt(form[product].expected   || '0', 10),
-          confirmed_opening: parseInt(form[product].confirmed  || '0', 10),
         }),
       })
       if (!res.ok) { setError('保存に失敗しました'); setLoading(false); return }
@@ -265,11 +263,10 @@ export default function InputPage() {
 
                   <div className="border-t border-gray-100 pt-3">
                     <p className="text-xs text-gray-400 mb-2">進捗トラッキング</p>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       {[
                         { key: 'remaining' as const, label: '残り開通数' },
                         { key: 'expected'  as const, label: '見込み開通数' },
-                        { key: 'confirmed' as const, label: '確定開通数' },
                       ].map(({ key, label }) => (
                         <div key={key}>
                           <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
