@@ -38,16 +38,19 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { year, month, product, cancel_count, activation_count } = await req.json()
+  const { year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening } = await req.json()
 
   await dbRun(`
-    INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+    INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
     ON CONFLICT(user_id, year, month, product)
-    DO UPDATE SET cancel_count = EXCLUDED.cancel_count,
-                  activation_count = EXCLUDED.activation_count,
-                  updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-  `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0])
+    DO UPDATE SET cancel_count       = EXCLUDED.cancel_count,
+                  activation_count   = EXCLUDED.activation_count,
+                  remaining_opening  = EXCLUDED.remaining_opening,
+                  expected_opening   = EXCLUDED.expected_opening,
+                  confirmed_opening  = EXCLUDED.confirmed_opening,
+                  updated_at         = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+  `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0, remaining_opening ?? 0, expected_opening ?? 0, confirmed_opening ?? 0])
 
   // 月合計開通数を集計してマイルストーンボーナスを付与
   const totals = await dbQueryOne<{ total: number }>(

@@ -5,7 +5,7 @@ import { calcHKR, formatMonth } from '@/lib/hkr'
 import { CheckCircle, X, Plus, Pencil } from 'lucide-react'
 import CelebrationOverlay from '@/components/CelebrationOverlay'
 
-type FormData = { [K: string]: { cancel: string; activation: string } }
+type FormData = { [K: string]: { cancel: string; activation: string; remaining: string; expected: string; confirmed: string } }
 type Tab = 'input' | 'products'
 
 export default function InputPage() {
@@ -44,7 +44,7 @@ export default function InputPage() {
         setProductItems(data)
         const names = data.map((p) => p.name)
         setProducts(names)
-        setForm(Object.fromEntries(names.map((n) => [n, { cancel: '', activation: '' }])))
+        setForm(Object.fromEntries(names.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '', confirmed: '' }])))
       })
   }, [])
 
@@ -54,10 +54,16 @@ export default function InputPage() {
       const res = await fetch(`/api/records?year=${year}&month=${month}`)
       if (!res.ok) return
       const data = await res.json()
-      const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '' }]))
+      const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '', confirmed: '' }]))
       for (const r of data) {
         if (next[r.product] !== undefined) {
-          next[r.product] = { cancel: String(r.cancel_count), activation: String(r.activation_count) }
+          next[r.product] = {
+            cancel: String(r.cancel_count),
+            activation: String(r.activation_count),
+            remaining: r.remaining_opening > 0 ? String(r.remaining_opening) : '',
+            expected:  r.expected_opening  > 0 ? String(r.expected_opening)  : '',
+            confirmed: r.confirmed_opening > 0 ? String(r.confirmed_opening) : '',
+          }
         }
       }
       setForm(next)
@@ -65,7 +71,7 @@ export default function InputPage() {
     load()
   }, [year, month, products])
 
-  function handleChange(product: string, field: 'cancel' | 'activation', value: string) {
+  function handleChange(product: string, field: 'cancel' | 'activation' | 'remaining' | 'expected' | 'confirmed', value: string) {
     if (value !== '' && !/^\d+$/.test(value)) return
     setForm((prev) => ({ ...prev, [product]: { ...prev[product], [field]: value } }))
   }
@@ -80,8 +86,11 @@ export default function InputPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           year, month, product,
-          cancel_count: parseInt(form[product].cancel || '0', 10),
-          activation_count: parseInt(form[product].activation || '0', 10),
+          cancel_count:      parseInt(form[product].cancel     || '0', 10),
+          activation_count:  parseInt(form[product].activation || '0', 10),
+          remaining_opening: parseInt(form[product].remaining  || '0', 10),
+          expected_opening:  parseInt(form[product].expected   || '0', 10),
+          confirmed_opening: parseInt(form[product].confirmed  || '0', 10),
         }),
       })
       if (!res.ok) { setError('保存に失敗しました'); setLoading(false); return }
@@ -231,7 +240,7 @@ export default function InputPage() {
                       </span>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">解除数</label>
                       <input
@@ -251,6 +260,28 @@ export default function InputPage() {
                         placeholder="0"
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-400 mb-2">進捗トラッキング</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { key: 'remaining' as const, label: '残り開通数' },
+                        { key: 'expected'  as const, label: '見込み開通数' },
+                        { key: 'confirmed' as const, label: '確定開通数' },
+                      ].map(({ key, label }) => (
+                        <div key={key}>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+                          <input
+                            type="text" inputMode="numeric"
+                            value={form[product]?.[key] ?? ''}
+                            onChange={(e) => handleChange(product, key, e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
