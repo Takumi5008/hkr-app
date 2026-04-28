@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, Gift } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, Gift, BookOpen } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getBadge } from '@/components/ActivationBadge'
 import UserAvatar from '@/components/UserAvatar'
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
+  { href: '/howto', label: '使い方', icon: BookOpen },
 ]
 
 const managerNavItems = [
