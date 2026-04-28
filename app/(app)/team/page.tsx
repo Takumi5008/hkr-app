@@ -112,13 +112,6 @@ export default function TeamPage() {
         <p className="text-sm text-teal-100 mt-0.5">{formatMonth(year, month)}のHKR一覧</p>
       </div>
 
-      {!loading && (
-        <div className="mb-6">
-          <TeamChallengeCard total={teamTotal} year={year} month={month} />
-          <PlayerCardsSection cards={cards} />
-        </div>
-      )}
-
       <div className="flex items-center justify-end mb-4">
         <select
           value={`${year}-${month}`}
@@ -133,6 +126,13 @@ export default function TeamPage() {
           ))}
         </select>
       </div>
+
+      {!loading && (
+        <div className="mb-6">
+          <TeamChallengeCard total={teamTotal} year={year} month={month} />
+          <PlayerCardsSection cards={cards} />
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
