@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const { year, month, activation_date, customer_name, line_type, has_construction, status } = await req.json()
+  const { year, month, activation_date, customer_name, line_type, construction_type, status } = await req.json()
   const row = await dbQueryOne(
-    `INSERT INTO opening_calendar (user_id, year, month, activation_date, customer_name, line_type, has_construction, status)
+    `INSERT INTO opening_calendar (user_id, year, month, activation_date, customer_name, line_type, construction_type, status)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [session.userId, year, month, activation_date ?? '', customer_name ?? '', line_type ?? '', has_construction ?? false, status ?? '']
+    [session.userId, year, month, activation_date ?? '', customer_name ?? '', line_type ?? '', construction_type ?? '', status ?? '']
   )
   return NextResponse.json(row)
 }
@@ -34,12 +34,12 @@ export async function PATCH(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const { id, activation_date, customer_name, line_type, has_construction, status } = await req.json()
+  const { id, activation_date, customer_name, line_type, construction_type, status } = await req.json()
   await dbRun(
     `UPDATE opening_calendar
-     SET activation_date = $1, customer_name = $2, line_type = $3, has_construction = $4, status = $5
+     SET activation_date = $1, customer_name = $2, line_type = $3, construction_type = $4, status = $5
      WHERE id = $6 AND user_id = $7`,
-    [activation_date, customer_name, line_type, has_construction, status, id, session.userId]
+    [activation_date, customer_name, line_type, construction_type ?? '', status, id, session.userId]
   )
   return NextResponse.json({ ok: true })
 }

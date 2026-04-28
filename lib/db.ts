@@ -272,10 +272,12 @@ async function initDb() {
       customer_name    TEXT    NOT NULL DEFAULT '',
       line_type        TEXT    NOT NULL DEFAULT '',
       has_construction BOOLEAN NOT NULL DEFAULT FALSE,
+      construction_type TEXT NOT NULL DEFAULT '',
       status           TEXT    NOT NULL DEFAULT '',
       created_at       TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
   `)
+  await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
   // ポイントを records の全合計から同期（過去分含む）
   await pool.query(`
     UPDATE users u

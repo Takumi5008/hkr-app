@@ -13,7 +13,7 @@ type CalendarEntry = {
   activation_date: string
   customer_name: string
   line_type: string
-  has_construction: boolean
+  construction_type: string
   status: string
 }
 
@@ -21,6 +21,7 @@ const COMMISSION = 15000
 const fmt = (n: number) => `¥${n.toLocaleString()}`
 const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
 const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
+const cycleConstruction = (s: string) => s === '' ? '🐜' : s === '🐜' ? '🍐' : ''
 
 export default function InputPage() {
   const now = new Date()
@@ -39,7 +40,7 @@ export default function InputPage() {
   // 開通カレンダー
   const [calEntries, setCalEntries] = useState<CalendarEntry[]>([])
   const [calEditingId, setCalEditingId] = useState<number | 'new' | null>(null)
-  const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', has_construction: false, status: '' })
+  const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' })
 
   // 回線管理
   const [productItems, setProductItems] = useState<{ id: number; name: string }[]>([])
@@ -450,10 +451,10 @@ export default function InputPage() {
                             </td>
                             <td className="px-2 py-1.5 text-center">
                               <button
-                                onClick={() => setCalForm((p) => ({ ...p, has_construction: !p.has_construction }))}
-                                className={`w-7 h-7 rounded text-xs font-bold transition-colors ${calForm.has_construction ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'}`}
+                                onClick={() => setCalForm((p) => ({ ...p, construction_type: cycleConstruction(p.construction_type) }))}
+                                className={`w-7 h-7 rounded text-base font-bold transition-colors ${calForm.construction_type ? 'bg-amber-100' : 'bg-gray-100 opacity-30'}`}
                               >
-                                🔨
+                                {calForm.construction_type || '🐜'}
                               </button>
                             </td>
                             <td className="px-2 py-1.5">
@@ -473,12 +474,12 @@ export default function InputPage() {
                             <td className="px-3 py-2 text-gray-800 text-xs font-medium">{entry.customer_name || '-'}</td>
                             <td className="px-3 py-2 text-gray-600 text-xs">{entry.line_type || '-'}</td>
                             <td className="px-3 py-2 text-center">
-                              {entry.has_construction && <span className="text-base leading-none">🔨</span>}
+                              {entry.construction_type && <span className="text-base leading-none">{entry.construction_type}</span>}
                             </td>
                             <td className="px-2 py-2">
                               <div className="flex items-center gap-1">
                                 <button
-                                  onClick={() => { setCalEditingId(entry.id); setCalForm({ activation_date: entry.activation_date, customer_name: entry.customer_name, line_type: entry.line_type, has_construction: entry.has_construction, status: entry.status }) }}
+                                  onClick={() => { setCalEditingId(entry.id); setCalForm({ activation_date: entry.activation_date, customer_name: entry.customer_name, line_type: entry.line_type, construction_type: entry.construction_type, status: entry.status }) }}
                                   className="text-gray-300 hover:text-blue-500 transition"
                                 >
                                   <Pencil size={13} />
@@ -531,10 +532,10 @@ export default function InputPage() {
                       </td>
                       <td className="px-2 py-1.5 text-center">
                         <button
-                          onClick={() => setCalForm((p) => ({ ...p, has_construction: !p.has_construction }))}
-                          className={`w-7 h-7 rounded text-xs font-bold transition-colors ${calForm.has_construction ? 'bg-orange-400 text-white' : 'bg-gray-100 text-gray-400'}`}
+                          onClick={() => setCalForm((p) => ({ ...p, construction_type: cycleConstruction(p.construction_type) }))}
+                          className={`w-7 h-7 rounded text-base font-bold transition-colors ${calForm.construction_type ? 'bg-amber-100' : 'bg-gray-100 opacity-30'}`}
                         >
-                          🔨
+                          {calForm.construction_type || '🐜'}
                         </button>
                       </td>
                       <td className="px-2 py-1.5">
@@ -556,7 +557,7 @@ export default function InputPage() {
             {/* 追加ボタン */}
             {calEditingId === null && (
               <button
-                onClick={() => { setCalEditingId('new'); setCalForm({ activation_date: '', customer_name: '', line_type: '', has_construction: false, status: '' }) }}
+                onClick={() => { setCalEditingId('new'); setCalForm({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' }) }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow mb-5"
               >
                 <Plus size={15} />行を追加
