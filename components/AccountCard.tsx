@@ -59,9 +59,13 @@ export default function AccountCard({
           </p>
           <p className="text-[10px] text-gray-400">MTG</p>
         </div>
-        <div className="flex-1 py-2">
+        <div className="flex-1 py-2 border-r border-gray-100">
           <p className={`text-xs font-bold ${entryDays === 0 ? 'text-gray-300' : 'text-indigo-600'}`}>{entryDays}</p>
           <p className="text-[10px] text-gray-400">行動表</p>
+        </div>
+        <div className="flex-1 py-2">
+          <p className={`text-xs font-bold ${loginCount === 0 ? 'text-gray-300' : 'text-violet-600'}`}>{loginCount}</p>
+          <p className="text-[10px] text-gray-400">ログイン</p>
         </div>
       </div>
 
