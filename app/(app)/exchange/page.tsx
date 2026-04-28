@@ -10,7 +10,7 @@ type Tab = 'items' | 'rules'
 interface Item { id: number; name: string; description: string; cost: number }
 interface Exchange { id: number; item_name: string; cost: number; status: string; created_at: string; user_name?: string; user_avatar?: string }
 interface Rule { id: number; action: string; points: number }
-interface RankUser { id: number; name: string; avatar: string | null; points: number }
+interface RankUser { id: number; name: string; avatar: string | null; points: number; level: number }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending:  { label: '処理中', color: 'bg-yellow-100 text-yellow-700' },
@@ -355,15 +355,16 @@ export default function ExchangePage() {
             </div>
           )}
 
-          {/* ポイントランキング（マネージャーのみ） */}
+          {/* レベルランキング（マネージャーのみ） */}
           {isManager && ranking.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4">
               <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                ⭐ ポイントランキング
+                🏆 レベルランキング
               </h2>
               <div className="space-y-2">
                 {ranking.map((u, i) => {
-                  const max = Math.max(ranking[0].points, 1)
+                  const maxLevel = Math.max(ranking[0].level, 1)
+                  const nextLevelCost = 100 * (u.level + 1)
                   const medals = ['🥇', '🥈', '🥉']
                   return (
                     <div key={u.id} className="flex items-center gap-3">
@@ -374,16 +375,20 @@ export default function ExchangePage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
                           <span className="text-sm font-medium text-gray-800 truncate">{u.name}</span>
-                          <span className={`text-sm font-bold shrink-0 ml-2 ${u.points < 0 ? 'text-red-500' : 'text-amber-600'}`}>
-                            {u.points.toLocaleString()}pt
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <span className="text-xs font-bold text-amber-600">{u.points.toLocaleString()}pt</span>
+                            <span className="text-sm font-black text-violet-600">Lv.{u.level}</span>
+                          </div>
                         </div>
                         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full"
-                            style={{ width: `${Math.max(0, Math.round((u.points / max) * 100))}%` }}
+                            className="h-full bg-gradient-to-r from-violet-400 to-indigo-400 rounded-full"
+                            style={{ width: `${Math.max(0, Math.round((u.level / maxLevel) * 100))}%` }}
                           />
                         </div>
+                        {u.level < 100 && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">次のLv.{u.level + 1}まで {nextLevelCost - u.points}pt</p>
+                        )}
                       </div>
                     </div>
                   )
