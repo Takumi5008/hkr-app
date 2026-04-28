@@ -173,7 +173,7 @@ export default function PerformancePage() {
     )
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1
-      return dataMap.get(m) ?? { member_name: selectedName, year: selectedPersonalYear, month: m, total_activation: 0, total_cancel: 0, work_days: 0 }
+      return dataMap.get(m) ?? { member_name: selectedName, year: selectedPersonalYear, month: m, total_activation: 0, total_cancel: 0, work_days: 0, work_hours: 0 }
     })
   })()
 
