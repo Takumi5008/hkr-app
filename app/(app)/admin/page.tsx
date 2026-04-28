@@ -5,9 +5,9 @@ import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calenda
 import { isHoliday } from '@/lib/holidays'
 import TableScrollContainer from '@/components/TableScrollContainer'
 
-type Role = 'member' | 'viewer' | 'manager'
-const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー' }
-const ROLE_DESCRIPTIONS: Record<Role, string> = { member: '自分のデータのみ', viewer: '全員を閲覧可', manager: '全員閲覧・管理可' }
+type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer'
+const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー', shift_viewer: 'シフト管理者' }
+const ROLE_DESCRIPTIONS: Record<Role, string> = { member: '自分のデータのみ', viewer: '全員を閲覧可', manager: '全員閲覧・管理可', shift_viewer: '全員のシフトのみ閲覧可' }
 
 const getWorkType = (workDates: any[], day: number) => {
   if (!workDates || workDates.length === 0) return null
@@ -25,6 +25,7 @@ const WorkCell = ({ type }: { type: string | null }) => {
 }
 
 export default function AdminPage() {
+  const [myRole, setMyRole] = useState<string>('')
   const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg' | 'progress'>('users')
 
   // Users & Products
@@ -75,9 +76,13 @@ export default function AdminPage() {
   const [shiftEditSaving, setShiftEditSaving] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => setCurrentUserId(d.id))
-    fetch('/api/users').then((r) => r.json()).then(setUsers)
-    fetch('/api/products').then((r) => r.json()).then(setProducts)
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => {
+      setCurrentUserId(d.id)
+      if (d.role === 'shift_viewer') setAdminTab('shifts')
+      setMyRole(d.role ?? '')
+    })
+    fetch('/api/users').then((r) => r.json()).then((data) => { if (Array.isArray(data)) setUsers(data) })
+    fetch('/api/products').then((r) => r.json()).then((data) => { if (Array.isArray(data)) setProducts(data) })
   }, [])
 
   useEffect(() => {
@@ -315,13 +320,13 @@ export default function AdminPage() {
       </div>
 
       {/* タブ */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
         {[
-          { id: 'users', label: 'ユーザー・商材', icon: Users },
-          { id: 'shifts', label: 'シフト管理', icon: Calendar },
-          { id: 'mtg', label: 'MTG管理', icon: ClipboardList },
-          { id: 'progress', label: '個人進捗', icon: BarChart2 },
-        ].map(({ id, label, icon: Icon }) => (
+          { id: 'users', label: 'ユーザー・商材', icon: Users, roles: ['manager'] },
+          { id: 'shifts', label: 'シフト管理', icon: Calendar, roles: ['manager', 'shift_viewer'] },
+          { id: 'mtg', label: 'MTG管理', icon: ClipboardList, roles: ['manager'] },
+          { id: 'progress', label: '個人進捗', icon: BarChart2, roles: ['manager'] },
+        ].filter(({ roles }) => !myRole || roles.includes(myRole)).map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setAdminTab(id as any)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${adminTab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <Icon size={14} />{label}
@@ -431,7 +436,8 @@ export default function AdminPage() {
             <button onClick={nextMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-indigo-50 text-indigo-600 font-bold transition flex items-center justify-center"><ChevronRight size={18} /></button>
           </div>
 
-          {/* 締切設定 */}
+          {/* 締切設定 (manager のみ) */}
+          {myRole !== 'shift_viewer' && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
             <h3 className="font-semibold text-gray-900 mb-3 text-sm">提出締切の設定</h3>
             <div className="flex items-center gap-2 flex-wrap">
@@ -448,6 +454,13 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+          )}
+          {myRole === 'shift_viewer' && deadlineAt && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5 flex items-center gap-2 text-sm text-gray-600">
+            <Calendar size={14} className="text-indigo-400 shrink-0" />
+            提出締切: <span className="font-medium">{new Date(deadlineAt).toLocaleString('ja-JP')}</span>
+          </div>
+          )}
 
           {/* シフト一覧 */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -488,10 +501,12 @@ export default function AdminPage() {
                         <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">
                           <div className="flex items-center gap-1.5">
                             {member.name}
-                            <button onClick={() => handleShiftEditOpen(member.id, member.name)}
-                              className="text-gray-300 hover:text-indigo-500 transition-colors shrink-0" title="シフトを修正">
-                              <Pencil size={12} />
-                            </button>
+                            {myRole !== 'shift_viewer' && (
+                              <button onClick={() => handleShiftEditOpen(member.id, member.name)}
+                                className="text-gray-300 hover:text-indigo-500 transition-colors shrink-0" title="シフトを修正">
+                                <Pencil size={12} />
+                              </button>
+                            )}
                           </div>
                         </td>
                         <td className="border border-gray-100 px-2 py-2 text-center">

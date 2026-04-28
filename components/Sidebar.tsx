@@ -29,6 +29,10 @@ const managerNavItems = [
   { href: '/admin', label: '管理', icon: Settings },
 ]
 
+const shiftViewerNavItems = [
+  { href: '/admin', label: 'シフト管理', icon: Calendar },
+]
+
 interface SidebarProps {
   name: string
   role: string
@@ -46,7 +50,8 @@ export default function Sidebar({ name, role }: SidebarProps) {
   }
 
   const isManager = role === 'manager' || role === 'viewer'
-  const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : 'メンバー'
+  const isShiftViewer = role === 'shift_viewer'
+  const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : role === 'shift_viewer' ? 'シフト管理者' : 'メンバー'
 
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
@@ -157,6 +162,29 @@ export default function Sidebar({ name, role }: SidebarProps) {
               <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">管理者</p>
             </div>
             {managerNavItems.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  pathname === href
+                    ? 'bg-white/15 text-white shadow-sm'
+                    : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon size={17} className={pathname === href ? 'text-blue-300' : ''} />
+                {label}
+              </Link>
+            ))}
+          </>
+        )}
+
+        {isShiftViewer && (
+          <>
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">シフト</p>
+            </div>
+            {shiftViewerNavItems.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}

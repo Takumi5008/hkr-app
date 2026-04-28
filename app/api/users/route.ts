@@ -6,7 +6,7 @@ import { getSession } from '@/lib/session'
 export async function GET() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role === 'member') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (session.role === 'member' || session.role === 'shift_viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const users = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
   return NextResponse.json(users)

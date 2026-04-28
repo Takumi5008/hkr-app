@@ -17,7 +17,7 @@ async function initDb() {
       name         TEXT    NOT NULL,
       email        TEXT    NOT NULL UNIQUE,
       password     TEXT    NOT NULL,
-      role         TEXT    NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'viewer', 'manager')),
+      role         TEXT    NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer')),
       temp_password TEXT   DEFAULT NULL,
       temp_password_expires_at TEXT DEFAULT NULL,
       created_at   TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
@@ -217,6 +217,8 @@ async function initDb() {
       UNIQUE(year, month)
     );
     ALTER TABLE shift_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer'));
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;

@@ -5,7 +5,7 @@ export interface SessionData {
   userId: number
   name: string
   email: string
-  role: 'member' | 'viewer' | 'manager'
+  role: 'member' | 'viewer' | 'manager' | 'shift_viewer'
 }
 
 const SESSION_OPTIONS = {
