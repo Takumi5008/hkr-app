@@ -146,10 +146,12 @@ export default function PerformancePage() {
   const monthsWithActivation = yearMonthly.filter((r) => r.total_activation > 0)
   const monthsWithCancel = yearMonthly.filter((r) => r.total_cancel > 0)
   const monthsWithWork = yearMonthly.filter((r) => r.work_days > 0)
+  const monthsWithWorkHours = yearMonthly.filter((r) => (r.work_hours ?? 0) > 0)
   const allMonthsTotal = {
     activation: yearMonthly.reduce((s, r) => s + r.total_activation, 0),
     cancel: yearMonthly.reduce((s, r) => s + r.total_cancel, 0),
     workDays: yearMonthly.reduce((s, r) => s + r.work_days, 0),
+    workHours: yearMonthly.reduce((s, r) => s + (r.work_hours ?? 0), 0),
   }
   const memberAvg = {
     activation: monthsWithActivation.length > 0
@@ -158,6 +160,8 @@ export default function PerformancePage() {
       ? Math.round(allMonthsTotal.cancel / monthsWithCancel.length) : 0,
     workDays: monthsWithWork.length > 0
       ? Math.round(allMonthsTotal.workDays / monthsWithWork.length) : 0,
+    workHours: monthsWithWorkHours.length > 0
+      ? Math.round(allMonthsTotal.workHours / monthsWithWorkHours.length * 10) / 10 : 0,
   }
   const hasMonthlyData = yearMonthly.length > 0
 
@@ -812,9 +816,21 @@ export default function PerformancePage() {
                     </div>
                     <div className="grid grid-cols-3 gap-2 bg-gray-50 rounded-xl p-3">
                       <div className="text-center">
-                        <p className="text-xs text-gray-400 mb-0.5">総獲得</p>
+                        <p className="text-xs text-gray-400 mb-0.5">総稼働時間</p>
+                        <p className="text-sm font-bold text-gray-700">
+                          {allMonthsTotal.workHours > 0 ? <>{allMonthsTotal.workHours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">総開通数</p>
                         <p className="text-sm font-bold text-gray-700">
                           {hasMonthlyData ? <>{allMonthsTotal.activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">開通平均/月</p>
+                        <p className="text-sm font-bold text-violet-600">
+                          {hasMonthlyData ? <>{memberAvg.activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                         </p>
                       </div>
                       <div className="text-center">
