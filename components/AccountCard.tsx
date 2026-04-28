@@ -52,7 +52,7 @@ export default function AccountCard({
       <div className="flex border-b border-gray-100 text-center">
         <div className="flex-1 py-2 border-r border-gray-100">
           <p className="text-xs font-bold text-gray-700">{totalActivation}</p>
-          <p className="text-[10px] text-gray-400">獲得</p>
+          <p className="text-[10px] text-gray-400">開通</p>
         </div>
         <div className="flex-1 py-2 border-r border-gray-100">
           <p className={`text-xs font-bold ${cancelRate == null ? 'text-gray-300' : cancelRate >= 80 ? 'text-emerald-600' : 'text-gray-700'}`}>

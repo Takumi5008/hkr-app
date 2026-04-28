@@ -14,13 +14,12 @@ interface MemberStat {
 interface MtgStat { present_count: number; absent_count: number; late_count: number }
 interface ActivityStat { entry_days: number; work_hours: number; pin_count: number; pingpong_count: number; intercom_count: number; hearing_sheet: number; consent_form: number }
 interface LoginStat { login_count: number; last_login_at: string | null }
-interface OpeningStat { opening_count: number }
 
 interface RawMemberStats {
   mtg: (MtgStat & { user_id: number })[]
   activity: (ActivityStat & { user_id: number })[]
   login: (LoginStat & { user_id: number })[]
-  opening: (OpeningStat & { user_id: number })[]
+  opening: ({ opening_count: number; user_id: number })[]
 }
 
 interface Props {
@@ -38,15 +37,11 @@ interface TeamAvgs {
   entryDays: number
   pinCount: number
   pingpongCount: number
-  activationPerHour: number
-  cancelPerHour: number
-  openingPerHour: number
+  openingPerHour: number  // 開通数/稼働時間
+  cancelPerHour: number   // 解除数/稼働時間
 }
 
-function computeTeamAvgs(
-  stats: MemberStat[],
-  rawStats: RawMemberStats | null
-): TeamAvgs {
+function computeTeamAvgs(stats: MemberStat[], rawStats: RawMemberStats | null): TeamAvgs {
   const n = stats.length || 1
   const validHkrs = stats.filter((d) => d.allHkr != null).map((d) => d.allHkr!)
   const hkr = validHkrs.length > 0
@@ -61,7 +56,7 @@ function computeTeamAvgs(
     : 0
 
   if (!rawStats) {
-    return { hkr, activation, cancelRate, points, workHours: 0, entryDays: 0, pinCount: 0, pingpongCount: 0, activationPerHour: 0, cancelPerHour: 0, openingPerHour: 0 }
+    return { hkr, activation, cancelRate, points, workHours: 0, entryDays: 0, pinCount: 0, pingpongCount: 0, openingPerHour: 0, cancelPerHour: 0 }
   }
 
   const an = rawStats.activity.length || 1
@@ -76,7 +71,7 @@ function computeTeamAvgs(
   })
   const mhN = membersWithHours.length || 1
 
-  const activationPerHour = membersWithHours.reduce((s, m) => {
+  const openingPerHour = membersWithHours.reduce((s, m) => {
     const act = rawStats.activity.find((a) => a.user_id === m.user.id)!
     return s + m.totalActivation / act.work_hours
   }, 0) / mhN
@@ -86,13 +81,7 @@ function computeTeamAvgs(
     return s + m.totalCancel / act.work_hours
   }, 0) / mhN
 
-  const openingPerHour = membersWithHours.reduce((s, m) => {
-    const op = rawStats.opening.find((o) => o.user_id === m.user.id)
-    const act = rawStats.activity.find((a) => a.user_id === m.user.id)!
-    return s + (op?.opening_count ?? 0) / act.work_hours
-  }, 0) / mhN
-
-  return { hkr, activation, cancelRate, points, workHours, entryDays, pinCount, pingpongCount, activationPerHour, cancelPerHour, openingPerHour }
+  return { hkr, activation, cancelRate, points, workHours, entryDays, pinCount, pingpongCount, openingPerHour, cancelPerHour }
 }
 
 function round1(n: number) { return Math.round(n * 10) / 10 }
@@ -102,7 +91,6 @@ function buildStrengths(
   mtg: MtgStat,
   activity: ActivityStat,
   login: LoginStat,
-  opening: OpeningStat,
   avgs: TeamAvgs
 ): string[] {
   const { allHkr, totalActivation, totalCancel, summaries, user } = member
@@ -121,20 +109,17 @@ function buildStrengths(
     if (avgs.cancelRate > 0 && cancelRate >= avgs.cancelRate * 1.2)
       result.push(`解除率が高い（${Math.round(cancelRate * 100)}%）`)
     else if (cancelRate >= 1.0)
-      result.push(`開通数と同等の解除を達成（${totalCancel}件）`)
+      result.push(`開通と同等の解除を達成（${totalCancel}件）`)
   }
 
   // 行動表：時間あたりの生産性
   if (activity.work_hours > 0) {
-    const actPerH = totalActivation / activity.work_hours
+    const opPerH = totalActivation / activity.work_hours
     const canPerH = totalCancel / activity.work_hours
-    const opPerH = opening.opening_count / activity.work_hours
-    if (avgs.activationPerHour > 0 && actPerH >= avgs.activationPerHour * 1.2)
-      result.push(`獲得効率が高い（${round1(actPerH)}件/h）`)
-    if (avgs.cancelPerHour > 0 && canPerH >= avgs.cancelPerHour * 1.2)
-      result.push(`解除効率が高い（${round1(canPerH)}件/h）`)
     if (avgs.openingPerHour > 0 && opPerH >= avgs.openingPerHour * 1.2)
       result.push(`開通効率が高い（${round1(opPerH)}件/h）`)
+    if (avgs.cancelPerHour > 0 && canPerH >= avgs.cancelPerHour * 1.2)
+      result.push(`解除効率が高い（${round1(canPerH)}件/h）`)
   }
 
   // 開通数
@@ -156,7 +141,7 @@ function buildStrengths(
   if (activity.hearing_sheet > 0)
     result.push(`ヒアリングシート記入（${activity.hearing_sheet}件）`)
 
-  // ログイン（最終ログインからの経過日数で判定）
+  // ログイン（最終ログインからの経過日数）
   if (login.last_login_at) {
     const days = Math.floor((Date.now() - new Date(login.last_login_at).getTime()) / 86400000)
     if (days <= 3) result.push('最近アプリを積極的に活用')
@@ -178,7 +163,6 @@ function buildImprovements(
   mtg: MtgStat,
   activity: ActivityStat,
   login: LoginStat,
-  opening: OpeningStat,
   avgs: TeamAvgs,
   products: string[]
 ): string[] {
@@ -215,15 +199,12 @@ function buildImprovements(
 
   // 行動表：時間あたり生産性
   if (activity.work_hours > 0) {
-    const actPerH = totalActivation / activity.work_hours
+    const opPerH = totalActivation / activity.work_hours
     const canPerH = totalCancel / activity.work_hours
-    const opPerH = opening.opening_count / activity.work_hours
-    if (avgs.activationPerHour > 0 && actPerH < avgs.activationPerHour * 0.7)
-      result.push(`獲得効率が低い（${round1(actPerH)}件/h、平均${round1(avgs.activationPerHour)}）`)
+    if (avgs.openingPerHour > 0 && opPerH < avgs.openingPerHour * 0.7)
+      result.push(`開通効率が低い（${round1(opPerH)}件/h、平均${round1(avgs.openingPerHour)}）`)
     if (avgs.cancelPerHour > 0 && canPerH < avgs.cancelPerHour * 0.7)
       result.push(`解除効率が低い（${round1(canPerH)}件/h、平均${round1(avgs.cancelPerHour)}）`)
-    if (avgs.openingPerHour > 0 && opPerH < avgs.openingPerHour * 0.7)
-      result.push(`開通効率が低い（${round1(opPerH)}件/h）`)
   } else if (activity.entry_days === 0) {
     result.push('行動表の記入がない')
   } else if (avgs.workHours > 0 && activity.work_hours < avgs.workHours * 0.6) {
@@ -251,7 +232,6 @@ export default function AccountCardsSection({ stats, products, memberStats }: Pr
   const emptyMtg: MtgStat = { present_count: 0, absent_count: 0, late_count: 0 }
   const emptyActivity: ActivityStat = { entry_days: 0, work_hours: 0, pin_count: 0, pingpong_count: 0, intercom_count: 0, hearing_sheet: 0, consent_form: 0 }
   const emptyLogin: LoginStat = { login_count: 0, last_login_at: null }
-  const emptyOpening: OpeningStat = { opening_count: 0 }
 
   return (
     <div className="mt-4">
@@ -267,7 +247,6 @@ export default function AccountCardsSection({ stats, products, memberStats }: Pr
           const mtg = memberStats?.mtg.find((m) => m.user_id === member.user.id) ?? emptyMtg
           const activity = memberStats?.activity.find((a) => a.user_id === member.user.id) ?? emptyActivity
           const login = memberStats?.login.find((l) => l.user_id === member.user.id) ?? emptyLogin
-          const opening = memberStats?.opening.find((o) => o.user_id === member.user.id) ?? emptyOpening
           return (
             <div key={member.user.id} style={{ scrollSnapAlign: 'start' }}>
               <AccountCard
@@ -278,8 +257,8 @@ export default function AccountCardsSection({ stats, products, memberStats }: Pr
                 loginCount={login.login_count}
                 entryDays={activity.entry_days}
                 mtgAbsent={mtg.absent_count}
-                strengths={buildStrengths(member, mtg, activity, login, opening, avgs)}
-                improvements={buildImprovements(member, mtg, activity, login, opening, avgs, products)}
+                strengths={buildStrengths(member, mtg, activity, login, avgs)}
+                improvements={buildImprovements(member, mtg, activity, login, avgs, products)}
               />
             </div>
           )
