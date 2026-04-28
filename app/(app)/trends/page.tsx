@@ -9,17 +9,39 @@ export default function TrendsPage() {
   const [records, setRecords] = useState<any[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [myId, setMyId] = useState<number | null>(null)
+  const [myName, setMyName] = useState('')
+  const [isManager, setIsManager] = useState(false)
+  const [allUsers, setAllUsers] = useState<{ id: number; name: string }[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/records').then((r) => r.json()),
-      fetch('/api/products').then((r) => r.json()),
-    ]).then(([recs, prods]) => {
-      setRecords(recs)
-      setProducts(prods.map((p: { name: string }) => p.name))
-      setLoading(false)
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => {
+      setMyId(d.userId)
+      setMyName(d.name)
+      setSelectedUserId(d.userId)
+      if (d.role === 'manager' || d.role === 'viewer') {
+        setIsManager(true)
+        fetch('/api/users').then((r) => r.json()).then((users: { id: number; name: string; role: string }[]) => {
+          setAllUsers(users.filter((u) => u.role !== 'viewer' && u.role !== 'shift_viewer'))
+        })
+      }
+    })
+    fetch('/api/products').then((r) => r.json()).then((prods: { name: string }[]) => {
+      setProducts(prods.map((p) => p.name))
     })
   }, [])
+
+  useEffect(() => {
+    if (!selectedUserId) return
+    setLoading(true)
+    fetch(`/api/records?userId=${selectedUserId}`).then((r) => r.json()).then((recs) => {
+      setRecords(recs)
+      setLoading(false)
+    })
+  }, [selectedUserId])
+
+  const selectedName = allUsers.find((u) => u.id === selectedUserId)?.name ?? myName
 
   const months = getPastMonths(12)
   const tabs = [...products, '合算']
@@ -73,8 +95,25 @@ export default function TrendsPage() {
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-indigo-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Trends</p>
         <h1 className="text-2xl font-bold">マイ推移</h1>
-        <p className="text-sm text-violet-100 mt-0.5">過去12ヶ月のHKR推移</p>
+        <p className="text-sm text-violet-100 mt-0.5">
+          {selectedName ? `${selectedName}さんの過去12ヶ月` : '過去12ヶ月のHKR推移'}
+        </p>
       </div>
+
+      {isManager && allUsers.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-xs text-gray-500 shrink-0">表示メンバー</span>
+          <select
+            value={selectedUserId ?? ''}
+            onChange={(e) => setSelectedUserId(Number(e.target.value))}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+          >
+            {allUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}{u.id === myId ? '（自分）' : ''}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
         {tabs.map((t) => (
