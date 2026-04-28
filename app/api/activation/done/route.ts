@@ -15,9 +15,10 @@ export async function PATCH(req: NextRequest) {
   if (!ALLOWED_FIELDS.includes(field)) return NextResponse.json({ error: '不正なフィールド' }, { status: 400 })
 
   const col = `${field}_done`
+  const val = typeof done === 'number' ? Math.min(2, Math.max(0, done)) : (done ? 1 : 0)
   await dbRun(
     `UPDATE activation_records SET ${col} = $1 WHERE id = $2 AND user_id = $3`,
-    [done ? 1 : 0, id, session.userId]
+    [val, id, session.userId]
   )
   return NextResponse.json({ ok: true })
 }

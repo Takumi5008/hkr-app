@@ -163,9 +163,14 @@ export default function ActivationPage() {
     setNotifEnabled(false)
   }
 
-  // FM等 ⭕️トグル
+  const cycleTextVal = (v: string) => v === '' ? '○' : v === '○' ? '×' : ''
+  const cycleDoneVal = (v: number) => v === 0 ? 1 : v === 1 ? 2 : 0
+  const textEmoji = (v: string) => v === '○' ? '⭕' : v === '×' ? '❌' : '🔘'
+  const doneEmoji = (v: number) => v === 1 ? '⭕' : v === 2 ? '❌' : '🔘'
+
+  // FM等トグル（3段階）
   const toggleDone = async (id: number, field: string, current: number) => {
-    const newVal = current === 0 ? 1 : 0
+    const newVal = cycleDoneVal(current)
     setRecords((prev) => prev.map((r) => r.id === id ? { ...r, [`${field}_done`]: newVal } : r))
     await fetch('/api/activation/done', {
       method: 'PATCH',
@@ -174,9 +179,9 @@ export default function ActivationPage() {
     })
   }
 
-  // 開通⭕️トグル
+  // 開通トグル（3段階）
   const toggleActivation = async (rec: ActivationRecord) => {
-    const newVal = rec.activation ? '' : '○'
+    const newVal = cycleTextVal(rec.activation)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activation: newVal } : r))
     await patchRecord(buildPatch(rec, { activation: newVal }))
   }
@@ -195,23 +200,23 @@ export default function ActivationPage() {
   const patchRecord = (body: object) =>
     fetch('/api/activation', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
-  // 解除⭕️トグル
+  // 解除トグル（3段階）
   const toggleCancel = async (rec: ActivationRecord) => {
-    const newVal = rec.cancel ? '' : '○'
+    const newVal = cycleTextVal(rec.cancel)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, cancel: newVal } : r))
     await patchRecord(buildPatch(rec, { cancel: newVal }))
   }
 
-  // 申込時ネガキャン⭕️トグル
+  // 申込時ネガキャントグル（3段階）
   const toggleNegApply = async (rec: ActivationRecord) => {
-    const newVal = rec.neg_apply ? '' : '○'
+    const newVal = cycleTextVal(rec.neg_apply)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, neg_apply: newVal } : r))
     await patchRecord(buildPatch(rec, { neg_apply: newVal }))
   }
 
-  // 解除時ネガキャン⭕️トグル
+  // 解除時ネガキャントグル（3段階）
   const toggleNegCancel = async (rec: ActivationRecord) => {
-    const newVal = rec.neg_cancel ? '' : '○'
+    const newVal = cycleTextVal(rec.neg_cancel)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, neg_cancel: newVal } : r))
     await patchRecord(buildPatch(rec, { neg_cancel: newVal }))
   }
@@ -398,25 +403,29 @@ export default function ActivationPage() {
                         const val = c.key === 'type_label'
                           ? TYPE_LABELS[rec.type as ActivationType] ?? rec.type
                           : rec[c.key as keyof ActivationRecord]
+                        const cellBg = isNA ? 'bg-gray-50/50'
+                          : isActivation ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
+                          : (isCancel || isNegApply || isNegCancel) ? (rec[c.key as keyof ActivationRecord] === '○' ? 'bg-red-50' : rec[c.key as keyof ActivationRecord] === '×' ? 'bg-amber-50' : '')
+                          : ''
                         return (
-                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${isNA ? 'bg-gray-50/50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${(isCancel || isNegApply || isNegCancel) && rec[c.key as keyof ActivationRecord] ? 'bg-red-50' : ''}`}>
+                          <td key={c.key} className={`border border-gray-100 px-3 py-2 text-center ${cellBg}`}>
                             {isNA ? (
                               <span className="text-gray-300">-</span>
                             ) : isActivation ? (
-                              <button onClick={() => toggleActivation(rec)} className="text-lg leading-none" title={rec.activation ? '取り消す' : '開通確認'}>
-                                {rec.activation ? '⭕' : '🔘'}
+                              <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.activation)}
                               </button>
                             ) : isCancel ? (
-                              <button onClick={() => toggleCancel(rec)} className="text-lg leading-none" title={rec.cancel ? '取り消す' : '解除確認'}>
-                                {rec.cancel ? '⭕' : '🔘'}
+                              <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.cancel)}
                               </button>
                             ) : isNegApply ? (
-                              <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none" title={rec.neg_apply ? '取り消す' : '申込時ネガキャン確認'}>
-                                {rec.neg_apply ? '⭕' : '🔘'}
+                              <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.neg_apply)}
                               </button>
                             ) : isNegCancel ? (
-                              <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none" title={rec.neg_cancel ? '取り消す' : '解除時ネガキャン確認'}>
-                                {rec.neg_cancel ? '⭕' : '🔘'}
+                              <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.neg_cancel)}
                               </button>
                             ) : val ? (
                               <span className="text-gray-700">{val as string}</span>
@@ -463,38 +472,44 @@ export default function ActivationPage() {
                   {cols.map((c) => {
                     const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
                     const doneKey = `${c.key}_done` as keyof ActivationRecord
-                    const isDone = isDoneField && rec[doneKey] === 1
+                    const doneVal = isDoneField ? (rec[doneKey] as number) : 0
                     const isActivation = c.key === 'activation'
                     const isCancel = c.key === 'cancel'
                     const isNegApply = c.key === 'neg_apply'
                     const isNegCancel = c.key === 'neg_cancel'
+                    const cellBg = isActivation
+                      ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
+                      : (isCancel || isNegApply || isNegCancel)
+                      ? (rec[c.key] === '○' ? 'bg-red-50' : rec[c.key] === '×' ? 'bg-amber-50' : '')
+                      : isDoneField
+                      ? (doneVal === 1 ? 'bg-green-50' : doneVal === 2 ? 'bg-red-50' : '')
+                      : ''
                     return (
-                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${isDone ? 'bg-green-50' : ''} ${isActivation && rec.activation ? 'bg-green-50' : ''} ${(isCancel || isNegApply || isNegCancel) && rec[c.key] ? 'bg-red-50' : ''}`}>
+                      <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${cellBg}`}>
                         {isActivation ? (
-                          <button onClick={() => toggleActivation(rec)} className="text-lg leading-none" title={rec.activation ? '取り消す' : '開通確認'}>
-                            {rec.activation ? '⭕' : '🔘'}
+                          <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.activation)}
                           </button>
                         ) : isCancel ? (
-                          <button onClick={() => toggleCancel(rec)} className="text-lg leading-none" title={rec.cancel ? '取り消す' : '解除確認'}>
-                            {rec.cancel ? '⭕' : '🔘'}
+                          <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.cancel)}
                           </button>
                         ) : isNegApply ? (
-                          <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none" title={rec.neg_apply ? '取り消す' : '申込時ネガキャン確認'}>
-                            {rec.neg_apply ? '⭕' : '🔘'}
+                          <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.neg_apply)}
                           </button>
                         ) : isNegCancel ? (
-                          <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none" title={rec.neg_cancel ? '取り消す' : '解除時ネガキャン確認'}>
-                            {rec.neg_cancel ? '⭕' : '🔘'}
+                          <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.neg_cancel)}
                           </button>
                         ) : isDoneField && rec[c.key] ? (
                           <div className="flex items-center justify-center gap-1">
                             <span className="text-gray-700">{rec[c.key]}</span>
                             <button
-                              onClick={() => toggleDone(rec.id, c.key, rec[doneKey] as number)}
+                              onClick={() => toggleDone(rec.id, c.key, doneVal)}
                               className="text-lg leading-none"
-                              title={isDone ? '未完了に戻す' : '完了にする'}
                             >
-                              {isDone ? '⭕' : '🔘'}
+                              {doneEmoji(doneVal)}
                             </button>
                           </div>
                         ) : rec[c.key] ? (
