@@ -7,7 +7,7 @@ export async function GET() {
   if (!session.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const user = await dbQueryOne('SELECT points, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+  const user = await dbQueryOne('SELECT points, level, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
   return NextResponse.json({
     id: session.userId,
     userId: session.userId,
@@ -15,6 +15,7 @@ export async function GET() {
     email: session.email,
     role: session.role,
     points: (user as any)?.points ?? 0,
+    level: (user as any)?.level ?? 0,
     avatar: (user as any)?.avatar ?? null,
     loginCount: (user as any)?.login_count ?? 0,
     lastLoginAt: (user as any)?.last_login_at ?? null,

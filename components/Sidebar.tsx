@@ -57,6 +57,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const [pushLoading, setPushLoading] = useState(false)
   const [myActivation, setMyActivation] = useState(0)
   const [myPoints, setMyPoints] = useState<number | null>(null)
+  const [myLevel, setMyLevel] = useState<number>(0)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
       .then((r) => r.json())
       .then((d) => {
         if (typeof d.points === 'number') setMyPoints(d.points)
+        if (typeof d.level === 'number') setMyLevel(d.level)
         if (d.avatar) setMyAvatar(d.avatar)
       })
       .catch(() => {})
@@ -219,11 +221,16 @@ export default function Sidebar({ name, role }: SidebarProps) {
             </div>
             <div className="flex items-center gap-2">
               <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
-              {myPoints !== null && (
-                <span className="text-[10px] font-bold text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded-full shrink-0">
-                  ⭐ {myPoints.toLocaleString()}pt
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-violet-300 bg-violet-400/20 px-1.5 py-0.5 rounded-full shrink-0">
+                  Lv.{myLevel}
                 </span>
-              )}
+                {myPoints !== null && (
+                  <span className="text-[10px] font-bold text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded-full shrink-0">
+                    ⭐ {myPoints.toLocaleString()}pt
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </Link>

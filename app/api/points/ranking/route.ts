@@ -8,7 +8,7 @@ export async function GET() {
   if (session.role !== 'manager' && session.role !== 'viewer') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const rows = await dbQuery(
-    `SELECT id, name, avatar, points FROM users ORDER BY points DESC, name ASC`
+    `SELECT id, name, avatar, points, level FROM users ORDER BY level DESC, points DESC, name ASC`
   )
   return NextResponse.json(rows)
 }

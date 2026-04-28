@@ -1,12 +1,30 @@
-import { dbRun } from './db'
+import { dbQueryOne, dbRun } from './db'
 
 export async function syncUserPoints(userId: number): Promise<void> {
-  await dbRun(
-    `UPDATE users SET points = (
+  const result = await dbQueryOne<{ raw: string }>(
+    `SELECT (
       COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = $1), 0)
       + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = $1), 0)
-    ) WHERE id = $1`,
+    ) AS raw`,
     [userId]
+  )
+  const rawPoints = Number(result?.raw ?? 0)
+
+  let level = 0
+  let spent = 0
+  while (level < 100) {
+    const nextCost = 100 * (level + 1)
+    if (rawPoints - spent >= nextCost) {
+      spent += nextCost
+      level++
+    } else {
+      break
+    }
+  }
+
+  await dbRun(
+    `UPDATE users SET points = $1, level = $2 WHERE id = $3`,
+    [rawPoints - spent, level, userId]
   )
 }
 

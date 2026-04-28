@@ -223,6 +223,7 @@ async function initDb() {
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer'));
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER NOT NULL DEFAULT 0;
@@ -278,13 +279,28 @@ async function initDb() {
     );
   `)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
-  // ポイントを records の全合計から同期（過去分含む）
+  // ポイントとレベルを records の全合計から同期（過去分含む）
   await pool.query(`
-    UPDATE users u
-    SET points = (
-      COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
-      + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0)
+    WITH raw AS (
+      SELECT
+        u.id,
+        COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
+        + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0) AS raw_points
+      FROM users u
+    ),
+    leveled AS (
+      SELECT
+        id,
+        raw_points,
+        LEAST(100, GREATEST(0, FLOOR((-1 + SQRT(1 + raw_points::float * 2.0 / 25)) / 2)))::int AS lvl
+      FROM raw
     )
+    UPDATE users u
+    SET
+      level  = l.lvl,
+      points = l.raw_points - 100 * l.lvl * (l.lvl + 1) / 2
+    FROM leveled l
+    WHERE u.id = l.id
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')
