@@ -46,6 +46,47 @@ export default async function ChallengePage() {
 
       <TeamChallengeCard total={total} year={year} month={month} />
 
+      {/* ボスイベント */}
+      {(() => {
+        const GOAL = 200
+        const phases = [
+          { threshold: 0,   name: 'スライム', icon: '🐛', color: 'from-green-400 to-emerald-500' },
+          { threshold: 50,  name: 'オーク',   icon: '🐗', color: 'from-yellow-400 to-orange-500' },
+          { threshold: 100, name: 'ドラゴン', icon: '🐲', color: 'from-red-500 to-rose-600' },
+          { threshold: 150, name: 'ラスボス', icon: '👹', color: 'from-purple-600 to-violet-700' },
+        ]
+        if (total >= GOAL) return (
+          <div className="mt-4 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl p-4 text-white text-center shadow">
+            <div className="text-4xl mb-1">🎉</div>
+            <p className="text-lg font-black">全ボス撃破！200件達成！</p>
+          </div>
+        )
+        const phaseIdx = phases.reduce((idx, p, i) => total >= p.threshold ? i : idx, 0)
+        const phase = phases[phaseIdx]
+        const dmg = Math.min(total - phase.threshold, 50)
+        const hpPct = Math.max(0, Math.round(((50 - dmg) / 50) * 100))
+        return (
+          <div className={`mt-4 bg-gradient-to-br ${phase.color} rounded-2xl p-4 text-white shadow`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">ボスイベント フェーズ{phaseIdx + 1}/4</span>
+              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">⚔️ ミッションで詳細確認</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-5xl">{phase.icon}</span>
+              <div className="flex-1">
+                <p className="text-lg font-black mb-1">{phase.name}</p>
+                <div className="flex items-center justify-between text-xs mb-0.5">
+                  <span>HP</span><span>{50 - dmg}/50</span>
+                </div>
+                <div className="h-3 bg-white/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-white rounded-full transition-all" style={{ width: `${hpPct}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* 本日の開通速報 */}
       <RecentActivationFeed />
 

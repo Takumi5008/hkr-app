@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, Gift, BookOpen } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, Gift, BookOpen, Swords } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { getBadge } from '@/components/ActivationBadge'
 import UserAvatar from '@/components/UserAvatar'
@@ -10,6 +10,7 @@ import UserAvatar from '@/components/UserAvatar'
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
+  { href: '/quests', label: 'ミッション', icon: Swords },
   { href: '/exchange', label: 'ポイント交換', icon: Gift },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
@@ -59,6 +60,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const [myActivation, setMyActivation] = useState(0)
   const [myPoints, setMyPoints] = useState<number | null>(null)
   const [myLevel, setMyLevel] = useState<number>(0)
+  const [myStreak, setMyStreak] = useState<number>(0)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
       .then((d) => {
         if (typeof d.points === 'number') setMyPoints(d.points)
         if (typeof d.level === 'number') setMyLevel(d.level)
+        if (typeof d.loginStreak === 'number') setMyStreak(d.loginStreak)
         if (d.avatar) setMyAvatar(d.avatar)
       })
       .catch(() => {})
@@ -222,10 +225,15 @@ export default function Sidebar({ name, role }: SidebarProps) {
             </div>
             <div className="flex items-center gap-2">
               <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-[10px] font-bold text-violet-300 bg-violet-400/20 px-1.5 py-0.5 rounded-full shrink-0">
                   Lv.{myLevel}
                 </span>
+                {myStreak > 0 && (
+                  <span className="text-[10px] font-bold text-orange-300 bg-orange-400/20 px-1.5 py-0.5 rounded-full shrink-0">
+                    🔥 {myStreak}日
+                  </span>
+                )}
                 {myPoints !== null && (
                   <span className="text-[10px] font-bold text-amber-300 bg-amber-400/20 px-1.5 py-0.5 rounded-full shrink-0">
                     ⭐ {myPoints.toLocaleString()}pt

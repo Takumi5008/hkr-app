@@ -5,7 +5,7 @@ import { CheckCircle, Plus, Trash2, Gift, Check, X, Pencil, Save } from 'lucide-
 import UserAvatar from '@/components/UserAvatar'
 import { useConfirm } from '@/components/useConfirm'
 
-type Tab = 'items' | 'rules'
+type Tab = 'items' | 'gacha' | 'rules'
 
 interface Item { id: number; name: string; description: string; cost: number }
 interface Exchange { id: number; item_name: string; cost: number; status: string; created_at: string; user_name?: string; user_avatar?: string }
@@ -48,6 +48,20 @@ export default function ExchangePage() {
   const [exchangeMsg, setExchangeMsg] = useState('')
   const [ranking, setRanking] = useState<RankUser[]>([])
 
+  // ガチャ
+  const [gachaItems, setGachaItems] = useState<any[]>([])
+  const [gachaCost, setGachaCost] = useState(200)
+  const [gachaPulling, setGachaPulling] = useState(false)
+  const [gachaResult, setGachaResult] = useState<any | null>(null)
+  const [gachaError, setGachaError] = useState('')
+  // ガチャ管理フォーム（マネージャー）
+  const [gachaName, setGachaName] = useState('')
+  const [gachaDesc, setGachaDesc] = useState('')
+  const [gachaRarity, setGachaRarity] = useState('common')
+  const [gachaWeight, setGachaWeight] = useState('10')
+  const [gachaAddError, setGachaAddError] = useState('')
+  const [gachaAddLoading, setGachaAddLoading] = useState(false)
+
   // 手動ポイント付与フォーム
   const [grantUserId, setGrantUserId] = useState('')
   const [grantDelta, setGrantDelta] = useState('')
@@ -61,6 +75,7 @@ export default function ExchangePage() {
     fetch('/api/points/exchanges').then(r => r.json()).then(d => { if (Array.isArray(d)) setExchanges(d) })
     fetch('/api/points/rules').then(r => r.json()).then(d => { if (Array.isArray(d)) setRules(d) })
     fetch('/api/points/ranking').then(r => r.json()).then(d => { if (Array.isArray(d)) setRanking(d) })
+    fetch('/api/gacha').then(r => r.json()).then(d => { if (d.items) { setGachaItems(d.items); setGachaCost(d.cost) } })
   }, [])
 
   const isManager = role === 'manager' || role === 'viewer'
@@ -153,6 +168,31 @@ export default function ExchangePage() {
     setGrantLoading(false)
   }
 
+  async function handleGachaPull() {
+    setGachaPulling(true); setGachaResult(null); setGachaError('')
+    const res = await fetch('/api/gacha', { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) { setGachaError(data.error); setGachaPulling(false); return }
+    setGachaResult(data)
+    setMyPoints(data.newPoints)
+    setGachaPulling(false)
+  }
+
+  async function handleAddGachaItem() {
+    setGachaAddError('')
+    if (!gachaName.trim()) { setGachaAddError('名前は必須です'); return }
+    setGachaAddLoading(true)
+    const res = await fetch('/api/points/items', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: gachaName.trim(), description: gachaDesc.trim(), cost: 1, isGacha: true, gachaRarity, gachaWeight: Number(gachaWeight) }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setGachaAddError(data.error); setGachaAddLoading(false); return }
+    fetch('/api/gacha').then(r => r.json()).then(d => { if (d.items) setGachaItems(d.items) })
+    setGachaName(''); setGachaDesc(''); setGachaRarity('common'); setGachaWeight('10')
+    setGachaAddLoading(false)
+  }
+
   async function handleUpdateStatus(id: number, status: 'approved' | 'rejected') {
     await fetch('/api/points/exchanges', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -176,20 +216,20 @@ export default function ExchangePage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl">
-        <button
-          onClick={() => setTab('items')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors relative ${tab === 'items' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
+        <button onClick={() => setTab('items')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors relative ${tab === 'items' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
           🎁 交換一覧
           {isManager && pendingCount > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{pendingCount}</span>
           )}
         </button>
-        <button
-          onClick={() => setTab('rules')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'rules' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-        >
-          ⭐ ポイント付加一覧
+        <button onClick={() => setTab('gacha')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === 'gacha' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          🎰 ガチャ
+        </button>
+        <button onClick={() => setTab('rules')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === 'rules' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          ⭐ ルール
         </button>
       </div>
 
@@ -397,6 +437,93 @@ export default function ExchangePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── ガチャタブ ── */}
+      {tab === 'gacha' && (
+        <div className="space-y-4">
+          {/* ガチャ引くUI */}
+          <div className="bg-gradient-to-br from-fuchsia-600 to-purple-700 rounded-2xl p-6 text-white text-center">
+            <div className="text-5xl mb-3">🎰</div>
+            <h2 className="text-xl font-black mb-1">ガチャ</h2>
+            <p className="text-sm opacity-80 mb-4">1回 {gachaCost}pt で引ける！</p>
+            {gachaError && <p className="text-red-200 text-sm mb-3 font-medium">{gachaError}</p>}
+            {gachaResult && !gachaPulling && (
+              <div className="mb-4 bg-white/20 rounded-xl p-4">
+                <p className="text-xs font-bold opacity-70 mb-1">当選！</p>
+                <div className="text-4xl mb-1">🎉</div>
+                <p className={`text-xs font-black px-2 py-0.5 rounded-full inline-block mb-1 ${gachaResult.rarityColor}`}>{gachaResult.rarityLabel}</p>
+                <p className="text-lg font-black">{gachaResult.item?.name}</p>
+                {gachaResult.item?.description && <p className="text-xs opacity-70 mt-0.5">{gachaResult.item.description}</p>}
+                <p className="text-xs opacity-60 mt-2">管理者が確認後に付与されます</p>
+              </div>
+            )}
+            {gachaPulling && (
+              <div className="mb-4 py-6">
+                <div className="text-6xl animate-spin inline-block">🎰</div>
+              </div>
+            )}
+            <button onClick={handleGachaPull} disabled={gachaPulling || myPoints < gachaCost}
+              className="w-full py-3 bg-white text-fuchsia-700 font-black text-base rounded-xl hover:bg-fuchsia-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg">
+              {gachaPulling ? '抽選中...' : `🎰 ガチャを引く（${gachaCost}pt）`}
+            </button>
+            {myPoints < gachaCost && <p className="text-xs text-red-200 mt-2">ポイントが不足しています（現在 {myPoints}pt）</p>}
+          </div>
+
+          {/* ガチャアイテム一覧 */}
+          {gachaItems.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4">
+              <h2 className="text-sm font-bold text-gray-700 mb-3">排出アイテム</h2>
+              <div className="space-y-2">
+                {gachaItems.map((item: any) => {
+                  const rarityColor: Record<string, string> = { common: 'bg-gray-100 text-gray-600', rare: 'bg-blue-100 text-blue-600', epic: 'bg-purple-100 text-purple-600', legendary: 'bg-yellow-100 text-yellow-600' }
+                  const rarityLabel: Record<string, string> = { common: 'コモン', rare: 'レア', epic: 'エピック', legendary: 'レジェンダリー' }
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                        {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${rarityColor[item.gacha_rarity] ?? rarityColor.common}`}>
+                        {rarityLabel[item.gacha_rarity] ?? 'コモン'}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 管理者: ガチャアイテム追加 */}
+          {isManager && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><Plus size={15} />ガチャアイテムを追加</h2>
+              <div className="space-y-3">
+                <input type="text" placeholder="アイテム名（例：コーヒー券）" value={gachaName}
+                  onChange={e => { setGachaName(e.target.value); setGachaAddError('') }}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400" />
+                <input type="text" placeholder="説明（任意）" value={gachaDesc}
+                  onChange={e => setGachaDesc(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400" />
+                <select value={gachaRarity} onChange={e => setGachaRarity(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400">
+                  <option value="common">コモン（高確率）</option>
+                  <option value="rare">レア（中確率）</option>
+                  <option value="epic">エピック（低確率）</option>
+                  <option value="legendary">レジェンダリー（超低確率）</option>
+                </select>
+                <input type="number" placeholder="排出重み（コモン:10 レア:5 エピック:2 レジェ:1）" value={gachaWeight} min={1}
+                  onChange={e => setGachaWeight(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400" />
+                {gachaAddError && <p className="text-xs text-red-600">{gachaAddError}</p>}
+                <button onClick={handleAddGachaItem} disabled={gachaAddLoading}
+                  className="w-full py-2.5 bg-fuchsia-500 text-white text-sm font-bold rounded-xl hover:bg-fuchsia-600 disabled:opacity-50 transition-colors">
+                  {gachaAddLoading ? '追加中...' : '追加する'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── ポイント付加一覧タブ ── */}

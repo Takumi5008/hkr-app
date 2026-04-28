@@ -224,7 +224,29 @@ async function initDb() {
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS login_streak INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+    CREATE TABLE IF NOT EXISTS login_days (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      UNIQUE(user_id, date)
+    );
+    CREATE TABLE IF NOT EXISTS user_badges (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      badge_id TEXT NOT NULL,
+      earned_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, badge_id)
+    );
+    CREATE TABLE IF NOT EXISTS weekly_quest_claims (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      quest_id TEXT NOT NULL,
+      week_start TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, quest_id, week_start)
+    );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TEXT;
@@ -232,13 +254,19 @@ async function initDb() {
     ALTER TABLE records ADD COLUMN IF NOT EXISTS expected_opening  INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE records ADD COLUMN IF NOT EXISTS confirmed_opening INTEGER NOT NULL DEFAULT 0;
     CREATE TABLE IF NOT EXISTS point_items (
-      id          SERIAL PRIMARY KEY,
-      name        TEXT    NOT NULL,
-      description TEXT    NOT NULL DEFAULT '',
-      cost        INTEGER NOT NULL CHECK (cost > 0),
-      is_active   BOOLEAN NOT NULL DEFAULT true,
-      created_at  TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      id            SERIAL PRIMARY KEY,
+      name          TEXT    NOT NULL,
+      description   TEXT    NOT NULL DEFAULT '',
+      cost          INTEGER NOT NULL CHECK (cost > 0),
+      is_active     BOOLEAN NOT NULL DEFAULT true,
+      is_gacha      BOOLEAN NOT NULL DEFAULT false,
+      gacha_rarity  TEXT    NOT NULL DEFAULT 'common',
+      gacha_weight  INTEGER NOT NULL DEFAULT 10,
+      created_at    TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
+    ALTER TABLE point_items ADD COLUMN IF NOT EXISTS is_gacha BOOLEAN NOT NULL DEFAULT false;
+    ALTER TABLE point_items ADD COLUMN IF NOT EXISTS gacha_rarity TEXT NOT NULL DEFAULT 'common';
+    ALTER TABLE point_items ADD COLUMN IF NOT EXISTS gacha_weight INTEGER NOT NULL DEFAULT 10;
     CREATE TABLE IF NOT EXISTS point_rules (
       id         SERIAL PRIMARY KEY,
       action     TEXT    NOT NULL,
