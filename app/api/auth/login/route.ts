@@ -34,9 +34,15 @@ export async function POST(req: NextRequest) {
   session.role = user.role
   await session.save()
 
+  const now = new Date()
+  const todayJST = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const lastLoginJST = user.last_login_at
+    ? new Date(new Date(user.last_login_at).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : null
+  const isNewDay = lastLoginJST !== todayJST
   await dbRun(
-    'UPDATE users SET login_count = login_count + 1, last_login_at = $1 WHERE id = $2',
-    [new Date().toISOString(), user.id]
+    `UPDATE users SET login_count = login_count + $1, last_login_at = $2 WHERE id = $3`,
+    [isNewDay ? 1 : 0, now.toISOString(), user.id]
   )
 
   const requirePasswordChange = isTempValid && !isPasswordValid
