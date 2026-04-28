@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const monthStr = `${year}-${String(month).padStart(2, '0')}-%`
   const yearStr = `${year}-%`
 
-  const [mtgRows, activityRows, loginRows] = await Promise.all([
+  const [mtgRows, activityRows, loginRows, openingRows] = await Promise.all([
     dbQuery(
       `SELECT user_id,
          COUNT(CASE WHEN status='present' THEN 1 END)::int AS present_count,
@@ -42,7 +42,15 @@ export async function GET(req: NextRequest) {
       `SELECT id AS user_id, COALESCE(login_count, 0)::int AS login_count, last_login_at
        FROM users WHERE role != 'viewer'`
     ),
+    dbQuery(
+      `SELECT u.id AS user_id, COALESCE(mms.opening_count, 0)::int AS opening_count
+       FROM users u
+       LEFT JOIN member_monthly_stats mms
+         ON mms.member_name = u.name AND mms.year = $1 AND mms.month = $2
+       WHERE u.role != 'viewer'`,
+      [year, month]
+    ),
   ])
 
-  return NextResponse.json({ mtg: mtgRows, activity: activityRows, login: loginRows })
+  return NextResponse.json({ mtg: mtgRows, activity: activityRows, login: loginRows, opening: openingRows })
 }
