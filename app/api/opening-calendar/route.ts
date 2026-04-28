@@ -7,12 +7,16 @@ export async function GET(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
   const { searchParams } = new URL(req.url)
-  const year  = parseInt(searchParams.get('year')  ?? '0')
-  const month = parseInt(searchParams.get('month') ?? '0')
+  const year   = parseInt(searchParams.get('year')   ?? '0')
+  const month  = parseInt(searchParams.get('month')  ?? '0')
+  const userId = searchParams.get('userId')
+
+  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const targetId  = isManager && userId ? parseInt(userId) : session.userId
 
   const rows = await dbQuery(
     'SELECT * FROM opening_calendar WHERE user_id = $1 AND year = $2 AND month = $3 ORDER BY created_at ASC',
-    [session.userId, year, month]
+    [targetId, year, month]
   )
   return NextResponse.json(rows)
 }

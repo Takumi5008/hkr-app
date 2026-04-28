@@ -41,6 +41,8 @@ export default function InputPage() {
   const [calEntries, setCalEntries] = useState<CalendarEntry[]>([])
   const [calEditingId, setCalEditingId] = useState<number | 'new' | null>(null)
   const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' })
+  const [calMembers, setCalMembers] = useState<{ id: number; name: string }[]>([])
+  const [calSelectedUserId, setCalSelectedUserId] = useState<number | null>(null)
 
   // 回線管理
   const [productItems, setProductItems] = useState<{ id: number; name: string }[]>([])
@@ -54,16 +56,26 @@ export default function InputPage() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => setRole(d.role))
+      .then((d) => {
+        setRole(d.role)
+        if (d.role === 'manager' || d.role === 'viewer') {
+          fetch('/api/users')
+            .then((r) => r.json())
+            .then((users: { id: number; name: string; role: string }[]) => {
+              setCalMembers(users.filter((u) => u.role !== 'viewer' && u.role !== 'shift_viewer'))
+            })
+        }
+      })
   }, [])
 
-  const fetchCalendar = () => {
-    fetch(`/api/opening-calendar?year=${year}&month=${month}`)
+  const fetchCalendar = (userId?: number | null) => {
+    const userParam = userId ? `&userId=${userId}` : ''
+    fetch(`/api/opening-calendar?year=${year}&month=${month}${userParam}`)
       .then((r) => r.json())
       .then((data) => { if (Array.isArray(data)) setCalEntries(data) })
   }
 
-  useEffect(() => { if (tab === 'calendar') fetchCalendar() }, [year, month, tab])
+  useEffect(() => { if (tab === 'calendar') fetchCalendar(calSelectedUserId) }, [year, month, tab, calSelectedUserId])
 
   useEffect(() => {
     fetch('/api/products')
@@ -134,14 +146,14 @@ export default function InputPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ year, month, ...calForm }),
       })
-      if (res.ok) fetchCalendar()
+      if (res.ok) fetchCalendar(calSelectedUserId)
     } else if (calEditingId !== null) {
       await fetch('/api/opening-calendar', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: calEditingId, ...calForm }),
       })
-      fetchCalendar()
+      fetchCalendar(calSelectedUserId)
     }
     setCalEditingId(null)
   }
@@ -377,6 +389,27 @@ export default function InputPage() {
       {/* 開通カレンダータブ */}
       {tab === 'calendar' && (
         <>
+            {/* メンバー選択（マネージャーのみ） */}
+            {isManager && calMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                <button
+                  onClick={() => { setCalSelectedUserId(null); setCalEditingId(null) }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${calSelectedUserId === null ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50'}`}
+                >
+                  自分
+                </button>
+                {calMembers.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setCalSelectedUserId(m.id); setCalEditingId(null) }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${calSelectedUserId === m.id ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50'}`}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* 月選択 */}
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
@@ -395,6 +428,7 @@ export default function InputPage() {
             </div>
 
             {/* エントリ一覧 */}
+            {(() => { const canEdit = calSelectedUserId === null; return (
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
               <table className="w-full text-sm">
                 <thead>
@@ -404,7 +438,7 @@ export default function InputPage() {
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">お客様名</th>
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-24">回線</th>
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-12">工事</th>
-                    <th className="px-3 py-2.5 w-12" />
+                    {canEdit && <th className="px-3 py-2.5 w-12" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -419,11 +453,15 @@ export default function InputPage() {
                     return (
                       <tr key={entry.id} className={bg}>
                         <td className="px-2 py-2 text-center">
-                          <button onClick={() => handleCalToggleStatus(entry)} className="text-lg leading-none">
-                            {statusEmoji(entry.status)}
-                          </button>
+                          {canEdit ? (
+                            <button onClick={() => handleCalToggleStatus(entry)} className="text-lg leading-none">
+                              {statusEmoji(entry.status)}
+                            </button>
+                          ) : (
+                            <span className="text-lg leading-none">{statusEmoji(entry.status)}</span>
+                          )}
                         </td>
-                        {isEditing ? (
+                        {isEditing && canEdit ? (
                           <>
                             <td className="px-2 py-1.5">
                               <input
@@ -476,26 +514,28 @@ export default function InputPage() {
                             <td className="px-3 py-2 text-center">
                               {entry.construction_type && <span className="text-base leading-none">{entry.construction_type}</span>}
                             </td>
-                            <td className="px-2 py-2">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => { setCalEditingId(entry.id); setCalForm({ activation_date: entry.activation_date, customer_name: entry.customer_name, line_type: entry.line_type, construction_type: entry.construction_type, status: entry.status }) }}
-                                  className="text-gray-300 hover:text-blue-500 transition"
-                                >
-                                  <Pencil size={13} />
-                                </button>
-                                <button onClick={() => handleCalDelete(entry.id)} className="text-gray-300 hover:text-red-400 transition">
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </td>
+                            {canEdit && (
+                              <td className="px-2 py-2">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => { setCalEditingId(entry.id); setCalForm({ activation_date: entry.activation_date, customer_name: entry.customer_name, line_type: entry.line_type, construction_type: entry.construction_type, status: entry.status }) }}
+                                    className="text-gray-300 hover:text-blue-500 transition"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                  <button onClick={() => handleCalDelete(entry.id)} className="text-gray-300 hover:text-red-400 transition">
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </>
                         )}
                       </tr>
                     )
                   })}
                   {/* 新規追加行 */}
-                  {calEditingId === 'new' && (
+                  {canEdit && calEditingId === 'new' && (
                     <tr>
                       <td className="px-2 py-1.5 text-center">
                         <button
@@ -553,9 +593,10 @@ export default function InputPage() {
                 </tbody>
               </table>
             </div>
+            ); })()}
 
             {/* 追加ボタン */}
-            {calEditingId === null && (
+            {calSelectedUserId === null && calEditingId === null && (
               <button
                 onClick={() => { setCalEditingId('new'); setCalForm({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' }) }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow mb-5"
