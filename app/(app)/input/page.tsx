@@ -236,6 +236,10 @@ export default function InputPage() {
 
   const isManager = role === 'manager'
 
+  const calConfirmed = calEntries.filter((e) => e.status === '○').length
+  const calRemaining = calEntries.filter((e) => e.status === '').length
+  const calForecast  = calConfirmed + calRemaining
+
   return (
     <div className="p-6 max-w-2xl mx-auto">
       {celebrationCount > 0 && (
@@ -370,12 +374,8 @@ export default function InputPage() {
       )}
 
       {/* 開通カレンダータブ */}
-      {tab === 'calendar' && (() => {
-        const confirmed = calEntries.filter((e) => e.status === '○').length
-        const remaining = calEntries.filter((e) => e.status === '').length
-        const forecast  = confirmed + remaining
-        return (
-          <>
+      {tab === 'calendar' && (
+        <>
             {/* 月選択 */}
             <div className="mb-5">
               <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
@@ -568,9 +568,9 @@ export default function InputPage() {
               <p className="text-xs font-semibold text-gray-500 mb-3">{formatMonth(year, month)} まとめ</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
-                  { label: '開通数', value: confirmed, color: 'text-emerald-600' },
-                  { label: '残り', value: remaining, color: 'text-indigo-600' },
-                  { label: '見込み', value: forecast, color: 'text-blue-600' },
+                  { label: '開通数', value: calConfirmed, color: 'text-emerald-600' },
+                  { label: '残り', value: calRemaining, color: 'text-indigo-600' },
+                  { label: '見込み', value: calForecast, color: 'text-blue-600' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-gray-50 rounded-lg px-4 py-3 text-center">
                     <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -578,18 +578,17 @@ export default function InputPage() {
                   </div>
                 ))}
                 <div className="bg-indigo-50 rounded-lg px-4 py-3 text-center sm:col-span-1">
-                  <p className="text-lg font-bold text-indigo-600">{fmt(forecast * COMMISSION)}</p>
+                  <p className="text-lg font-bold text-indigo-600">{fmt(calForecast * COMMISSION)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">見込み委託費</p>
                 </div>
                 <div className="bg-emerald-50 rounded-lg px-4 py-3 text-center sm:col-span-2">
-                  <p className="text-lg font-bold text-emerald-600">{fmt(confirmed * COMMISSION)}</p>
+                  <p className="text-lg font-bold text-emerald-600">{fmt(calConfirmed * COMMISSION)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">確定委託費</p>
                 </div>
               </div>
             </div>
-          </>
-        )
-      })()}
+        </>
+      )}
 
       {/* 回線管理タブ（マネージャーのみ） */}
       {tab === 'products' && isManager && (
