@@ -101,6 +101,7 @@ export async function GET(req: NextRequest) {
       ovr,
       tier,
       isTotw,
+      activation: m.activation,
       stats: [
         { label: '開通', value: activationScore },
         { label: 'HKR', value: hkrScore },

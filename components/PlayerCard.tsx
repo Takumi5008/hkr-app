@@ -12,6 +12,7 @@ export interface PlayerCardData {
   isTotw: boolean
   stats: { label: string; value: number }[]
   form: FormResult[]
+  activation: number
 }
 
 const TIER = {

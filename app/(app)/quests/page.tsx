@@ -46,7 +46,7 @@ export default function QuestsPage() {
     if (q.quests) { setQuests(q.quests); setWeekStart(q.weekStart) }
     if (Array.isArray(b)) setBadges(b)
     if (typeof me.points === 'number') setMyPoints(me.points)
-    if (Array.isArray(ch)) setTeamTotal(ch.reduce((s: number, c: any) => s + (c.activation_count ?? 0), 0))
+    if (Array.isArray(ch)) setTeamTotal(ch.reduce((s: number, c: any) => s + (c.activation ?? 0), 0))
   }
 
   async function handleClaim(questId: string) {
