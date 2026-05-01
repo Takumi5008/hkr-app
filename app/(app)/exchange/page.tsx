@@ -5,7 +5,7 @@ import { CheckCircle, Plus, Trash2, Gift, Check, X, Pencil, Save } from 'lucide-
 import UserAvatar from '@/components/UserAvatar'
 import { useConfirm } from '@/components/useConfirm'
 
-type Tab = 'items' | 'gacha' | 'rules'
+type Tab = 'items' | 'gacha' | 'level' | 'rules'
 
 interface Item { id: number; name: string; description: string; cost: number }
 interface Exchange { id: number; item_name: string; cost: number; status: string; created_at: string; user_name?: string; user_avatar?: string }
@@ -47,6 +47,10 @@ export default function ExchangePage() {
 
   const [exchangeMsg, setExchangeMsg] = useState('')
   const [ranking, setRanking] = useState<RankUser[]>([])
+  const [myLevel, setMyLevel] = useState(0)
+  const [levelHistory, setLevelHistory] = useState<any[]>([])
+  const [levelUpLoading, setLevelUpLoading] = useState(false)
+  const [levelUpMsg, setLevelUpMsg] = useState<{ msg: string; ok: boolean } | null>(null)
 
   // ガチャ
   const [gachaItems, setGachaItems] = useState<any[]>([])
@@ -69,8 +73,15 @@ export default function ExchangePage() {
   const [grantMsg, setGrantMsg] = useState('')
   const [grantLoading, setGrantLoading] = useState(false)
 
+  async function fetchLevelHistory() {
+    const res = await fetch('/api/points/levelup')
+    const data = await res.json()
+    if (Array.isArray(data)) setLevelHistory(data)
+  }
+
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.role); setMyPoints(d.points ?? 0) })
+    fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.role); setMyPoints(d.points ?? 0); setMyLevel(d.level ?? 0) })
+    fetchLevelHistory()
     fetch('/api/points/items').then(r => r.json()).then(d => { if (Array.isArray(d)) setItems(d) })
     fetch('/api/points/exchanges').then(r => r.json()).then(d => { if (Array.isArray(d)) setExchanges(d) })
     fetch('/api/points/rules').then(r => r.json()).then(d => { if (Array.isArray(d)) setRules(d) })
@@ -168,6 +179,23 @@ export default function ExchangePage() {
     setGrantLoading(false)
   }
 
+  async function handleLevelUp() {
+    setLevelUpLoading(true)
+    setLevelUpMsg(null)
+    const res = await fetch('/api/points/levelup', { method: 'POST' })
+    const data = await res.json()
+    if (!res.ok) {
+      setLevelUpMsg({ msg: data.error, ok: false })
+    } else {
+      setMyPoints(data.points)
+      setMyLevel(data.level)
+      setLevelUpMsg({ msg: `Lv.${data.level} にレベルアップしました！`, ok: true })
+      fetchLevelHistory()
+    }
+    setLevelUpLoading(false)
+    setTimeout(() => setLevelUpMsg(null), 3000)
+  }
+
   async function handleGachaPull() {
     setGachaPulling(true); setGachaResult(null); setGachaError('')
     const res = await fetch('/api/gacha', { method: 'POST' })
@@ -226,6 +254,10 @@ export default function ExchangePage() {
         <button onClick={() => setTab('gacha')}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === 'gacha' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
           🎰 ガチャ
+        </button>
+        <button onClick={() => setTab('level')}
+          className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === 'level' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          ⬆️ レベル
         </button>
         <button onClick={() => setTab('rules')}
           className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === 'rules' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -437,6 +469,98 @@ export default function ExchangePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── レベルタブ ── */}
+      {tab === 'level' && (
+        <div className="space-y-4">
+          {/* 現在のレベルカード */}
+          <div className="bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl p-6 text-white">
+            <div className="text-center mb-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Level</p>
+              <div className="text-7xl font-black mb-1">{myLevel}</div>
+              <p className="text-violet-200 text-sm">現在のレベル</p>
+            </div>
+
+            {myLevel < 100 ? (
+              <>
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-sm mb-1.5">
+                    <span className="text-violet-200">Lv.{myLevel + 1}まであと</span>
+                    <span className="font-bold">{Math.max(0, 100 * (myLevel + 1) - myPoints).toLocaleString()}pt</span>
+                  </div>
+                  <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-white rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, Math.round((myPoints / (100 * (myLevel + 1))) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-violet-200 mt-1">
+                    <span>現在: {myPoints.toLocaleString()}pt</span>
+                    <span>必要: {(100 * (myLevel + 1)).toLocaleString()}pt</span>
+                  </div>
+                </div>
+
+                {levelUpMsg && (
+                  <p className={`text-sm font-bold text-center mb-3 ${levelUpMsg.ok ? 'text-green-300' : 'text-red-300'}`}>
+                    {levelUpMsg.msg}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleLevelUp}
+                  disabled={levelUpLoading || myPoints < 100 * (myLevel + 1)}
+                  className="w-full py-3 bg-white text-violet-700 font-black text-sm rounded-xl hover:bg-violet-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg"
+                >
+                  {levelUpLoading ? 'レベルアップ中...' : `⬆️ Lv.${myLevel + 1}にレベルアップ（${(100 * (myLevel + 1)).toLocaleString()}pt）`}
+                </button>
+                {myPoints < 100 * (myLevel + 1) && (
+                  <p className="text-xs text-violet-300 text-center mt-2">
+                    あと {(100 * (myLevel + 1) - myPoints).toLocaleString()}pt 貯めると昇格できます
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="text-center mt-2">
+                <p className="text-2xl font-black text-yellow-300">🏆 MAX LEVEL!</p>
+                <p className="text-violet-200 text-sm mt-1">おめでとうございます！</p>
+              </div>
+            )}
+          </div>
+
+          {/* レベルアップ履歴 */}
+          {levelHistory.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="text-sm font-bold text-gray-700 mb-3">⬆️ レベルアップ履歴</h2>
+              <div className="space-y-2">
+                {levelHistory.map((h: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
+                    <span className="text-violet-500 text-base shrink-0">⬆️</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">{h.reason}</p>
+                      <p className="text-xs text-gray-400">{h.created_at.slice(0, 10)}</p>
+                    </div>
+                    <span className="text-sm font-bold text-violet-600 shrink-0">{Math.abs(h.delta).toLocaleString()}pt</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* レベルアップ費用表 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <h2 className="text-sm font-bold text-gray-700 mb-3">💡 レベルアップ費用</h2>
+            <p className="text-xs text-gray-500 mb-3">費用 = <span className="font-bold text-violet-600">100 × 次のレベル pt</span></p>
+            <div className="grid grid-cols-2 gap-1">
+              {[1,2,3,4,5,10,20,50,100].map(lv => (
+                <div key={lv} className={`flex justify-between items-center px-3 py-1.5 rounded-lg text-xs ${lv === myLevel + 1 ? 'bg-violet-50 font-bold text-violet-700' : 'bg-gray-50 text-gray-600'}`}>
+                  <span>Lv.{lv - 1} → {lv}</span>
+                  <span className="font-bold">{(100 * lv).toLocaleString()}pt</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── ガチャタブ ── */}

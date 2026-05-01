@@ -307,28 +307,13 @@ async function initDb() {
     );
   `)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
-  // ポイントとレベルを records の全合計から同期（過去分含む）
+  // ポイントを records + point_transactions の合計から同期（レベルは手動管理）
   await pool.query(`
-    WITH raw AS (
-      SELECT
-        u.id,
-        COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
-        + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0) AS raw_points
-      FROM users u
-    ),
-    leveled AS (
-      SELECT
-        id,
-        raw_points,
-        LEAST(100, GREATEST(0, FLOOR((-1 + SQRT(1 + raw_points::float * 2.0 / 25)) / 2)))::int AS lvl
-      FROM raw
-    )
     UPDATE users u
-    SET
-      level  = l.lvl,
-      points = l.raw_points - 100 * l.lvl * (l.lvl + 1) / 2
-    FROM leveled l
-    WHERE u.id = l.id
+    SET points = (
+      COALESCE((SELECT SUM(r.activation_count) * 5 + SUM(r.cancel_count) * 1 FROM records r WHERE r.user_id = u.id), 0)
+      + COALESCE((SELECT SUM(pt.delta) FROM point_transactions pt WHERE pt.user_id = u.id), 0)
+    )
   `)
   // 初期商材データ
   const { rows } = await pool.query('SELECT COUNT(*) as cnt FROM products')

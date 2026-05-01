@@ -10,21 +10,9 @@ export async function syncUserPoints(userId: number): Promise<void> {
   )
   const rawPoints = Number(result?.raw ?? 0)
 
-  let level = 0
-  let spent = 0
-  while (level < 100) {
-    const nextCost = 100 * (level + 1)
-    if (rawPoints - spent >= nextCost) {
-      spent += nextCost
-      level++
-    } else {
-      break
-    }
-  }
-
   await dbRun(
-    `UPDATE users SET points = $1, level = $2 WHERE id = $3`,
-    [rawPoints - spent, level, userId]
+    `UPDATE users SET points = $1 WHERE id = $2`,
+    [rawPoints, userId]
   )
 }
 
