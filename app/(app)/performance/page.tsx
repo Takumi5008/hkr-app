@@ -56,7 +56,7 @@ export default function PerformancePage() {
   const { confirm, ConfirmDialog } = useConfirm()
   const [records, setRecords] = useState<MemberPerformance[]>([])
   const [monthly, setMonthly] = useState<MonthlyRecord[]>([])
-  const [role, setRole] = useState<string>('member')
+  const [role, setRole] = useState<string>('')
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
@@ -1199,6 +1199,9 @@ export default function PerformancePage() {
 
           {rankingLoading && <p className="text-sm text-gray-400 text-center py-8">読み込み中...</p>}
           {rankingError && <p className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{rankingError}</p>}
+          {!rankingLoading && !rankingError && !rankingData && (
+            <p className="text-sm text-gray-400 text-center py-8">月を選択してください</p>
+          )}
 
           {rankingData && !rankingLoading && (
             <>
