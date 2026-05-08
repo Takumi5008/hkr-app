@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       // 当月の解除時間生産性ランキング
       dbQuery<{ member_name: string; total_cancel: number; work_hours: number; productivity: number }>(
         `SELECT member_name, total_cancel, work_hours,
-                ROUND((total_cancel::numeric / work_hours), 3) AS productivity
+                ROUND(total_cancel::numeric / work_hours::numeric, 3) AS productivity
          FROM member_monthly_stats
          WHERE year = $1 AND month = $2 AND work_hours > 0
          ORDER BY productivity DESC`,
