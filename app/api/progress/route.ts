@@ -12,6 +12,14 @@ function extractWorkDays(workDatesJson: string): number[] {
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
+
+  // ロール修正：memberになっている場合にmanagerに戻す
+  if (session.email === 'komotaku0508@gmail.com' && session.role === 'member') {
+    await dbRun(`UPDATE users SET role = 'manager' WHERE id = $1`, [session.userId])
+    session.role = 'manager'
+    await session.save()
+  }
+
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
