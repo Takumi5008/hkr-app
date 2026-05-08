@@ -66,9 +66,7 @@ export default function ActivityPage() {
   const [rankingYear, setRankingYear] = useState(today.getFullYear())
   const [rankingMonth, setRankingMonth] = useState(today.getMonth() + 1)
   type RankingData = {
-    months3: { year: number; month: number }[]
     monthlyCancel: { member_name: string; total_cancel: number; work_hours: number; productivity: number }[]
-    last3Opening: { member_name: string; total_opening: number; total_hours: number; hours_per_opening: number }[]
   }
   const [rankingData, setRankingData] = useState<RankingData | null>(null)
   const [rankingLoading, setRankingLoading] = useState(false)
@@ -493,46 +491,6 @@ export default function ActivityPage() {
                 )}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-                <div className="px-5 py-3 bg-teal-50 border-b border-teal-100">
-                  <h2 className="text-sm font-bold text-teal-700">直近3ヶ月 開通時間生産性ランキング</h2>
-                  <p className="text-xs text-teal-400 mt-0.5">
-                    {rankingData.months3.map((m) => `${m.month}月`).join('・')} — 何時間で1開通（h/件、少ない方が優秀）
-                  </p>
-                </div>
-                {rankingData.last3Opening.length === 0 ? (
-                  <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
-                ) : (
-                  <div className="divide-y divide-gray-50">
-                    {rankingData.last3Opening.map((r, i) => {
-                      const medals = ['🥇', '🥈', '🥉']
-                      const minHours = rankingData.last3Opening[0]?.hours_per_opening ?? 1
-                      const maxHours = rankingData.last3Opening[rankingData.last3Opening.length - 1]?.hours_per_opening ?? 1
-                      const range = maxHours - minHours || 1
-                      const pct = Math.round(((maxHours - r.hours_per_opening) / range) * 100)
-                      return (
-                        <div key={r.member_name} className="flex items-center gap-3 px-5 py-3">
-                          <span className="text-base w-7 text-center shrink-0">
-                            {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
-                              <div className="text-right shrink-0 ml-2">
-                                <span className="text-sm font-bold text-teal-600">{r.hours_per_opening}<span className="text-xs font-normal text-gray-400 ml-0.5">h/件</span></span>
-                                <span className="text-xs text-gray-400 ml-2">({r.total_opening}件 / {r.total_hours}h)</span>
-                              </div>
-                            </div>
-                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-teal-300 to-teal-500 rounded-full" style={{ width: `${Math.max(pct, 5)}%` }} />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
             </>
           )}
         </div>
