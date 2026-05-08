@@ -5,7 +5,6 @@ import TeamChallengeCard from '@/components/TeamChallengeCard'
 import ActivationBadge from '@/components/ActivationBadge'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
-import TodayFollowAlerts from '@/components/TodayFollowAlerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +15,28 @@ export default async function ChallengePage() {
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
+  const day = now.getDate()
+
+  // 今日の日付フォーマット一覧
+  const mm = String(month).padStart(2, '0')
+  const dd = String(day).padStart(2, '0')
+  const todayFmts = [
+    `${year}-${mm}-${dd}`, `${year}/${mm}/${dd}`, `${year}/${month}/${day}`,
+    `${month}/${day}`, `${mm}/${dd}`, `${month}月${day}日`, `${mm}月${dd}日`,
+  ]
+  const ph = todayFmts.map((_, i) => `$${i + 2}`).join(', ')
+
+  // 本日のフォロー対応アラート
+  const [sonetRows, directRows, postRows] = await Promise.all([
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='sonet' AND construction_date IN (${ph})`, [session.userId, ...todayFmts]),
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='wimax_direct' AND week_after IN (${ph})`, [session.userId, ...todayFmts]),
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='wimax_post' AND week_after_delivery IN (${ph})`, [session.userId, ...todayFmts]),
+  ])
+  const followAlerts = [
+    ...sonetRows.map(r => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+    ...directRows.map(r => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
+    ...postRows.map(r => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
+  ]
 
   const [row] = await dbQuery(
     `SELECT COALESCE(SUM(activation_count), 0)::int AS total FROM records WHERE year = $1 AND month = $2`,
@@ -89,7 +110,27 @@ export default async function ChallengePage() {
       })()}
 
       {/* 本日のフォロー対応アラート */}
-      <TodayFollowAlerts />
+      {followAlerts.length > 0 && (
+        <div className="mt-4 bg-amber-50 rounded-2xl border border-amber-200 p-4">
+          <h2 className="text-sm font-bold text-amber-700 flex items-center gap-2 mb-3">
+            🔔 本日のフォロー対応
+          </h2>
+          <div className="space-y-2">
+            {followAlerts.map((item, i) => (
+              <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 border border-amber-100">
+                <span className="text-base">📋</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1.5">{item.typeLabel}</span>
+                  <span className="text-sm font-bold text-gray-800">{item.name}</span>
+                  <span className="text-sm text-gray-600"> さんの</span>
+                  <span className="text-sm font-bold text-amber-700">「{item.fieldLabel}」</span>
+                  <span className="text-sm text-gray-600">は本日です</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 本日の開通速報 */}
       <RecentActivationFeed />
