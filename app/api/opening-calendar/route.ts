@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun, dbQueryOne } from '@/lib/db'
+import { awardBadges } from '@/lib/badges'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -45,6 +46,7 @@ export async function PATCH(req: NextRequest) {
      WHERE id = $6 AND user_id = $7`,
     [activation_date, customer_name, line_type, construction_type ?? '', status, id, session.userId]
   )
+  if (status === '○') await awardBadges(session.userId)
   return NextResponse.json({ ok: true })
 }
 
