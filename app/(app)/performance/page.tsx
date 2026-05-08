@@ -170,6 +170,10 @@ export default function PerformancePage() {
   const avgHKR = memberAvg.cancel > 0
     ? Math.round((memberAvg.opening / memberAvg.cancel) * 1000) / 10 : null
   const hasMonthlyData = yearMonthly.length > 0
+  const cancelTimeProductivity = allMonthsTotal.workHours > 0
+    ? Math.round((allMonthsTotal.cancel / allMonthsTotal.workHours) * 100) / 100 : null
+  const openingTimeProductivity = allMonthsTotal.workHours > 0
+    ? Math.round((allMonthsTotal.openingCount / allMonthsTotal.workHours) * 100) / 100 : null
 
   // 個人タブ：年一覧（2022〜当年 + 追加分）
   const currentYear = new Date().getFullYear()
@@ -852,6 +856,18 @@ export default function PerformancePage() {
                           {avgHKR != null ? <>{avgHKR}<span className="text-xs font-normal ml-0.5">%</span></> : '-'}
                         </p>
                       </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">解除時間生産性</p>
+                        <p className="text-sm font-bold text-orange-500">
+                          {cancelTimeProductivity != null ? <>{cancelTimeProductivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/h</span></> : '-'}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-gray-400 mb-0.5">開通時間生産性</p>
+                        <p className="text-sm font-bold text-teal-500">
+                          {openingTimeProductivity != null ? <>{openingTimeProductivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/h</span></> : '-'}
+                        </p>
+                      </div>
                     </div>
                     {r.note && <p className="text-xs text-gray-400 mt-2">{r.note}</p>}
                   </div>
@@ -865,7 +881,7 @@ export default function PerformancePage() {
                   <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                     <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
                       <span className="text-xs font-semibold text-gray-400 w-8">月</span>
-                      <div className="flex-1 grid grid-cols-7 gap-1 text-right">
+                      <div className="flex-1 grid grid-cols-9 gap-1 text-right">
                         <span className="text-xs font-semibold text-gray-400">獲得数</span>
                         <span className="text-xs font-semibold text-gray-400">開通数</span>
                         <span className="text-xs font-semibold text-gray-400">解除数</span>
@@ -873,6 +889,8 @@ export default function PerformancePage() {
                         <span className="text-xs font-semibold text-gray-400">稼働時間</span>
                         <span className="text-xs font-semibold text-gray-400">解除率</span>
                         <span className="text-xs font-semibold text-gray-400">解除生産性</span>
+                        <span className="text-xs font-semibold text-gray-400">解除時間生産性</span>
+                        <span className="text-xs font-semibold text-gray-400">開通時間生産性</span>
                       </div>
                       {role === 'manager' && <div className="w-7 shrink-0" />}
                     </div>
@@ -881,11 +899,13 @@ export default function PerformancePage() {
                         const hasData = r.total_activation > 0 || r.total_cancel > 0 || r.work_days > 0
                         const isEditing = editingPersonalMonth === r.month
                         const cancelProductivity = r.work_days > 0 ? (r.total_cancel / r.work_days).toFixed(2) : '-'
+                        const cancelTimeProductivity = r.work_hours > 0 ? (r.total_cancel / r.work_hours).toFixed(2) : '-'
+                        const openingTimeProductivity = r.work_hours > 0 && (r.opening_count ?? 0) > 0 ? ((r.opening_count ?? 0) / r.work_hours).toFixed(2) : '-'
                         return (
                           <div key={r.month}>
                             <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
                               <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
-                              <div className="flex-1 grid grid-cols-7 gap-1 text-right">
+                              <div className="flex-1 grid grid-cols-9 gap-1 text-right">
                                 <span className="text-sm font-bold text-violet-600">
                                   {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                                 </span>
@@ -906,6 +926,12 @@ export default function PerformancePage() {
                                 </span>
                                 <span className="text-sm font-semibold text-blue-600">
                                   {cancelProductivity}
+                                </span>
+                                <span className="text-sm font-semibold text-orange-500">
+                                  {cancelTimeProductivity}
+                                </span>
+                                <span className="text-sm font-semibold text-teal-500">
+                                  {openingTimeProductivity}
                                 </span>
                               </div>
                               {role === 'manager' && !isEditing && (
