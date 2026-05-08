@@ -23,7 +23,12 @@ export async function GET() {
      FROM users u
      JOIN opening_calendar oc ON oc.user_id = u.id
      WHERE oc.status = '○'
-       AND LEFT(oc.created_at, 10) >= $1 AND LEFT(oc.created_at, 10) <= $2
+       AND oc.activation_date ~ E'^\\d{1,2}/\\d{1,2}$'
+       AND MAKE_DATE(
+             oc.year,
+             SPLIT_PART(oc.activation_date, '/', 1)::int,
+             SPLIT_PART(oc.activation_date, '/', 2)::int
+           ) BETWEEN $1::date AND $2::date
      GROUP BY u.id, u.name
      ORDER BY weekly DESC`,
     [from, to]
