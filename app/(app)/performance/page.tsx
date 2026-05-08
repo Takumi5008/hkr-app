@@ -514,13 +514,18 @@ export default function PerformancePage() {
 
       {/* タブ */}
       <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-        {(['personal', 'team', ...(role === 'manager' ? ['ranking'] : [])] as const).map((t) => (
-          <button key={t} onClick={() => switchTab(t as any)}
+        {(['personal', 'team'] as const).map((t) => (
+          <button key={t} onClick={() => switchTab(t)}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
               ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {t === 'personal' ? '個人' : t === 'team' ? '全体' : 'ランキング'}
+            {t === 'personal' ? '個人' : '全体'}
           </button>
         ))}
+        <button onClick={() => switchTab('ranking')}
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
+            ${tab === 'ranking' ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          ランキング
+        </button>
       </div>
 
       {/* 個人タブ：名前選択バー */}
