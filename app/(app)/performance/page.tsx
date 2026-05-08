@@ -97,6 +97,7 @@ export default function PerformancePage() {
     last3Opening: { member_name: string; total_opening: number; total_hours: number; hours_per_opening: number }[]
   } | null>(null)
   const [rankingLoading, setRankingLoading] = useState(false)
+  const [rankingError, setRankingError] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
@@ -401,8 +402,18 @@ export default function PerformancePage() {
 
   const fetchRanking = async (y: number, m: number) => {
     setRankingLoading(true)
-    const res = await fetch(`/api/performance/ranking?year=${y}&month=${m}`)
-    if (res.ok) setRankingData(await res.json())
+    setRankingError('')
+    try {
+      const res = await fetch(`/api/performance/ranking?year=${y}&month=${m}`)
+      const data = await res.json()
+      if (res.ok) {
+        setRankingData(data)
+      } else {
+        setRankingError(data.error ?? `エラー (${res.status})`)
+      }
+    } catch (e: any) {
+      setRankingError(e.message ?? 'ネットワークエラー')
+    }
     setRankingLoading(false)
   }
 
@@ -503,8 +514,8 @@ export default function PerformancePage() {
 
       {/* タブ */}
       <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-        {(['personal', 'team', 'ranking'] as const).map((t) => (
-          <button key={t} onClick={() => switchTab(t)}
+        {(['personal', 'team', ...(role === 'manager' ? ['ranking'] : [])] as const).map((t) => (
+          <button key={t} onClick={() => switchTab(t as any)}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
               ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {t === 'personal' ? '個人' : t === 'team' ? '全体' : 'ランキング'}
@@ -1182,6 +1193,7 @@ export default function PerformancePage() {
           </div>
 
           {rankingLoading && <p className="text-sm text-gray-400 text-center py-8">読み込み中...</p>}
+          {rankingError && <p className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{rankingError}</p>}
 
           {rankingData && !rankingLoading && (
             <>
