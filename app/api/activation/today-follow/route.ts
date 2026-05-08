@@ -14,9 +14,11 @@ function todayFormats(y: number, m: number, d: number): string[] {
   return [
     `${y}-${mm}-${dd}`,
     `${y}/${mm}/${dd}`,
+    `${y}/${m}/${d}`,
     `${m}/${d}`,
     `${mm}/${dd}`,
     `${m}月${d}日`,
+    `${mm}月${dd}日`,
   ]
 }
 
