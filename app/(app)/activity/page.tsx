@@ -59,10 +59,20 @@ export default function ActivityPage() {
   const [editingDay, setEditingDay] = useState<number | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<'activity' | 'conversion'>('activity')
+  const [tab, setTab] = useState<'activity' | 'conversion' | 'ranking'>('activity')
   const [myRole, setMyRole] = useState<string>('')
   const [members, setMembers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null | 'all'>(null)
+  const [rankingYear, setRankingYear] = useState(today.getFullYear())
+  const [rankingMonth, setRankingMonth] = useState(today.getMonth() + 1)
+  type RankingData = {
+    months3: { year: number; month: number }[]
+    monthlyCancel: { member_name: string; total_cancel: number; work_hours: number; productivity: number }[]
+    last3Opening: { member_name: string; total_opening: number; total_hours: number; hours_per_opening: number }[]
+  }
+  const [rankingData, setRankingData] = useState<RankingData | null>(null)
+  const [rankingLoading, setRankingLoading] = useState(false)
+  const [rankingError, setRankingError] = useState('')
 
   type AllMemberRow = {
     user_id: number; name: string; work_days: number; work_hours: number
@@ -97,6 +107,28 @@ export default function ActivityPage() {
       }
     })
   }, [])
+
+  const fetchRanking = async (y: number, m: number) => {
+    setRankingLoading(true)
+    setRankingError('')
+    setRankingData(null)
+    try {
+      const res = await fetch(`/api/performance/ranking?year=${y}&month=${m}`)
+      const data = await res.json()
+      if (res.ok) {
+        setRankingData(data)
+      } else {
+        setRankingError(data.error ?? `エラー (${res.status})`)
+      }
+    } catch (e: any) {
+      setRankingError(e.message ?? 'ネットワークエラー')
+    }
+    setRankingLoading(false)
+  }
+
+  useEffect(() => {
+    if (tab === 'ranking') fetchRanking(rankingYear, rankingMonth)
+  }, [tab])
 
   useEffect(() => {
     if (selectedUserId === 'all') {
@@ -234,9 +266,18 @@ export default function ActivityPage() {
             {t === 'activity' ? '行動表' : '転換率'}
           </button>
         ))}
+        <button
+          onClick={() => setTab('ranking')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            tab === 'ranking' ? 'bg-teal-500 text-white shadow' : 'bg-white text-gray-500 hover:bg-teal-50 shadow-sm'
+          }`}
+        >
+          ランキング
+        </button>
       </div>
 
       {/* 月選択 */}
+      {tab !== 'ranking' && (
       <div className="flex items-center justify-center gap-4 mb-5">
         <button onClick={prevMonth} className="w-9 h-9 rounded-full bg-white shadow hover:bg-teal-50 text-teal-500 font-bold transition flex items-center justify-center">
           <ChevronLeft size={18} />
@@ -246,9 +287,10 @@ export default function ActivityPage() {
           <ChevronRight size={18} />
         </button>
       </div>
+      )}
 
       {/* ===== 全員サマリーテーブル ===== */}
-      {selectedUserId === 'all' && (() => {
+      {selectedUserId === 'all' && tab !== 'ranking' && (() => {
         const ALL_COLS = [
           { label: '稼働日数',        key: 'work_days' as const },
           { label: '稼働時間',        key: 'work_hours' as const },
@@ -385,6 +427,116 @@ export default function ActivityPage() {
           </div>
         )
       })()}
+
+      {/* ===== ランキングタブ ===== */}
+      {tab === 'ranking' && (
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-600 shrink-0">対象月</label>
+            <select
+              value={`${rankingYear}-${rankingMonth}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split('-').map(Number)
+                setRankingYear(y)
+                setRankingMonth(m)
+                fetchRanking(y, m)
+              }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
+            >
+              {Array.from({ length: 24 }, (_, i) => {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1)
+                const y = d.getFullYear(); const m = d.getMonth() + 1
+                return <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年{m}月</option>
+              })}
+            </select>
+          </div>
+
+          {rankingLoading && <p className="text-sm text-gray-400 text-center py-8">読み込み中...</p>}
+          {rankingError && <p className="text-sm text-red-500 bg-red-50 px-4 py-3 rounded-xl">{rankingError}</p>}
+
+          {rankingData && !rankingLoading && (
+            <>
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="px-5 py-3 bg-orange-50 border-b border-orange-100">
+                  <h2 className="text-sm font-bold text-orange-700">解除時間生産性ランキング</h2>
+                  <p className="text-xs text-orange-400 mt-0.5">{rankingYear}年{rankingMonth}月 — 解除数 ÷ 稼働時間（件/h）</p>
+                </div>
+                {rankingData.monthlyCancel.length === 0 ? (
+                  <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {rankingData.monthlyCancel.map((r, i) => {
+                      const medals = ['🥇', '🥈', '🥉']
+                      const maxProd = rankingData.monthlyCancel[0]?.productivity ?? 1
+                      const pct = maxProd > 0 ? Math.round((r.productivity / maxProd) * 100) : 0
+                      return (
+                        <div key={r.member_name} className="flex items-center gap-3 px-5 py-3">
+                          <span className="text-base w-7 text-center shrink-0">
+                            {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
+                              <div className="text-right shrink-0 ml-2">
+                                <span className="text-sm font-bold text-orange-500">{r.productivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/h</span></span>
+                                <span className="text-xs text-gray-400 ml-2">({r.total_cancel}件 / {r.work_hours}h)</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-orange-300 to-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="px-5 py-3 bg-teal-50 border-b border-teal-100">
+                  <h2 className="text-sm font-bold text-teal-700">直近3ヶ月 開通時間生産性ランキング</h2>
+                  <p className="text-xs text-teal-400 mt-0.5">
+                    {rankingData.months3.map((m) => `${m.month}月`).join('・')} — 何時間で1開通（h/件、少ない方が優秀）
+                  </p>
+                </div>
+                {rankingData.last3Opening.length === 0 ? (
+                  <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {rankingData.last3Opening.map((r, i) => {
+                      const medals = ['🥇', '🥈', '🥉']
+                      const minHours = rankingData.last3Opening[0]?.hours_per_opening ?? 1
+                      const maxHours = rankingData.last3Opening[rankingData.last3Opening.length - 1]?.hours_per_opening ?? 1
+                      const range = maxHours - minHours || 1
+                      const pct = Math.round(((maxHours - r.hours_per_opening) / range) * 100)
+                      return (
+                        <div key={r.member_name} className="flex items-center gap-3 px-5 py-3">
+                          <span className="text-base w-7 text-center shrink-0">
+                            {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
+                              <div className="text-right shrink-0 ml-2">
+                                <span className="text-sm font-bold text-teal-600">{r.hours_per_opening}<span className="text-xs font-normal text-gray-400 ml-0.5">h/件</span></span>
+                                <span className="text-xs text-gray-400 ml-2">({r.total_opening}件 / {r.total_hours}h)</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-teal-300 to-teal-500 rounded-full" style={{ width: `${Math.max(pct, 5)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {selectedUserId !== 'all' && tab === 'activity' && (
       <>{/* テーブル */}
