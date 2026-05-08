@@ -20,11 +20,19 @@ export async function GET() {
 
   const rows = await dbQuery(
     `SELECT u.id, u.name,
-            COALESCE(SUM(da.wimax + da.sonet), 0)::int AS weekly
+            COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS weekly
      FROM users u
-     LEFT JOIN daily_activity da ON da.user_id = u.id AND da.date >= $1 AND da.date <= $2
-     GROUP BY u.id, u.name
-     HAVING COALESCE(SUM(da.wimax + da.sonet), 0) > 0
+     LEFT JOIN (
+       SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
+       WHERE activation = '○' AND created_at::date >= $1::date AND created_at::date <= $2::date
+       GROUP BY user_id
+     ) ar ON ar.user_id = u.id
+     LEFT JOIN (
+       SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
+       WHERE status = '○' AND created_at::date >= $1::date AND created_at::date <= $2::date
+       GROUP BY user_id
+     ) oc ON oc.user_id = u.id
+     WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
      ORDER BY weekly DESC`,
     [from, to]
   )

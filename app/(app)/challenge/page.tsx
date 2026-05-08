@@ -39,7 +39,10 @@ export default async function ChallengePage() {
   ]
 
   const [row] = await dbQuery(
-    `SELECT COALESCE(SUM(activation_count), 0)::int AS total FROM records WHERE year = $1 AND month = $2`,
+    `SELECT (
+       (SELECT COUNT(*) FROM activation_records WHERE year = $1 AND month = $2 AND activation = '○') +
+       (SELECT COUNT(*) FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○')
+     )::int AS total`,
     [year, month]
   )
   const total: number = row?.total ?? 0
@@ -47,12 +50,19 @@ export default async function ChallengePage() {
   // 個人別月次ランキング（今月）
   const memberRows = await dbQuery(
     `SELECT u.id, u.name,
-            COALESCE(SUM(r.activation_count), 0)::int AS activation,
-            COALESCE(SUM(r.cancel_count), 0)::int AS cancel
+            COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS activation
      FROM users u
-     LEFT JOIN records r ON r.user_id = u.id AND r.year = $1 AND r.month = $2
-     GROUP BY u.id, u.name
-     HAVING COALESCE(SUM(r.activation_count), 0) > 0
+     LEFT JOIN (
+       SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
+       WHERE year = $1 AND month = $2 AND activation = '○'
+       GROUP BY user_id
+     ) ar ON ar.user_id = u.id
+     LEFT JOIN (
+       SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
+       WHERE year = $1 AND month = $2 AND status = '○'
+       GROUP BY user_id
+     ) oc ON oc.user_id = u.id
+     WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
      ORDER BY activation DESC`,
     [year, month]
   )
