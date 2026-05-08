@@ -5,6 +5,7 @@ import TeamChallengeCard from '@/components/TeamChallengeCard'
 import ActivationBadge from '@/components/ActivationBadge'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
+import TodayFollowAlerts from '@/components/TodayFollowAlerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,9 @@ export default async function ChallengePage() {
           </div>
         )
       })()}
+
+      {/* 本日のフォロー対応アラート */}
+      <TodayFollowAlerts />
 
       {/* 本日の開通速報 */}
       <RecentActivationFeed />

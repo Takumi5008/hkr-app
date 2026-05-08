@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 
 interface Row { name: string; activation: number; last_updated: string }
-interface FollowItem { name: string; typeLabel: string; fieldLabel: string }
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso.replace('Z', '+00:00')).getTime()
@@ -17,23 +16,13 @@ function timeAgo(iso: string) {
 
 export default function RecentActivationFeed() {
   const [rows, setRows] = useState<Row[]>([])
-  const [followItems, setFollowItems] = useState<FollowItem[]>([])
   const [lastFetch, setLastFetch] = useState<Date | null>(null)
 
   const load = useCallback(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = now.getMonth() + 1
-    const d = now.getDate()
-
-    Promise.all([
-      fetch('/api/challenge/recent').then((r) => r.json()).catch(() => []),
-      fetch(`/api/activation/today-follow?y=${y}&m=${m}&d=${d}`).then((r) => r.json()).catch(() => []),
-    ]).then(([recent, follow]) => {
-      if (Array.isArray(recent)) setRows(recent)
-      if (Array.isArray(follow)) setFollowItems(follow)
-      setLastFetch(new Date())
-    })
+    fetch('/api/challenge/recent')
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setRows(d); setLastFetch(new Date()) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -42,7 +31,7 @@ export default function RecentActivationFeed() {
     return () => clearInterval(t)
   }, [load])
 
-  if (rows.length === 0 && followItems.length === 0) return null
+  if (rows.length === 0) return null
 
   return (
     <div className="mt-6 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl border border-indigo-100 p-5">
@@ -54,43 +43,20 @@ export default function RecentActivationFeed() {
           更新
         </button>
       </div>
-
-      {/* フォローアップアラート */}
-      {followItems.length > 0 && (
-        <div className="mb-3 space-y-2">
-          {followItems.map((item, i) => (
-            <div key={i} className="flex items-center gap-3 bg-amber-50 rounded-xl px-4 py-2.5 border border-amber-200">
-              <span className="text-lg">🔔</span>
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1.5">{item.typeLabel}</span>
-                <span className="text-sm font-bold text-gray-800">{item.name}</span>
-                <span className="text-sm text-gray-600"> さんの</span>
-                <span className="text-sm font-bold text-amber-700">「{item.fieldLabel}」</span>
-                <span className="text-sm text-gray-600">は本日です</span>
-              </div>
+      <div className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-indigo-50">
+            <span className="text-lg">🎯</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-bold text-gray-800">{row.name}</span>
+              <span className="text-sm text-gray-600"> が </span>
+              <span className="text-sm font-black text-indigo-600">{row.activation}件</span>
+              <span className="text-sm text-gray-600"> 開通しました！</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* 開通速報 */}
-      {rows.length > 0 && (
-        <div className="space-y-2">
-          {rows.map((row, i) => (
-            <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 shadow-sm border border-indigo-50">
-              <span className="text-lg">🎯</span>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold text-gray-800">{row.name}</span>
-                <span className="text-sm text-gray-600"> が </span>
-                <span className="text-sm font-black text-indigo-600">{row.activation}件</span>
-                <span className="text-sm text-gray-600"> 開通しました！</span>
-              </div>
-              <span className="text-xs text-gray-400 shrink-0">{timeAgo(row.last_updated)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
+            <span className="text-xs text-gray-400 shrink-0">{timeAgo(row.last_updated)}</span>
+          </div>
+        ))}
+      </div>
       {lastFetch && (
         <p className="text-[10px] text-indigo-300 mt-2 text-right">
           {lastFetch.getHours()}:{String(lastFetch.getMinutes()).padStart(2, '0')} 更新
