@@ -24,13 +24,13 @@ export default async function ChallengePage() {
     `${year}-${mm}-${dd}`, `${year}/${mm}/${dd}`, `${year}/${month}/${day}`,
     `${month}/${day}`, `${mm}/${dd}`, `${month}月${day}日`, `${mm}月${dd}日`,
   ]
-  const ph = todayFmts.map((_, i) => `$${i + 2}`).join(', ')
+  const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
-  // 本日のフォロー対応アラート
+  // 本日のフォロー対応アラート（全ユーザー対象）
   const [sonetRows, directRows, postRows] = await Promise.all([
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='sonet' AND construction_date IN (${ph})`, [session.userId, ...todayFmts]),
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='wimax_direct' AND week_after IN (${ph})`, [session.userId, ...todayFmts]),
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE user_id=$1 AND type='wimax_post' AND week_after_delivery IN (${ph})`, [session.userId, ...todayFmts]),
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='sonet' AND construction_date IN (${ph})`, todayFmts),
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_direct' AND week_after IN (${ph})`, todayFmts),
+    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_post' AND week_after_delivery IN (${ph})`, todayFmts),
   ])
   const followAlerts = [
     ...sonetRows.map(r => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
