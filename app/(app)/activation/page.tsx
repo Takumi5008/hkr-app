@@ -58,6 +58,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'day_before_construction', label: '工事日前日' },
     { key: 'construction_date', label: '工事日' },
     { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_post: [
     { key: 'name', label: '名前' },
@@ -71,6 +72,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_direct: [
     { key: 'name', label: '名前' },
@@ -82,6 +84,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
 }
 
@@ -108,6 +111,7 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[]
   { key: 'delivery_date',           label: '受取日' },
   { key: 'week_after_delivery',     label: '受け取り1週間後' },
   { key: 'activation',              label: '開通' },
+  { key: 'cancel_reason',           label: 'キャンセル理由' },
 ]
 
 // 各タイプで使用しないフィールド（一覧でハイフン表示）
@@ -181,11 +185,19 @@ export default function ActivationPage() {
     })
   }
 
-  // 開通トグル（3段階）
+  // 開通トグル（3段階）―❌のときキャンセル理由モーダルを表示
   const toggleActivation = async (rec: ActivationRecord) => {
     const newVal = cycleTextVal(rec.activation)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, activation: newVal } : r))
-    await patchRecord(buildPatch(rec, { activation: newVal }))
+    if (newVal === '×') {
+      setCancelModal({ rec: { ...rec, activation: newVal }, reason: rec.cancel_reason })
+    } else {
+      await patchRecord(buildPatch(rec, { activation: newVal }))
+    }
+  }
+
+  const openCancelReasonModal = (rec: ActivationRecord) => {
+    setCancelModal({ rec, reason: rec.cancel_reason })
   }
 
   const buildPatch = (rec: ActivationRecord, overrides: Partial<ActivationRecord>) => ({
@@ -207,17 +219,13 @@ export default function ActivationPage() {
   const toggleCancel = async (rec: ActivationRecord) => {
     const newVal = cycleTextVal(rec.cancel)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, cancel: newVal } : r))
-    if (newVal === '○') {
-      setCancelModal({ rec: { ...rec, cancel: newVal }, reason: rec.cancel_reason })
-    } else {
-      await patchRecord(buildPatch(rec, { cancel: newVal, cancel_reason: newVal === '' ? '' : rec.cancel_reason }))
-    }
+    await patchRecord(buildPatch(rec, { cancel: newVal }))
   }
 
   const saveCancelReason = async () => {
     if (!cancelModal) return
-    const updated = buildPatch(cancelModal.rec, { cancel: cancelModal.rec.cancel, cancel_reason: cancelModal.reason })
-    setRecords((prev) => prev.map((r) => r.id === cancelModal.rec.id ? { ...r, cancel_reason: cancelModal.reason } : r))
+    const updated = buildPatch(cancelModal.rec, { activation: cancelModal.rec.activation, cancel_reason: cancelModal.reason })
+    setRecords((prev) => prev.map((r) => r.id === cancelModal.rec.id ? { ...r, activation: cancelModal.rec.activation, cancel_reason: cancelModal.reason } : r))
     await patchRecord(updated)
     setCancelModal(null)
   }
@@ -336,12 +344,12 @@ export default function ActivationPage() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {ConfirmDialog}
 
-      {/* 解除理由モーダル */}
+      {/* キャンセル理由モーダル */}
       {cancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-white rounded-2xl shadow-xl p-5 w-full max-w-sm">
-            <h3 className="text-sm font-bold text-gray-800 mb-1">解除理由を入力</h3>
-            <p className="text-xs text-gray-400 mb-3">省略可。あとで編集から変更もできます。</p>
+            <h3 className="text-sm font-bold text-gray-800 mb-1">キャンセル理由を入力</h3>
+            <p className="text-xs text-gray-400 mb-3">省略可。キャンセル理由列からいつでも変更できます。</p>
             <input
               type="text"
               value={cancelModal.reason}
@@ -445,11 +453,12 @@ export default function ActivationPage() {
                     <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
                       <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
                       {LIST_COLS.map((c) => {
-                        const isNA = c.key !== 'type_label' && naFields.includes(c.key as keyof ActivationRecord)
+                        const isNA = c.key !== 'type_label' && c.key !== 'cancel_reason' && naFields.includes(c.key as keyof ActivationRecord)
                         const isActivation = c.key === 'activation'
                         const isCancel = c.key === 'cancel'
                         const isNegApply = c.key === 'neg_apply'
                         const isNegCancel = c.key === 'neg_cancel'
+                        const isCancelReason = c.key === 'cancel_reason'
                         const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
                         const doneKey = `${c.key}_done` as keyof ActivationRecord
                         const doneVal = isDoneField ? (rec[doneKey] as number) : 0
@@ -469,15 +478,17 @@ export default function ActivationPage() {
                               <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
                                 {textEmoji(rec.activation)}
                               </button>
+                            ) : isCancelReason ? (
+                              <button
+                                onClick={() => openCancelReasonModal(rec)}
+                                className="text-left text-xs text-gray-600 hover:text-violet-500 w-full min-w-[60px] px-1"
+                              >
+                                {rec.cancel_reason || <span className="text-gray-200">-</span>}
+                              </button>
                             ) : isCancel ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
-                                  {textEmoji(rec.cancel)}
-                                </button>
-                                {rec.cancel_reason && (
-                                  <span className="text-[10px] text-gray-400 max-w-[80px] truncate">{rec.cancel_reason}</span>
-                                )}
-                              </div>
+                              <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.cancel)}
+                              </button>
                             ) : isNegApply ? (
                               <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
                                 {textEmoji(rec.neg_apply)}
@@ -543,6 +554,7 @@ export default function ActivationPage() {
                     const isCancel = c.key === 'cancel'
                     const isNegApply = c.key === 'neg_apply'
                     const isNegCancel = c.key === 'neg_cancel'
+                    const isCancelReason = c.key === 'cancel_reason'
                     const cellBg = isActivation
                       ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
                       : (isCancel || isNegApply || isNegCancel)
@@ -556,15 +568,17 @@ export default function ActivationPage() {
                           <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
                             {textEmoji(rec.activation)}
                           </button>
+                        ) : isCancelReason ? (
+                          <button
+                            onClick={() => openCancelReasonModal(rec)}
+                            className="text-left text-xs text-gray-600 hover:text-violet-500 w-full min-w-[60px] px-1"
+                          >
+                            {rec.cancel_reason || <span className="text-gray-200">-</span>}
+                          </button>
                         ) : isCancel ? (
-                          <div className="flex flex-col items-center gap-0.5">
-                            <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
-                              {textEmoji(rec.cancel)}
-                            </button>
-                            {rec.cancel_reason && (
-                              <span className="text-[10px] text-gray-400 max-w-[80px] truncate">{rec.cancel_reason}</span>
-                            )}
-                          </div>
+                          <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.cancel)}
+                          </button>
                         ) : isNegApply ? (
                           <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
                             {textEmoji(rec.neg_apply)}
@@ -625,7 +639,7 @@ export default function ActivationPage() {
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
           <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel', 'activation'].includes(c.key)).map((c) => {
+            {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel', 'activation', 'cancel_reason'].includes(c.key)).map((c) => {
               const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'].includes(c.key)
               const isUndecided = isDateField && form[c.key] === '未定'
               return (
