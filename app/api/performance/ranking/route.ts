@@ -21,12 +21,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const [monthlyCancel, last3Opening] = await Promise.all([
-      // 当月の解除時間生産性ランキング
+      // 当月の解除時間生産性ランキング（daily_activity から集計）
       dbQuery<{ member_name: string; total_cancel: number; work_hours: number; productivity: number }>(
-        `SELECT member_name, total_cancel, work_hours,
-                ROUND(total_cancel::numeric / work_hours::numeric, 3) AS productivity
-         FROM member_monthly_stats
-         WHERE year = $1 AND month = $2 AND work_hours > 0
+        `SELECT u.name AS member_name,
+                SUM(da.cancel)::int AS total_cancel,
+                ROUND(SUM(NULLIF(da.work_hours, '')::numeric), 2) AS work_hours,
+                ROUND(SUM(da.cancel)::numeric / NULLIF(SUM(NULLIF(da.work_hours, '')::numeric), 0), 3) AS productivity
+         FROM daily_activity da
+         JOIN users u ON u.id = da.user_id
+         WHERE EXTRACT(YEAR FROM da.date::date) = $1
+           AND EXTRACT(MONTH FROM da.date::date) = $2
+           AND u.role != 'viewer'
+         GROUP BY u.name
+         HAVING SUM(NULLIF(da.work_hours, '')::numeric) > 0
          ORDER BY productivity DESC`,
         [year, month]
       ),
