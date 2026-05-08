@@ -1,14 +1,14 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell } from 'lucide-react'
+import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell, ShieldAlert } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 import TableScrollContainer from '@/components/TableScrollContainer'
 import { useConfirm } from '@/components/useConfirm'
 
-type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer'
-const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー', shift_viewer: 'シフト管理者' }
-const ROLE_DESCRIPTIONS: Record<Role, string> = { member: '自分のデータのみ', viewer: '全員を閲覧可', manager: '全員閲覧・管理可', shift_viewer: '全員のシフトのみ閲覧可' }
+type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer' | 'admin'
+const ROLE_LABELS: Record<Role, string> = { member: 'メンバー', viewer: '閲覧者（全体）', manager: 'マネージャー', shift_viewer: 'シフト管理者', admin: 'アプリ管理者' }
+const ROLE_DESCRIPTIONS: Record<Role, string> = { member: '自分のデータのみ', viewer: '全員を閲覧可', manager: '全員閲覧・管理可', shift_viewer: '全員のシフトのみ閲覧可', admin: '全機能＋システム統計閲覧可' }
 
 const getWorkType = (workDates: any[], day: number) => {
   if (!workDates || workDates.length === 0) return null
@@ -28,7 +28,7 @@ const WorkCell = ({ type }: { type: string | null }) => {
 export default function AdminPage() {
   const { confirm, ConfirmDialog } = useConfirm()
   const [myRole, setMyRole] = useState<string>('')
-  const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg' | 'progress'>('users')
+  const [adminTab, setAdminTab] = useState<'users' | 'shifts' | 'mtg' | 'progress' | 'stats'>('users')
 
   // Users & Products
   const [users, setUsers] = useState<any[]>([])
@@ -55,6 +55,10 @@ export default function AdminPage() {
   const [shiftsLoading, setShiftsLoading] = useState(false)
   const [deadlineAt, setDeadlineAt] = useState('')
   const [deadlineSaved, setDeadlineSaved] = useState(false)
+
+  // System stats (admin only)
+  const [statsData, setStatsData] = useState<any>(null)
+  const [statsLoading, setStatsLoading] = useState(false)
 
   // Progress
   const [progressYear, setProgressYear] = useState(today.getFullYear())
@@ -106,6 +110,12 @@ export default function AdminPage() {
       .then((r) => r.json())
       .then(setProgressData)
   }, [adminTab, progressYear, progressMonth])
+
+  useEffect(() => {
+    if (adminTab !== 'stats') return
+    setStatsLoading(true)
+    fetch('/api/admin/stats').then((r) => r.json()).then((d) => { setStatsData(d); setStatsLoading(false) })
+  }, [adminTab])
 
   useEffect(() => {
     if (adminTab !== 'mtg') return
@@ -328,10 +338,11 @@ export default function AdminPage() {
       {/* タブ */}
       <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit flex-wrap">
         {[
-          { id: 'users', label: 'ユーザー・商材', icon: Users, roles: ['manager'] },
-          { id: 'shifts', label: 'シフト管理', icon: Calendar, roles: ['manager', 'shift_viewer'] },
-          { id: 'mtg', label: 'MTG管理', icon: ClipboardList, roles: ['manager'] },
-          { id: 'progress', label: '個人進捗', icon: BarChart2, roles: ['manager'] },
+          { id: 'users', label: 'ユーザー・商材', icon: Users, roles: ['manager', 'admin'] },
+          { id: 'shifts', label: 'シフト管理', icon: Calendar, roles: ['manager', 'shift_viewer', 'admin'] },
+          { id: 'mtg', label: 'MTG管理', icon: ClipboardList, roles: ['manager', 'admin'] },
+          { id: 'progress', label: '個人進捗', icon: BarChart2, roles: ['manager', 'admin'] },
+          { id: 'stats', label: 'システム統計', icon: ShieldAlert, roles: ['admin'] },
         ].filter(({ roles }) => !myRole || roles.includes(myRole)).map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setAdminTab(id as any)}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${adminTab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -777,6 +788,101 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+        </>
+      )}
+      {/* ===== システム統計タブ (admin only) ===== */}
+      {adminTab === 'stats' && (
+        <>
+          {statsLoading || !statsData ? (
+            <p className="text-gray-400 text-sm py-8 text-center">読み込み中...</p>
+          ) : (
+            <>
+              {/* サマリーカード */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-400 mb-1">登録者数</p>
+                  <p className="text-3xl font-black text-gray-900">{statsData.totalUsers}<span className="text-sm font-normal text-gray-400 ml-1">人</span></p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-400 mb-1">累計ログイン数</p>
+                  <p className="text-3xl font-black text-gray-900">{statsData.totalLogins}<span className="text-sm font-normal text-gray-400 ml-1">回</span></p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4 col-span-2 sm:col-span-1">
+                  <p className="text-xs text-gray-400 mb-2">ロール内訳</p>
+                  <div className="space-y-1">
+                    {statsData.roleCounts.map((r: any) => (
+                      <div key={r.role} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600">{ROLE_LABELS[r.role as Role] ?? r.role}</span>
+                        <span className="font-bold text-gray-900">{r.count}人</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 直近30日のログイン推移 */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+                <h3 className="font-semibold text-gray-900 mb-3 text-sm">直近30日のログイン件数</h3>
+                {statsData.dailyLogins.length === 0 ? (
+                  <p className="text-xs text-gray-400">データなし</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="text-xs w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="text-left px-3 py-2 border border-gray-100 text-gray-600 font-semibold">日付</th>
+                          <th className="text-right px-3 py-2 border border-gray-100 text-gray-600 font-semibold">ログイン数</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statsData.dailyLogins.map((d: any) => (
+                          <tr key={d.date} className="even:bg-gray-50/50">
+                            <td className="px-3 py-2 border border-gray-100 text-gray-700">{d.date}</td>
+                            <td className="px-3 py-2 border border-gray-100 text-right font-bold text-indigo-600">{d.count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ユーザー別ログインデータ */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                  <p className="text-xs font-semibold text-gray-600">ユーザー別ログインデータ</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="text-xs w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="text-left px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold sticky left-0 bg-gray-50">名前</th>
+                        <th className="text-left px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">メール</th>
+                        <th className="text-left px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">ロール</th>
+                        <th className="text-left px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">登録日</th>
+                        <th className="text-right px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">ログイン数</th>
+                        <th className="text-right px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">連続</th>
+                        <th className="text-left px-3 py-2.5 border border-gray-100 text-gray-600 font-semibold">最終ログイン</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statsData.users.map((u: any, idx: number) => (
+                        <tr key={u.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                          <td className="px-3 py-2 border border-gray-100 font-semibold text-gray-800 sticky left-0 bg-inherit">{u.name}</td>
+                          <td className="px-3 py-2 border border-gray-100 text-gray-500 font-mono">{u.email}</td>
+                          <td className="px-3 py-2 border border-gray-100 text-gray-600">{ROLE_LABELS[u.role as Role] ?? u.role}</td>
+                          <td className="px-3 py-2 border border-gray-100 text-gray-500">{u.created_at ? u.created_at.slice(0, 10) : '-'}</td>
+                          <td className="px-3 py-2 border border-gray-100 text-right font-bold text-indigo-600">{u.login_count ?? 0}</td>
+                          <td className="px-3 py-2 border border-gray-100 text-right text-gray-600">{u.login_streak ?? 0}日</td>
+                          <td className="px-3 py-2 border border-gray-100 text-gray-500">{u.last_login_at ? new Date(u.last_login_at).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

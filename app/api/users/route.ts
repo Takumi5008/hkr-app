@@ -7,6 +7,11 @@ export async function GET() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role === 'member' || session.role === 'shift_viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // admin can see all user fields
+  if (session.role === 'admin') {
+    const allUsers = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
+    return NextResponse.json(allUsers)
+  }
 
   const users = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
   return NextResponse.json(users)
@@ -15,7 +20,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { name, email, password, role } = await req.json()
   if (!name || !email || !password) {
@@ -37,7 +42,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id, role, display_order } = await req.json()
 

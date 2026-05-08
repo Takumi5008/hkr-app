@@ -17,7 +17,7 @@ async function initDb() {
       name         TEXT    NOT NULL,
       email        TEXT    NOT NULL UNIQUE,
       password     TEXT    NOT NULL,
-      role         TEXT    NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer')),
+      role         TEXT    NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin')),
       temp_password TEXT   DEFAULT NULL,
       temp_password_expires_at TEXT DEFAULT NULL,
       created_at   TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
@@ -220,7 +220,7 @@ async function initDb() {
     );
     ALTER TABLE shift_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer'));
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin'));
     ALTER TABLE mtg_month_deadlines ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS level INTEGER NOT NULL DEFAULT 0;
@@ -307,6 +307,11 @@ async function initDb() {
     );
   `)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin'));
+    UPDATE users SET role = 'admin' WHERE email = 'komotaku0508@gmail.com' AND role != 'admin';
+  `)
   // ポイントを records + point_transactions の合計から同期（レベルは手動管理）
   await pool.query(`
     UPDATE users u
