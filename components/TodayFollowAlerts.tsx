@@ -1,35 +1,31 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 
 interface FollowItem { name: string; typeLabel: string; fieldLabel: string }
 
 export default function TodayFollowAlerts() {
-  const [items, setItems] = useState<FollowItem[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const [items, setItems] = useState<FollowItem[] | null>(null)
 
-  const load = useCallback(() => {
+  useEffect(() => {
     const now = new Date()
     const y = now.getFullYear()
     const m = now.getMonth() + 1
     const d = now.getDate()
     fetch(`/api/activation/today-follow?y=${y}&m=${m}&d=${d}`)
-      .then((r) => r.json())
-      .then((data) => { if (Array.isArray(data)) setItems(data) })
-      .catch(() => {})
-      .finally(() => setLoaded(true))
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setItems(Array.isArray(data) ? data : []))
+      .catch(() => setItems([]))
   }, [])
-
-  useEffect(() => { load() }, [load])
-
-  if (!loaded) return null
 
   return (
     <div className="mt-4 bg-amber-50 rounded-2xl border border-amber-200 p-4">
       <h2 className="text-sm font-bold text-amber-700 flex items-center gap-2 mb-3">
         🔔 本日のフォロー対応
       </h2>
-      {items.length === 0 ? (
+      {items === null ? (
+        <p className="text-xs text-amber-300 text-center py-2">読み込み中...</p>
+      ) : items.length === 0 ? (
         <p className="text-xs text-amber-400 text-center py-2">本日の対応はありません</p>
       ) : (
         <div className="space-y-2">
