@@ -33,6 +33,7 @@ export default function InputPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [celebrationCount, setCelebrationCount] = useState(0)
+  const [savedActivation, setSavedActivation] = useState<Record<string, number>>({})
 
   const [role, setRole] = useState<string>('')
   const [tab, setTab] = useState<Tab>('input')
@@ -95,6 +96,7 @@ export default function InputPage() {
       if (!res.ok) return
       const data = await res.json()
       const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }]))
+      const savedAct: Record<string, number> = {}
       for (const r of data) {
         if (next[r.product] !== undefined) {
           next[r.product] = {
@@ -103,9 +105,11 @@ export default function InputPage() {
             remaining: r.remaining_opening > 0 ? String(r.remaining_opening) : '',
             expected:  r.expected_opening  > 0 ? String(r.expected_opening)  : '',
           }
+          savedAct[r.product] = r.activation_count
         }
       }
       setForm(next)
+      setSavedActivation(savedAct)
     }
     load()
   }, [year, month, products])
@@ -118,15 +122,17 @@ export default function InputPage() {
   async function handleSave() {
     setError('')
     setLoading(true)
-    const totalActivation = products.reduce((sum, p) => sum + parseInt(form[p]?.activation || '0', 10), 0)
+    const newActivation: Record<string, number> = {}
     for (const product of products) {
+      const count = parseInt(form[product]?.activation || '0', 10)
+      newActivation[product] = count
       const res = await fetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           year, month, product,
           cancel_count:      parseInt(form[product].cancel     || '0', 10),
-          activation_count:  parseInt(form[product].activation || '0', 10),
+          activation_count:  count,
           remaining_opening: parseInt(form[product].remaining  || '0', 10),
           expected_opening:  parseInt(form[product].expected   || '0', 10),
         }),
@@ -136,7 +142,9 @@ export default function InputPage() {
     setSuccess(true)
     setLoading(false)
     setTimeout(() => setSuccess(false), 3000)
-    if (totalActivation > 0) setCelebrationCount(totalActivation)
+    const delta = products.reduce((sum, p) => sum + newActivation[p] - (savedActivation[p] ?? 0), 0)
+    if (delta > 0) setCelebrationCount(delta)
+    setSavedActivation(newActivation)
   }
 
   async function handleCalSave() {
