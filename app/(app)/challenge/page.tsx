@@ -44,10 +44,7 @@ export default async function ChallengePage() {
   let total = 0
   try {
     const [row] = await dbQuery(
-      `SELECT (
-         (SELECT COUNT(*) FROM activation_records WHERE year = $1 AND month = $2 AND activation = '○') +
-         (SELECT COUNT(*) FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○')
-       )::int AS total`,
+      `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○'`,
       [year, month]
     )
     total = row?.total ?? 0
@@ -57,20 +54,11 @@ export default async function ChallengePage() {
   let memberRows: any[] = []
   try {
     memberRows = await dbQuery(
-      `SELECT u.id, u.name,
-              COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS activation
+      `SELECT u.id, u.name, COUNT(oc.id)::int AS activation
        FROM users u
-       LEFT JOIN (
-         SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
-         WHERE year = $1 AND month = $2 AND activation = '○'
-         GROUP BY user_id
-       ) ar ON ar.user_id = u.id
-       LEFT JOIN (
-         SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
-         WHERE year = $1 AND month = $2 AND status = '○'
-         GROUP BY user_id
-       ) oc ON oc.user_id = u.id
-       WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
+       JOIN opening_calendar oc ON oc.user_id = u.id
+       WHERE oc.year = $1 AND oc.month = $2 AND oc.status = '○'
+       GROUP BY u.id, u.name
        ORDER BY activation DESC`,
       [year, month]
     )

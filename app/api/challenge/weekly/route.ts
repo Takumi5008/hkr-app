@@ -19,22 +19,12 @@ export async function GET() {
   const to = fmt(sunday)
 
   const rows = await dbQuery(
-    `SELECT u.id, u.name,
-            COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS weekly
+    `SELECT u.id, u.name, COUNT(oc.id)::int AS weekly
      FROM users u
-     LEFT JOIN (
-       SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
-       WHERE activation = '○'
-         AND LEFT(created_at, 10) >= $1 AND LEFT(created_at, 10) <= $2
-       GROUP BY user_id
-     ) ar ON ar.user_id = u.id
-     LEFT JOIN (
-       SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
-       WHERE status = '○'
-         AND LEFT(created_at, 10) >= $1 AND LEFT(created_at, 10) <= $2
-       GROUP BY user_id
-     ) oc ON oc.user_id = u.id
-     WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
+     JOIN opening_calendar oc ON oc.user_id = u.id
+     WHERE oc.status = '○'
+       AND LEFT(oc.created_at, 10) >= $1 AND LEFT(oc.created_at, 10) <= $2
+     GROUP BY u.id, u.name
      ORDER BY weekly DESC`,
     [from, to]
   )
