@@ -27,17 +27,17 @@ export default async function ChallengePage() {
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
   // 本日のフォロー対応アラート（全ユーザー対象）
-  let followAlerts: { name: string; typeLabel: string; fieldLabel: string }[] = []
+  let followAlerts: { name: string; staffName: string; typeLabel: string; fieldLabel: string }[] = []
   try {
     const [sonetRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='sonet' AND construction_date IN (${ph})`, todayFmts),
-      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_direct' AND week_after IN (${ph})`, todayFmts),
-      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_post' AND week_after_delivery IN (${ph})`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph})`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph})`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`, todayFmts),
     ])
     followAlerts = [
-      ...sonetRows.map(r => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-      ...directRows.map(r => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-      ...postRows.map(r => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
+      ...sonetRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+      ...directRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
+      ...postRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
     ]
   } catch {}
 
@@ -139,9 +139,11 @@ export default async function ChallengePage() {
               <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 border border-amber-100">
                 <span className="text-base">📋</span>
                 <div className="flex-1 min-w-0">
-                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mr-1.5">{item.typeLabel}</span>
+                  <span className="text-sm font-bold text-gray-800">{item.staffName}</span>
+                  <span className="text-sm text-gray-600">さんの</span>
+                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mx-1">{item.typeLabel}獲得</span>
                   <span className="text-sm font-bold text-gray-800">{item.name}</span>
-                  <span className="text-sm text-gray-600"> さんの</span>
+                  <span className="text-sm text-gray-600">さんの</span>
                   <span className="text-sm font-bold text-amber-700">「{item.fieldLabel}」</span>
                   <span className="text-sm text-gray-600">は本日です</span>
                 </div>
