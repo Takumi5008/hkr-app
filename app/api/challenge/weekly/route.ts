@@ -24,12 +24,14 @@ export async function GET() {
      FROM users u
      LEFT JOIN (
        SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
-       WHERE activation = '○' AND created_at::date >= $1::date AND created_at::date <= $2::date
+       WHERE activation = '○'
+         AND LEFT(created_at, 10) >= $1 AND LEFT(created_at, 10) <= $2
        GROUP BY user_id
      ) ar ON ar.user_id = u.id
      LEFT JOIN (
        SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
-       WHERE status = '○' AND created_at::date >= $1::date AND created_at::date <= $2::date
+       WHERE status = '○'
+         AND LEFT(created_at, 10) >= $1 AND LEFT(created_at, 10) <= $2
        GROUP BY user_id
      ) oc ON oc.user_id = u.id
      WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0

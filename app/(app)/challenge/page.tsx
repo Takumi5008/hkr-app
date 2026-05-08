@@ -27,45 +27,54 @@ export default async function ChallengePage() {
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
   // 本日のフォロー対応アラート（全ユーザー対象）
-  const [sonetRows, directRows, postRows] = await Promise.all([
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='sonet' AND construction_date IN (${ph})`, todayFmts),
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_direct' AND week_after IN (${ph})`, todayFmts),
-    dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_post' AND week_after_delivery IN (${ph})`, todayFmts),
-  ])
-  const followAlerts = [
-    ...sonetRows.map(r => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-    ...directRows.map(r => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-    ...postRows.map(r => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
-  ]
+  let followAlerts: { name: string; typeLabel: string; fieldLabel: string }[] = []
+  try {
+    const [sonetRows, directRows, postRows] = await Promise.all([
+      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='sonet' AND construction_date IN (${ph})`, todayFmts),
+      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_direct' AND week_after IN (${ph})`, todayFmts),
+      dbQuery<{ name: string }>(`SELECT name FROM activation_records WHERE type='wimax_post' AND week_after_delivery IN (${ph})`, todayFmts),
+    ])
+    followAlerts = [
+      ...sonetRows.map(r => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+      ...directRows.map(r => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
+      ...postRows.map(r => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
+    ]
+  } catch {}
 
-  const [row] = await dbQuery(
-    `SELECT (
-       (SELECT COUNT(*) FROM activation_records WHERE year = $1 AND month = $2 AND activation = '○') +
-       (SELECT COUNT(*) FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○')
-     )::int AS total`,
-    [year, month]
-  )
-  const total: number = row?.total ?? 0
+  let total = 0
+  try {
+    const [row] = await dbQuery(
+      `SELECT (
+         (SELECT COUNT(*) FROM activation_records WHERE year = $1 AND month = $2 AND activation = '○') +
+         (SELECT COUNT(*) FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○')
+       )::int AS total`,
+      [year, month]
+    )
+    total = row?.total ?? 0
+  } catch {}
 
   // 個人別月次ランキング（今月）
-  const memberRows = await dbQuery(
-    `SELECT u.id, u.name,
-            COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS activation
-     FROM users u
-     LEFT JOIN (
-       SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
-       WHERE year = $1 AND month = $2 AND activation = '○'
-       GROUP BY user_id
-     ) ar ON ar.user_id = u.id
-     LEFT JOIN (
-       SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
-       WHERE year = $1 AND month = $2 AND status = '○'
-       GROUP BY user_id
-     ) oc ON oc.user_id = u.id
-     WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
-     ORDER BY activation DESC`,
-    [year, month]
-  )
+  let memberRows: any[] = []
+  try {
+    memberRows = await dbQuery(
+      `SELECT u.id, u.name,
+              COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) AS activation
+       FROM users u
+       LEFT JOIN (
+         SELECT user_id, COUNT(*)::int AS cnt FROM activation_records
+         WHERE year = $1 AND month = $2 AND activation = '○'
+         GROUP BY user_id
+       ) ar ON ar.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, COUNT(*)::int AS cnt FROM opening_calendar
+         WHERE year = $1 AND month = $2 AND status = '○'
+         GROUP BY user_id
+       ) oc ON oc.user_id = u.id
+       WHERE COALESCE(ar.cnt, 0) + COALESCE(oc.cnt, 0) > 0
+       ORDER BY activation DESC`,
+      [year, month]
+    )
+  } catch {}
 
 
   return (

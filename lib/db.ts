@@ -308,6 +308,8 @@ async function initDb() {
     );
   `)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
   await pool.query(`
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin'));
