@@ -36,16 +36,16 @@ export async function POST(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
   const body = await req.json()
-  const { year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
+  const { year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
   const result = await dbRun(
     `INSERT INTO activation_records
-     (user_id, year, month, type, name, date, line, cancel, neg_apply, neg_cancel, fm,
+     (user_id, year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
       week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING id`,
-    [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '',
+    [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '',
      neg_apply ?? '', neg_cancel ?? '', fm ?? '', week_after ?? '',
      day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '']
@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
   const body = await req.json()
-  const { id, name, date, line, cancel, neg_apply, neg_cancel, fm,
+  const { id, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date, week_after_delivery, activation } = body
 
   // 更新前の状態を取得
@@ -69,11 +69,11 @@ export async function PATCH(req: NextRequest) {
 
   await dbRun(
     `UPDATE activation_records SET
-     name=$1, date=$2, line=$3, cancel=$4, neg_apply=$5, neg_cancel=$6, fm=$7,
-     week_after=$8, day_before_construction=$9, construction_date=$10,
-     day_before_delivery=$11, delivery_date=$12, week_after_delivery=$13, activation=$14
-     WHERE id=$15 AND user_id=$16`,
-    [name ?? '', date ?? '', line ?? '', cancel ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
+     name=$1, date=$2, line=$3, cancel=$4, cancel_reason=$5, neg_apply=$6, neg_cancel=$7, fm=$8,
+     week_after=$9, day_before_construction=$10, construction_date=$11,
+     day_before_delivery=$12, delivery_date=$13, week_after_delivery=$14, activation=$15
+     WHERE id=$16 AND user_id=$17`,
+    [name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
      week_after ?? '', day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
      id, session.userId]

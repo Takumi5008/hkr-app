@@ -155,6 +155,7 @@ async function initDb() {
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS day_before_delivery_done INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date_done INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_delivery_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS cancel_reason TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -14,6 +14,7 @@ type ActivationRecord = {
   date: string
   line: string
   cancel: string
+  cancel_reason: string
   neg_apply: string
   neg_cancel: string
   fm: string
@@ -39,7 +40,7 @@ const DONE_KEYS = [
 ] as const
 
 const emptyRecord = {
-  name: '', date: '', line: '', cancel: '', neg_apply: '', neg_cancel: '', fm: '',
+  name: '', date: '', line: '', cancel: '', cancel_reason: '', neg_apply: '', neg_cancel: '', fm: '',
   week_after: '', day_before_construction: '', construction_date: '',
   day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
 }
@@ -128,6 +129,7 @@ export default function ActivationPage() {
   const [editingId, setEditingId] = useState<number | 'new' | null>(null)
   const [form, setForm] = useState({ ...emptyRecord })
   const [saving, setSaving] = useState(false)
+  const [cancelModal, setCancelModal] = useState<{ rec: ActivationRecord; reason: string } | null>(null)
   const [myRole, setMyRole] = useState<string>('')
   const [members, setMembers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
@@ -189,6 +191,7 @@ export default function ActivationPage() {
   const buildPatch = (rec: ActivationRecord, overrides: Partial<ActivationRecord>) => ({
     id: rec.id,
     name: rec.name, date: rec.date, line: rec.line, cancel: rec.cancel,
+    cancel_reason: rec.cancel_reason,
     neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
     week_after: rec.week_after, day_before_construction: rec.day_before_construction,
     construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
@@ -204,7 +207,19 @@ export default function ActivationPage() {
   const toggleCancel = async (rec: ActivationRecord) => {
     const newVal = cycleTextVal(rec.cancel)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, cancel: newVal } : r))
-    await patchRecord(buildPatch(rec, { cancel: newVal }))
+    if (newVal === '○') {
+      setCancelModal({ rec: { ...rec, cancel: newVal }, reason: rec.cancel_reason })
+    } else {
+      await patchRecord(buildPatch(rec, { cancel: newVal, cancel_reason: newVal === '' ? '' : rec.cancel_reason }))
+    }
+  }
+
+  const saveCancelReason = async () => {
+    if (!cancelModal) return
+    const updated = buildPatch(cancelModal.rec, { cancel: cancelModal.rec.cancel, cancel_reason: cancelModal.reason })
+    setRecords((prev) => prev.map((r) => r.id === cancelModal.rec.id ? { ...r, cancel_reason: cancelModal.reason } : r))
+    await patchRecord(updated)
+    setCancelModal(null)
   }
 
   // 申込時ネガキャントグル（3段階）
@@ -271,6 +286,7 @@ export default function ActivationPage() {
     setEditingId(rec.id)
     setForm({
       name: rec.name, date: rec.date, line: rec.line, cancel: rec.cancel,
+      cancel_reason: rec.cancel_reason,
       neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
       week_after: rec.week_after, day_before_construction: rec.day_before_construction,
       construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
@@ -319,6 +335,40 @@ export default function ActivationPage() {
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {ConfirmDialog}
+
+      {/* 解除理由モーダル */}
+      {cancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-5 w-full max-w-sm">
+            <h3 className="text-sm font-bold text-gray-800 mb-1">解除理由を入力</h3>
+            <p className="text-xs text-gray-400 mb-3">省略可。あとで編集から変更もできます。</p>
+            <input
+              type="text"
+              value={cancelModal.reason}
+              onChange={(e) => setCancelModal((p) => p ? { ...p, reason: e.target.value } : p)}
+              placeholder="例：転居、料金不満など"
+              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400 mb-3"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') saveCancelReason() }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { saveCancelReason() }}
+                className="flex-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg hover:bg-violet-600 transition"
+              >
+                保存
+              </button>
+              <button
+                onClick={() => setCancelModal(null)}
+                className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition"
+              >
+                スキップ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-purple-500 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Activation</p>
         <h1 className="text-2xl font-bold">開通表</h1>
@@ -420,9 +470,14 @@ export default function ActivationPage() {
                                 {textEmoji(rec.activation)}
                               </button>
                             ) : isCancel ? (
-                              <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
-                                {textEmoji(rec.cancel)}
-                              </button>
+                              <div className="flex flex-col items-center gap-0.5">
+                                <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                                  {textEmoji(rec.cancel)}
+                                </button>
+                                {rec.cancel_reason && (
+                                  <span className="text-[10px] text-gray-400 max-w-[80px] truncate">{rec.cancel_reason}</span>
+                                )}
+                              </div>
                             ) : isNegApply ? (
                               <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
                                 {textEmoji(rec.neg_apply)}
@@ -502,9 +557,14 @@ export default function ActivationPage() {
                             {textEmoji(rec.activation)}
                           </button>
                         ) : isCancel ? (
-                          <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
-                            {textEmoji(rec.cancel)}
-                          </button>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <button onClick={() => toggleCancel(rec)} className="text-lg leading-none">
+                              {textEmoji(rec.cancel)}
+                            </button>
+                            {rec.cancel_reason && (
+                              <span className="text-[10px] text-gray-400 max-w-[80px] truncate">{rec.cancel_reason}</span>
+                            )}
+                          </div>
                         ) : isNegApply ? (
                           <button onClick={() => toggleNegApply(rec)} className="text-lg leading-none">
                             {textEmoji(rec.neg_apply)}
