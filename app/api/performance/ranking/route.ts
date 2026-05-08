@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         `SELECT member_name,
                 SUM(opening_count)::int AS total_opening,
                 SUM(work_hours) AS total_hours,
-                ROUND(SUM(work_hours) / NULLIF(SUM(opening_count), 0), 2) AS hours_per_opening
+                ROUND(SUM(work_hours)::numeric / NULLIF(SUM(opening_count), 0), 2) AS hours_per_opening
          FROM member_monthly_stats
          WHERE (
            (year = $1 AND month = $2) OR
