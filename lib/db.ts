@@ -313,7 +313,7 @@ async function initDb() {
   await pool.query(`
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin'));
-    UPDATE users SET role = 'admin' WHERE email = 'komotaku0508@gmail.com' AND role != 'admin';
+    UPDATE users SET role = 'manager' WHERE email = 'komotaku0508@gmail.com' AND role = 'member';
   `)
   // ポイントを records + point_transactions の合計から同期（レベルは手動管理）
   await pool.query(`
