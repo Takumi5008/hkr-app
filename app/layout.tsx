@@ -8,6 +8,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: '#4338ca',
 }
 
 export const metadata: Metadata = {
@@ -23,7 +24,6 @@ export const metadata: Metadata = {
     title: "インフラ管理",
     statusBarStyle: "default",
   },
-  themeColor: "#4338ca",
   manifest: "/manifest.json",
 };
 
