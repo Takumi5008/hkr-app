@@ -74,7 +74,7 @@ export default function PerformancePage() {
   const [editingPersonalMonth, setEditingPersonalMonth] = useState<number | null>(null)
   const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '', workHours: '', openingCount: '' })
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
-  const [tab, setTab] = useState<'personal' | 'team'>('personal')
+  const [tab, setTab] = useState<'personal' | 'team' | 'ranking'>('personal')
   const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete' | 'sort'>('view')
   const [sortedRecords, setSortedRecords] = useState<MemberPerformance[]>([])
   const [savingOrder, setSavingOrder] = useState(false)
@@ -87,6 +87,16 @@ export default function PerformancePage() {
   const [extraTeamYears, setExtraTeamYears] = useState<number[]>([])
   const [showAddTeamYear, setShowAddTeamYear] = useState(false)
   const [newTeamYearInput, setNewTeamYearInput] = useState('')
+
+  // ランキングタブ
+  const [rankingYear, setRankingYear] = useState(new Date().getFullYear())
+  const [rankingMonth, setRankingMonth] = useState(new Date().getMonth() + 1)
+  const [rankingData, setRankingData] = useState<{
+    months3: { year: number; month: number }[]
+    monthlyCancel: { member_name: string; total_cancel: number; work_hours: number; productivity: number }[]
+    last3Opening: { member_name: string; total_opening: number; total_hours: number; hours_per_opening: number }[]
+  } | null>(null)
+  const [rankingLoading, setRankingLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.role ?? 'member'))
@@ -389,8 +399,16 @@ export default function PerformancePage() {
   const f = (v: string | undefined, key: keyof typeof form) =>
     setForm((prev) => ({ ...prev, [key]: v ?? '' }))
 
-  const switchTab = (t: 'personal' | 'team') => {
+  const fetchRanking = async (y: number, m: number) => {
+    setRankingLoading(true)
+    const res = await fetch(`/api/performance/ranking?year=${y}&month=${m}`)
+    if (res.ok) setRankingData(await res.json())
+    setRankingLoading(false)
+  }
+
+  const switchTab = (t: 'personal' | 'team' | 'ranking') => {
     setTab(t)
+    if (t === 'ranking') fetchRanking(rankingYear, rankingMonth)
   }
 
   const moveMember = (idx: number, dir: -1 | 1) => {
@@ -485,11 +503,11 @@ export default function PerformancePage() {
 
       {/* タブ */}
       <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
-        {(['personal', 'team'] as const).map((t) => (
+        {(['personal', 'team', 'ranking'] as const).map((t) => (
           <button key={t} onClick={() => switchTab(t)}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition
               ${tab === t ? 'bg-white text-violet-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {t === 'personal' ? '個人' : '全体'}
+            {t === 'personal' ? '個人' : t === 'team' ? '全体' : 'ランキング'}
           </button>
         ))}
       </div>
@@ -1138,6 +1156,117 @@ export default function PerformancePage() {
             </>
           )}
         </>
+      )}
+
+      {/* ===== ランキングタブ ===== */}
+      {tab === 'ranking' && (
+        <div className="space-y-6">
+          {/* 月選択 */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-600 shrink-0">対象月</label>
+            <select
+              value={`${rankingYear}-${rankingMonth}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split('-').map(Number)
+                setRankingYear(y); setRankingMonth(m)
+                fetchRanking(y, m)
+              }}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
+            >
+              {Array.from({ length: 24 }, (_, i) => {
+                const d = new Date(new Date().getFullYear(), new Date().getMonth() - i, 1)
+                const y = d.getFullYear(); const m = d.getMonth() + 1
+                return <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年{m}月</option>
+              })}
+            </select>
+          </div>
+
+          {rankingLoading && <p className="text-sm text-gray-400 text-center py-8">読み込み中...</p>}
+
+          {rankingData && !rankingLoading && (
+            <>
+              {/* 解除時間生産性ランキング */}
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="px-5 py-3 bg-orange-50 border-b border-orange-100">
+                  <h2 className="text-sm font-bold text-orange-700">解除時間生産性ランキング</h2>
+                  <p className="text-xs text-orange-400 mt-0.5">{rankingYear}年{rankingMonth}月 — 解除数 ÷ 稼働時間（件/h）</p>
+                </div>
+                {rankingData.monthlyCancel.length === 0 ? (
+                  <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {rankingData.monthlyCancel.map((r, i) => {
+                      const medals = ['🥇', '🥈', '🥉']
+                      const maxProd = rankingData.monthlyCancel[0]?.productivity ?? 1
+                      const pct = maxProd > 0 ? Math.round((r.productivity / maxProd) * 100) : 0
+                      return (
+                        <div key={r.member_name} className="flex items-center gap-3 px-5 py-3">
+                          <span className="text-base w-7 text-center shrink-0">
+                            {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
+                              <div className="text-right shrink-0 ml-2">
+                                <span className="text-sm font-bold text-orange-500">{r.productivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/h</span></span>
+                                <span className="text-xs text-gray-400 ml-2">({r.total_cancel}件 / {r.work_hours}h)</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-orange-300 to-orange-500 rounded-full" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 直近3ヶ月 開通時間生産性ランキング */}
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="px-5 py-3 bg-teal-50 border-b border-teal-100">
+                  <h2 className="text-sm font-bold text-teal-700">直近3ヶ月 開通時間生産性ランキング</h2>
+                  <p className="text-xs text-teal-400 mt-0.5">
+                    {rankingData.months3.map((m) => `${m.month}月`).join('・')} — 何時間で1開通（h/件、少ない方が優秀）
+                  </p>
+                </div>
+                {rankingData.last3Opening.length === 0 ? (
+                  <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {rankingData.last3Opening.map((r, i) => {
+                      const medals = ['🥇', '🥈', '🥉']
+                      const minHours = rankingData.last3Opening[0]?.hours_per_opening ?? 1
+                      const maxHours = rankingData.last3Opening[rankingData.last3Opening.length - 1]?.hours_per_opening ?? 1
+                      const range = maxHours - minHours || 1
+                      const pct = Math.round(((maxHours - r.hours_per_opening) / range) * 100)
+                      return (
+                        <div key={r.member_name} className="flex items-center gap-3 px-5 py-3">
+                          <span className="text-base w-7 text-center shrink-0">
+                            {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
+                              <div className="text-right shrink-0 ml-2">
+                                <span className="text-sm font-bold text-teal-600">{r.hours_per_opening}<span className="text-xs font-normal text-gray-400 ml-0.5">h/件</span></span>
+                                <span className="text-xs text-gray-400 ml-2">({r.total_opening}件 / {r.total_hours}h)</span>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-teal-300 to-teal-500 rounded-full" style={{ width: `${Math.max(pct, 5)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       )}
     </div>
   )
