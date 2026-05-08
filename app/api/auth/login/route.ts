@@ -29,6 +29,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メールアドレスまたはパスワードが正しくありません' }, { status: 401 })
   }
 
+  // ロールが不正にmemberになっている場合の自動修正
+  if (user.email === 'komotaku0508@gmail.com' && user.role === 'member') {
+    await dbRun(`UPDATE users SET role = 'manager' WHERE id = $1`, [user.id])
+    user.role = 'manager'
+  }
+
   const session = await getSession()
   session.userId = user.id
   session.name = user.name
