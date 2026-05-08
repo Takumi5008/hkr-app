@@ -37,16 +37,17 @@ export default function QuestsPage() {
   }, [])
 
   async function loadAll() {
-    const [q, b, me, ch] = await Promise.all([
+    const now = new Date()
+    const [q, b, me, tot] = await Promise.all([
       fetch('/api/quests').then(r => r.json()),
       fetch('/api/badges').then(r => r.json()),
       fetch('/api/auth/me').then(r => r.json()),
-      fetch(`/api/challenge/cards?year=${new Date().getFullYear()}&month=${new Date().getMonth() + 1}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`/api/challenge/total?year=${now.getFullYear()}&month=${now.getMonth() + 1}`).then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     if (q.quests) { setQuests(q.quests); setWeekStart(q.weekStart) }
     if (Array.isArray(b)) setBadges(b)
     if (typeof me.points === 'number') setMyPoints(me.points)
-    if (Array.isArray(ch)) setTeamTotal(ch.reduce((s: number, c: any) => s + (c.activation ?? 0), 0))
+    if (typeof tot?.total === 'number') setTeamTotal(tot.total)
   }
 
   async function handleClaim(questId: string) {
