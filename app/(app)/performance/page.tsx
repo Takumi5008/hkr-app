@@ -403,6 +403,7 @@ export default function PerformancePage() {
   const fetchRanking = async (y: number, m: number) => {
     setRankingLoading(true)
     setRankingError('')
+    setRankingData(null)
     try {
       const res = await fetch(`/api/performance/ranking?year=${y}&month=${m}`)
       const data = await res.json()
@@ -417,9 +418,12 @@ export default function PerformancePage() {
     setRankingLoading(false)
   }
 
+  useEffect(() => {
+    if (tab === 'ranking') fetchRanking(rankingYear, rankingMonth)
+  }, [tab])
+
   const switchTab = (t: 'personal' | 'team' | 'ranking') => {
     setTab(t)
-    if (t === 'ranking') fetchRanking(rankingYear, rankingMonth)
   }
 
   const moveMember = (idx: number, dir: -1 | 1) => {
@@ -1184,7 +1188,8 @@ export default function PerformancePage() {
               value={`${rankingYear}-${rankingMonth}`}
               onChange={(e) => {
                 const [y, m] = e.target.value.split('-').map(Number)
-                setRankingYear(y); setRankingMonth(m)
+                setRankingYear(y)
+                setRankingMonth(m)
                 fetchRanking(y, m)
               }}
               className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
