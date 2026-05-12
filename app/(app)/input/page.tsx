@@ -59,7 +59,7 @@ export default function InputPage() {
       .then((r) => r.json())
       .then((d) => {
         setRole(d.role)
-        if (d.role === 'manager' || d.role === 'viewer') {
+        if (d.role === 'manager' || d.role === 'viewer' || d.role === 'admin') {
           fetch('/api/users')
             .then((r) => r.json())
             .then((users: { id: number; name: string; role: string }[]) => {
@@ -255,7 +255,7 @@ export default function InputPage() {
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
 
-  const isManager = role === 'manager'
+  const isManager = role === 'manager' || role === 'admin'
 
   const calConfirmed = calEntries.filter((e) => e.status === '○').length
   const calRemaining = calEntries.filter((e) => e.status === '').length

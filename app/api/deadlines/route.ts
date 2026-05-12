@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   const { year, month, deadlineAt } = await req.json()
   if (!year || !month || !deadlineAt) return NextResponse.json({ error: '不正なリクエストです' }, { status: 400 })
   await dbRun(
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   const { year, month } = await req.json()
   await dbRun('DELETE FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
   return NextResponse.json({ ok: true })

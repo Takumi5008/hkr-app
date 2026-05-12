@@ -12,7 +12,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { name, description, cost } = await req.json()
   if (!name?.trim() || !cost || cost <= 0) {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { id } = await req.json()
   await dbRun('UPDATE point_items SET is_active = false WHERE id = $1', [id])

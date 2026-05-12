@@ -50,7 +50,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
     router.refresh()
   }
 
-  const isManager = role === 'manager' || role === 'viewer'
+  const isManager = role === 'manager' || role === 'viewer' || role === 'admin'
   const isShiftViewer = role === 'shift_viewer'
   const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : role === 'shift_viewer' ? 'シフト管理者' : 'メンバー'
 

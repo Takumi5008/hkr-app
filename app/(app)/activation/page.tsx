@@ -252,7 +252,7 @@ export default function ActivationPage() {
     fetch('/api/progress').then((r) => r.json()).then((data) => {
       const role = data.role ?? ''
       setMyRole(role)
-      if (role === 'manager' || role === 'viewer') {
+      if (role === 'manager' || role === 'viewer' || role === 'admin') {
         fetch('/api/users').then((r) => r.json()).then((users: User[]) => {
           setMembers(users.filter((u) => u.role !== 'viewer'))
         })

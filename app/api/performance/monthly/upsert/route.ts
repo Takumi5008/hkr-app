@@ -5,7 +5,7 @@ import { dbRun, dbQuery } from '@/lib/db'
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
   const { year, month, totalActivation, totalCancel, memberCount, note } = await req.json()
 

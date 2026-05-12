@@ -9,7 +9,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getSession()
-  if (!session.userId || session.role !== 'manager') {
+  if (!session.userId || session.role !== 'manager' && session.role !== 'admin') {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
   const { name } = await req.json()
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   const session = await getSession()
-  if (!session.userId || session.role !== 'manager') {
+  if (!session.userId || session.role !== 'manager' && session.role !== 'admin') {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
   const { oldName, newName } = await req.json()
@@ -50,7 +50,7 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getSession()
-  if (!session.userId || session.role !== 'manager') {
+  if (!session.userId || session.role !== 'manager' && session.role !== 'admin') {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
   const { name } = await req.json()

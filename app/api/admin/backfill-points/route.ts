@@ -9,7 +9,7 @@ const DEADLINE = '2026-04-26T14:59:59Z'
 export async function POST() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const results: { type: string; userId: number; name: string; ref: string }[] = []
 

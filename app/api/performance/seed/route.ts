@@ -29,7 +29,7 @@ const SEED_DATA = [
 export async function POST() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
   const existing = await dbQuery('SELECT COUNT(*) as cnt FROM member_performance', [])
   const cnt = parseInt((existing[0] as any).cnt)

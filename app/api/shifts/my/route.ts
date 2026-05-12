@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
   const { year, month, workDates, submitted } = await req.json()
   if (!year || !month || !Array.isArray(workDates)) return NextResponse.json({ error: '不正なリクエストです' }, { status: 400 })
-  if (session.role !== 'manager') {
+  if (session.role !== 'manager' && session.role !== 'admin') {
     const deadline = await dbQueryOne('SELECT * FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
     if (deadline?.deadline_at && new Date(deadline.deadline_at) < new Date()) {
       return NextResponse.json({ error: '提出期限が終了しています' }, { status: 403 })

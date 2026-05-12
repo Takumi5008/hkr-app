@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const month = searchParams.get('month')
   if (!year || !month) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
 
-  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const userId = searchParams.get('userId')
 
   // 全員集計モード

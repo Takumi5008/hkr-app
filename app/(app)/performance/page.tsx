@@ -106,7 +106,7 @@ export default function PerformancePage() {
   }, [selectedName])
 
   useEffect(() => {
-    if (role !== 'manager') return
+    if (role !== 'manager' && role !== 'admin') return
     fetch('/api/performance').then((r) => r.json()).then((rows: MemberPerformance[]) => {
       setRecords(rows)
       if (rows.length > 0) {
@@ -125,7 +125,7 @@ export default function PerformancePage() {
   }, [role])
 
   // マネージャー以外はアクセス不可
-  if (role && role !== 'manager') {
+  if (role && role !== 'manager' && role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-400 text-sm">このページはマネージャーのみ閲覧できます</p>
@@ -772,7 +772,7 @@ export default function PerformancePage() {
           )}
 
           {/* 一覧タブ */}
-          {(personalTab === 'view' || role !== 'manager') && (
+          {(personalTab === 'view' || role !== 'manager' && role !== 'admin') && (
             records.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <p className="text-sm font-medium">実績データがありません</p>

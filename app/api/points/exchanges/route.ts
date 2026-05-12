@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   if (isManager) {
     const rows = await dbQuery(
       `SELECT pe.*, u.name AS user_name, u.avatar AS user_avatar
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { id, status } = await req.json()
   if (!['approved', 'rejected'].includes(status)) {

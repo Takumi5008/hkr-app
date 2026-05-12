@@ -23,7 +23,7 @@ function statScore(value: number, max: number): number {
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager' && session.role !== 'viewer') {
+  if (session.role !== 'manager' && session.role !== 'viewer' && session.role !== 'admin') {
     return NextResponse.json({ error: '権限なし' }, { status: 403 })
   }
 

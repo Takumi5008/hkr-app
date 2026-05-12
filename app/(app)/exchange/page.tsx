@@ -89,7 +89,7 @@ export default function ExchangePage() {
     fetch('/api/gacha').then(r => r.json()).then(d => { if (d.items) { setGachaItems(d.items); setGachaCost(d.cost) } })
   }, [])
 
-  const isManager = role === 'manager' || role === 'viewer'
+  const isManager = role === 'manager' || role === 'viewer' || role === 'admin'
   const pendingCount = isManager ? exchanges.filter(e => e.status === 'pending').length : 0
 
   async function handleExchange(item: Item) {

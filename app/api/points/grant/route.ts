@@ -6,7 +6,7 @@ import { syncUserPoints } from '@/lib/points'
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { userId, delta, reason } = await req.json()
   if (!userId || !delta || delta === 0) return NextResponse.json({ error: '不正なリクエスト' }, { status: 400 })

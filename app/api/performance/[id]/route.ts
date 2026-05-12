@@ -5,7 +5,7 @@ import { dbRun, dbQuery } from '@/lib/db'
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   const { id } = await params
   const { name, activationTarget, cancelTarget, workDaysTarget, periodStart, periodEnd, totalWork, totalActivation, totalCancel, note, sortOrder } = await req.json()
   await dbRun(
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   const { id } = await params
   await dbRun('DELETE FROM member_performance WHERE id=$1', [id])
   return NextResponse.json({ ok: true })

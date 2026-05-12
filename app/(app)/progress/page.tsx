@@ -23,7 +23,7 @@ export default function ProgressPage() {
   const isCurrentMonth = year === todayYear && month === todayMonth
 
   // カレンダー操作がロックされるか（メンバーかつ締切過ぎ）
-  const calendarLocked = deadlinePassed && role !== 'manager'
+  const calendarLocked = deadlinePassed && role !== 'manager' && role !== 'admin'
 
   useEffect(() => {
     fetch(`/api/progress?year=${year}&month=${month}`)

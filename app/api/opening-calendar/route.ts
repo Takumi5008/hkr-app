@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const month  = parseInt(searchParams.get('month')  ?? '0')
   const userId = searchParams.get('userId')
 
-  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const targetId  = isManager && userId ? parseInt(userId) : session.userId
 
   const rows = await dbQuery(

@@ -5,7 +5,7 @@ import { dbQuery } from '@/lib/db'
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  if (session.role !== 'manager' && session.role !== 'viewer') return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'manager' && session.role !== 'viewer' && session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const year = Number(searchParams.get('year') || new Date().getFullYear())

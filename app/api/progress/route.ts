@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const { year, month, cancelTarget, actualCancel, workDates } = await req.json()
 
   // 締切チェック（マネージャーは除外）
-  if (session.role !== 'manager') {
+  if (session.role !== 'manager' && session.role !== 'admin') {
     const deadline = await dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
     const deadlineAt = deadline[0]?.deadline_at
     if (deadlineAt && new Date(deadlineAt) < new Date()) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer'
+type Role = 'member' | 'viewer' | 'manager' | 'shift_viewer' | 'admin'
 
 interface Section {
   title: string
@@ -267,6 +267,7 @@ const ROLE_LABEL: Record<Role, string> = {
   viewer: '閲覧者',
   manager: 'マネージャー',
   shift_viewer: 'シフト管理者',
+  admin: 'アプリ管理者',
 }
 
 const ROLE_COLOR: Record<Role, string> = {
@@ -274,6 +275,7 @@ const ROLE_COLOR: Record<Role, string> = {
   viewer: 'from-blue-600 to-cyan-500',
   manager: 'from-slate-700 to-slate-600',
   shift_viewer: 'from-emerald-600 to-teal-500',
+  admin: 'from-red-700 to-rose-600',
 }
 
 export default function HowtoPage() {
@@ -285,7 +287,7 @@ export default function HowtoPage() {
 
   if (!role) return null
 
-  const isManager = role === 'manager' || role === 'viewer'
+  const isManager = role === 'manager' || role === 'viewer' || role === 'admin'
   const isShiftViewer = role === 'shift_viewer'
 
   const sections = [

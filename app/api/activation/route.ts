@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get('type')
   if (!year || !month || !type) return NextResponse.json({ error: 'パラメータ不足' }, { status: 400 })
 
-  const isManager = session.role === 'manager' || session.role === 'viewer'
+  const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const targetUserId = isManager && searchParams.get('userId') ? searchParams.get('userId') : session.userId
 
   if (type === 'all') {
