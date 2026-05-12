@@ -30,7 +30,6 @@ export default function QuestsPage() {
   const [claiming, setClaiming] = useState<string | null>(null)
   const [claimMsg, setClaimMsg] = useState<{ id: string; msg: string; ok: boolean } | null>(null)
   const [tab, setTab] = useState<'quests' | 'boss' | 'badges'>('quests')
-  const [myPoints, setMyPoints] = useState(0)
 
   useEffect(() => {
     loadAll()
@@ -38,15 +37,13 @@ export default function QuestsPage() {
 
   async function loadAll() {
     const now = new Date()
-    const [q, b, me, tot] = await Promise.all([
+    const [q, b, tot] = await Promise.all([
       fetch('/api/quests').then(r => r.json()),
       fetch('/api/badges').then(r => r.json()),
-      fetch('/api/auth/me').then(r => r.json()),
       fetch(`/api/challenge/total?year=${now.getFullYear()}&month=${now.getMonth() + 1}`).then(r => r.ok ? r.json() : null).catch(() => null),
     ])
     if (q.quests) { setQuests(q.quests); setWeekStart(q.weekStart) }
     if (Array.isArray(b)) setBadges(b)
-    if (typeof me.points === 'number') setMyPoints(me.points)
     if (typeof tot?.total === 'number') setTeamTotal(tot.total)
   }
 
@@ -59,8 +56,7 @@ export default function QuestsPage() {
     })
     const data = await res.json()
     if (res.ok) {
-      setMyPoints(data.newPoints)
-      setClaimMsg({ id: questId, msg: `+${data.reward}pt 獲得！`, ok: true })
+      setClaimMsg({ id: questId, msg: 'クエスト達成！', ok: true })
       setQuests(prev => prev.map(q => q.id === questId ? { ...q, claimed: true } : q))
     } else {
       setClaimMsg({ id: questId, msg: data.error, ok: false })
@@ -87,10 +83,6 @@ export default function QuestsPage() {
       <div className="mb-6 bg-gradient-to-r from-fuchsia-600 to-purple-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-fuchsia-200 mb-1">Gamification</p>
         <h1 className="text-2xl font-bold">ミッション</h1>
-        <div className="flex items-center gap-3 mt-2">
-          <span className="text-fuchsia-200 text-sm">保有ポイント</span>
-          <span className="text-xl font-black">⭐ {myPoints.toLocaleString()}pt</span>
-        </div>
       </div>
 
       {/* タブ */}
@@ -121,7 +113,6 @@ export default function QuestsPage() {
                         <p className="text-xs text-gray-500">{q.desc}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-black text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full shrink-0">+{q.reward}pt</span>
                   </div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex-1 h-2 bg-white/60 rounded-full overflow-hidden">
