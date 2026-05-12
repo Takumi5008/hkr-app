@@ -17,6 +17,8 @@ function getStageName(stageIndex: number) {
   return ['森の始まり', '砂漠の試練', '海の彼方', '天空の城', '最終決戦'][stageIndex] ?? `ステージ${stageIndex + 1}`
 }
 
+interface ChestReward { type: string; amount: number; message: string; emoji: string; newSteps?: number }
+
 export default function SugorokuPage() {
   const [state, setState] = useState<GameState | null>(null)
   const [loading, setLoading] = useState(true)
@@ -24,6 +26,7 @@ export default function SugorokuPage() {
   const [tab, setTab] = useState<'board' | 'collection'>('board')
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'event' | 'clear' | 'error' } | null>(null)
   const [animation, setAnimation] = useState<'idle' | 'move' | 'event' | 'clear'>('idle')
+  const [chest, setChest] = useState<{ open: boolean; opening: boolean; reward: ChestReward | null }>({ open: false, opening: false, reward: null })
   const boardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { load() }, [])
@@ -67,11 +70,30 @@ export default function SugorokuPage() {
         showToast(`ステージクリア！「${CHARACTERS.find(c => c.id === data.newCharacter)?.name}」をゲット！`, 'clear')
       } else if (data.isEvent) {
         setAnimation('event')
-        showToast('イベントマス！ボーナス！', 'event')
+        setChest({ open: true, opening: false, reward: null })
       }
       load()
       setAdvancing(false)
     }, 600)
+  }
+
+  async function openChest() {
+    if (chest.opening) return
+    setChest(c => ({ ...c, opening: true }))
+    const res = await fetch('/api/sugoroku', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'open_chest' }),
+    })
+    const data = await res.json()
+    setTimeout(() => {
+      setChest({ open: true, opening: false, reward: data.reward })
+      if (data.reward?.newSteps !== undefined) load()
+    }, 800)
+  }
+
+  function closeChest() {
+    setChest({ open: false, opening: false, reward: null })
   }
 
   function showToast(msg: string, type: typeof toast extends null ? never : NonNullable<typeof toast>['type']) {
@@ -124,6 +146,43 @@ export default function SugorokuPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-lg mx-auto">
+
+      {/* チェストモーダル */}
+      {chest.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={chest.reward ? closeChest : undefined}>
+          <div className="bg-white rounded-3xl p-8 mx-6 text-center shadow-2xl max-w-xs w-full" onClick={e => e.stopPropagation()}>
+            {!chest.reward ? (
+              <>
+                <div className={`text-7xl mb-4 select-none transition-transform duration-200 ${chest.opening ? 'animate-bounce' : 'cursor-pointer hover:scale-110'}`}
+                  onClick={openChest}>
+                  {chest.opening ? '📦' : '🎁'}
+                </div>
+                <p className="text-lg font-black text-gray-800 mb-2">イベントマス！</p>
+                <p className="text-sm text-gray-500 mb-5">チェストをタップして開ける</p>
+                <button onClick={openChest} disabled={chest.opening}
+                  className="w-full py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-black rounded-2xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-50">
+                  {chest.opening ? '開けてる...' : '✨ 開ける！'}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-7xl mb-3 animate-bounce">{chest.reward.emoji}</div>
+                <p className="text-2xl font-black text-gray-800 mb-2">{chest.reward.message}</p>
+                {chest.reward.type === 'steps' && (
+                  <p className="text-sm text-violet-500 font-bold mb-4">自動で{chest.reward.amount}マス進んだ！</p>
+                )}
+                {chest.reward.type === 'message' && (
+                  <p className="text-sm text-gray-400 mb-4">はずれ... でも応援してるよ！</p>
+                )}
+                <button onClick={closeChest}
+                  className="w-full py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-black rounded-2xl shadow hover:shadow-lg active:scale-95 transition-all">
+                  閉じる
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-5 bg-gradient-to-r from-violet-600 to-purple-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Mini Game</p>

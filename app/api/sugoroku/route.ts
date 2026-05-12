@@ -177,5 +177,38 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  if (action === 'open_chest') {
+    const user = await dbQueryOne<{ game_steps: number }>(
+      'SELECT game_steps FROM users WHERE id = $1',
+      [session.userId]
+    )
+    const currentSteps = user?.game_steps ?? 0
+    const totalBoardSize = SUGOROKU_STAGES.reduce((a, b) => a + b, 0)
+
+    const CHEST_REWARDS = [
+      { type: 'steps', amount: 1, message: '+1マス進む！', emoji: '🎁', weight: 35 },
+      { type: 'steps', amount: 2, message: '+2マス進む！', emoji: '✨', weight: 30 },
+      { type: 'steps', amount: 3, message: '+3マス進む！', emoji: '💫', weight: 20 },
+      { type: 'steps', amount: 5, message: '+5マス進む！', emoji: '🌟', weight: 10 },
+      { type: 'message', amount: 0, message: '今日も開通頑張ろう！', emoji: '💪', weight: 5 },
+    ]
+    const totalWeight = CHEST_REWARDS.reduce((s, r) => s + r.weight, 0)
+    let rand = Math.random() * totalWeight
+    let reward = CHEST_REWARDS[0]
+    for (const r of CHEST_REWARDS) {
+      rand -= r.weight
+      if (rand <= 0) { reward = r; break }
+    }
+
+    // Apply extra steps (capped at board size)
+    if (reward.type === 'steps' && reward.amount > 0) {
+      const newSteps = Math.min(currentSteps + reward.amount, totalBoardSize)
+      await dbRun('UPDATE users SET game_steps = $1 WHERE id = $2', [newSteps, session.userId])
+      return NextResponse.json({ ok: true, reward: { ...reward, newSteps } })
+    }
+
+    return NextResponse.json({ ok: true, reward })
+  }
+
   return NextResponse.json({ error: '不明なアクション' }, { status: 400 })
 }
