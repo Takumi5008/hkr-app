@@ -52,7 +52,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
   const isManager = role === 'manager' || role === 'viewer' || role === 'admin'
   const isShiftViewer = role === 'shift_viewer'
-  const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : role === 'shift_viewer' ? 'シフト管理者' : 'メンバー'
+  const roleLabel = role === 'manager' ? 'マネージャー' : role === 'viewer' ? '閲覧者' : role === 'shift_viewer' ? 'シフト管理者' : role === 'admin' ? 'アプリ管理者' : 'メンバー'
 
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
