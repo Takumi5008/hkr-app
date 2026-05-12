@@ -147,15 +147,6 @@ async function initDb() {
     ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_days INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS work_hours REAL NOT NULL DEFAULT 0;
     ALTER TABLE member_monthly_stats ADD COLUMN IF NOT EXISTS opening_count INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date TEXT NOT NULL DEFAULT '';
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS fm_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS day_before_construction_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS construction_date_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS day_before_delivery_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_delivery_done INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS cancel_reason TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id         SERIAL PRIMARY KEY,
       user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -212,6 +203,15 @@ async function initDb() {
       activation            TEXT NOT NULL DEFAULT '',
       created_at            TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date TEXT NOT NULL DEFAULT '';
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS fm_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS day_before_construction_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS construction_date_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS day_before_delivery_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS delivery_date_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS week_after_delivery_done INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS cancel_reason TEXT NOT NULL DEFAULT '';
     CREATE TABLE IF NOT EXISTS mtg_month_deadlines (
       id          SERIAL PRIMARY KEY,
       year        INTEGER NOT NULL,
@@ -307,6 +307,9 @@ async function initDb() {
       created_at       TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
   `)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_character TEXT`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_steps INTEGER NOT NULL DEFAULT 0`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_collected TEXT NOT NULL DEFAULT '[]'`)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
   await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
