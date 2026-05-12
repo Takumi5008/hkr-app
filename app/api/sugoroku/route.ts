@@ -26,9 +26,9 @@ export async function GET() {
     [session.userId]
   )
 
-  // Total cumulative openings (same source as badge system)
+  // Total cumulative openings from opening_calendar
   const openRow = await dbQueryOne<{ total: number }>(
-    `SELECT COALESCE(SUM(activation_count), 0)::int AS total FROM records WHERE user_id = $1`,
+    `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE user_id = $1 AND status = '○'`,
     [session.userId]
   )
   const totalOpenings = openRow?.total ?? 0
