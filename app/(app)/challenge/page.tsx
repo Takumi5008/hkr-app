@@ -1,212 +1,184 @@
-import { dbQuery } from '@/lib/db'
-import { getSession } from '@/lib/session'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect } from 'react'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
-import ActivationBadge from '@/components/ActivationBadge'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
+import ActivationBadge from '@/components/ActivationBadge'
 
-export const dynamic = 'force-dynamic'
+const BOSS_PHASES = [
+  { threshold: 0,   name: 'スライム', icon: '🐛', color: 'from-green-400 to-emerald-500' },
+  { threshold: 50,  name: 'オーク',   icon: '🐗', color: 'from-yellow-400 to-orange-500' },
+  { threshold: 100, name: 'ドラゴン', icon: '🐲', color: 'from-red-500 to-rose-600' },
+  { threshold: 150, name: 'ラスボス', icon: '👹', color: 'from-purple-600 to-violet-700' },
+]
 
-export default async function ChallengePage() {
-  const session = await getSession()
-  if (!session.userId) redirect('/login')
+const BADGE_DEFS = [
+  { min: 20, emoji: '🏆', label: '開通レジェンド', desc: '今月20件以上' },
+  { min: 15, emoji: '👑', label: '開通マスター',   desc: '今月15件以上' },
+  { min: 10, emoji: '💎', label: '開通職人',       desc: '今月10件以上' },
+  { min: 7,  emoji: '🔥', label: '開通師',         desc: '今月7件以上' },
+  { min: 4,  emoji: '⚡', label: '開通士',         desc: '今月4件以上' },
+  { min: 1,  emoji: '🌱', label: '見習い',         desc: '今月1件以上' },
+]
+
+interface MemberRow { id: number; name: string; activation: number }
+
+export default function ChallengePage() {
+  const [tab, setTab] = useState<'team' | 'personal'>('team')
+  const [total, setTotal] = useState(0)
+  const [members, setMembers] = useState<MemberRow[]>([])
+  const [myActivation, setMyActivation] = useState(0)
 
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth() + 1
-  const day = now.getDate()
 
-  // 今日の日付フォーマット一覧
-  const mm = String(month).padStart(2, '0')
-  const dd = String(day).padStart(2, '0')
-  const todayFmts = [
-    `${year}-${mm}-${dd}`, `${year}/${mm}/${dd}`, `${year}/${month}/${day}`,
-    `${month}/${day}`, `${mm}/${dd}`, `${month}月${day}日`, `${mm}月${dd}日`,
-  ]
-  const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
+  useEffect(() => {
+    const y = year, m = month
+    Promise.all([
+      fetch(`/api/challenge/total?year=${y}&month=${m}`).then(r => r.json()),
+      fetch(`/api/challenge/members?year=${y}&month=${m}`).then(r => r.json()),
+      fetch('/api/auth/me').then(r => r.json()),
+    ]).then(([tot, mem, me]) => {
+      if (typeof tot.total === 'number') setTotal(tot.total)
+      if (Array.isArray(mem)) {
+        setMembers(mem)
+        const myRow = mem.find((r: MemberRow) => r.id === me.id)
+        if (myRow) setMyActivation(myRow.activation)
+      }
+    })
 
-  // 本日のフォロー対応アラート（全ユーザー対象）
-  let followAlerts: { name: string; staffName: string; typeLabel: string; fieldLabel: string }[] = []
-  try {
-    const [sonetRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`, todayFmts),
-    ])
-    followAlerts = [
-      ...sonetRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-      ...directRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-      ...postRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
-    ]
-  } catch {}
+  }, [])
 
-  let total = 0
-  try {
-    const [row] = await dbQuery(
-      `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE year = $1 AND month = $2 AND status = '○'`,
-      [year, month]
-    )
-    total = row?.total ?? 0
-  } catch {}
+  const GOAL = 200
+  const phaseIdx = BOSS_PHASES.reduce((idx, p, i) => total >= p.threshold ? i : idx, 0)
+  const phase = BOSS_PHASES[phaseIdx]
+  const dmg = Math.min(total - phase.threshold, 50)
+  const hpPct = Math.max(0, Math.round(((50 - dmg) / 50) * 100))
 
-  // 個人別月次ランキング（今月）
-  let memberRows: any[] = []
-  try {
-    memberRows = await dbQuery(
-      `SELECT u.id, u.name, COUNT(oc.id)::int AS activation
-       FROM users u
-       JOIN opening_calendar oc ON oc.user_id = u.id
-       WHERE oc.year = $1 AND oc.month = $2 AND oc.status = '○'
-       GROUP BY u.id, u.name
-       ORDER BY activation DESC`,
-      [year, month]
-    )
-  } catch {}
-
+  const myBadge = BADGE_DEFS.find(b => myActivation >= b.min)
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-      <div className="mb-6 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl px-6 py-5 shadow-md text-white">
+      <div className="mb-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Challenge</p>
-        <h1 className="text-2xl font-bold">チームチャレンジ</h1>
+        <h1 className="text-2xl font-bold">チャレンジ</h1>
         <p className="text-sm text-violet-200 mt-0.5">{year}年{month}月</p>
       </div>
 
-      <TeamChallengeCard total={total} year={year} month={month} />
-
-      {/* ボスイベント */}
-      {(() => {
-        const GOAL = 200
-        const phases = [
-          { threshold: 0,   name: 'スライム', icon: '🐛', color: 'from-green-400 to-emerald-500' },
-          { threshold: 50,  name: 'オーク',   icon: '🐗', color: 'from-yellow-400 to-orange-500' },
-          { threshold: 100, name: 'ドラゴン', icon: '🐲', color: 'from-red-500 to-rose-600' },
-          { threshold: 150, name: 'ラスボス', icon: '👹', color: 'from-purple-600 to-violet-700' },
-        ]
-        if (total >= GOAL) return (
-          <div className="mt-4 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl p-4 text-white text-center shadow">
-            <div className="text-4xl mb-1">🎉</div>
-            <p className="text-lg font-black">全ボス撃破！200件達成！</p>
-          </div>
-        )
-        const phaseIdx = phases.reduce((idx, p, i) => total >= p.threshold ? i : idx, 0)
-        const phase = phases[phaseIdx]
-        const dmg = Math.min(total - phase.threshold, 50)
-        const hpPct = Math.max(0, Math.round(((50 - dmg) / 50) * 100))
-        return (
-          <div className={`mt-4 bg-gradient-to-br ${phase.color} rounded-2xl p-4 text-white shadow`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">ボスイベント フェーズ{phaseIdx + 1}/4</span>
-              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">⚔️ ミッションで詳細確認</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-5xl">{phase.icon}</span>
-              <div className="flex-1">
-                <p className="text-lg font-black mb-1">{phase.name}</p>
-                <div className="flex items-center justify-between text-xs mb-0.5">
-                  <span>HP</span><span>{50 - dmg}/50</span>
-                </div>
-                <div className="h-3 bg-white/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full transition-all" style={{ width: `${hpPct}%` }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-
-      {/* 本日のフォロー対応アラート */}
-      {followAlerts.length > 0 && (
-        <div className="mt-4 bg-amber-50 rounded-2xl border border-amber-200 p-4">
-          <h2 className="text-sm font-bold text-amber-700 flex items-center gap-2 mb-3">
-            🔔 本日のフォロー対応
-          </h2>
-          <div className="space-y-2">
-            {followAlerts.map((item, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5 border border-amber-100">
-                <span className="text-base">📋</span>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-bold text-gray-800">{item.staffName}</span>
-                  <span className="text-sm text-gray-600">さんの</span>
-                  <span className="text-xs font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mx-1">{item.typeLabel}獲得</span>
-                  <span className="text-sm font-bold text-gray-800">{item.name}</span>
-                  <span className="text-sm text-gray-600">さんの</span>
-                  <span className="text-sm font-bold text-amber-700">「{item.fieldLabel}」</span>
-                  <span className="text-sm text-gray-600">は本日です</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 本日の開通速報 */}
-      <RecentActivationFeed />
-
-      {/* 今週の開通ランキング */}
-      <WeeklyRankingCard />
-
-      {/* 個人別月次ランキング */}
-      {memberRows.length > 0 && (
-        <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-            🏅 今月の個人別開通数
-          </h2>
-          <div className="space-y-3">
-            {(memberRows as any[]).map((m, i) => {
-              const pct = total > 0 ? Math.round((m.activation / total) * 100) : 0
-              const medals = ['🥇', '🥈', '🥉']
-              return (
-                <div key={m.id} className="flex items-center gap-3">
-                  <span className="text-base w-6 text-center shrink-0">
-                    {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
-                        <ActivationBadge cumulative={m.activation} size="xs" />
-                      </div>
-                      <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-400 w-8 text-right shrink-0">{pct}%</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* バッジ一覧 */}
-      <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
-        <h2 className="text-sm font-bold text-gray-700 mb-3">🎖️ 称号バッジ一覧</h2>
-        <div className="grid grid-cols-1 gap-2">
-          {[
-            { min: 20, emoji: '🏆', label: '開通レジェンド', desc: '今月20件以上' },
-            { min: 15, emoji: '👑', label: '開通マスター',   desc: '今月15件以上' },
-            { min: 10, emoji: '💎', label: '開通職人',       desc: '今月10件以上' },
-            { min: 7,  emoji: '🔥', label: '開通師',         desc: '今月7件以上' },
-            { min: 4,  emoji: '⚡', label: '開通士',         desc: '今月4件以上' },
-            { min: 1,  emoji: '🌱', label: '見習い',         desc: '今月1件以上' },
-          ].map((b) => (
-            <div key={b.min} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
-              <span className="text-xl w-7 text-center">{b.emoji}</span>
-              <div className="flex-1">
-                <span className="text-sm font-bold text-gray-800">{b.label}</span>
-                <span className="text-xs text-gray-400 ml-2">{b.desc}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* タブ */}
+      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl">
+        {([['team', '👥 チーム'], ['personal', '👤 個人']] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)}
+            className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-colors ${tab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            {l}
+          </button>
+        ))}
       </div>
+
+      {/* チームタブ */}
+      {tab === 'team' && (
+        <div className="space-y-4">
+          <TeamChallengeCard total={total} year={year} month={month} />
+
+          {/* ボス */}
+          {total >= GOAL ? (
+            <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl p-4 text-white text-center shadow">
+              <div className="text-4xl mb-1">🎉</div>
+              <p className="text-lg font-black">全ボス撃破！200件達成！</p>
+            </div>
+          ) : (
+            <div className={`bg-gradient-to-br ${phase.color} rounded-2xl p-4 text-white shadow`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">ボスイベント フェーズ{phaseIdx + 1}/4</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-5xl">{phase.icon}</span>
+                <div className="flex-1">
+                  <p className="text-lg font-black mb-1">{phase.name}</p>
+                  <div className="flex items-center justify-between text-xs mb-0.5">
+                    <span>HP</span><span>{50 - dmg}/50</span>
+                  </div>
+                  <div className="h-3 bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${hpPct}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <RecentActivationFeed />
+          <WeeklyRankingCard />
+        </div>
+      )}
+
+      {/* 個人タブ */}
+      {tab === 'personal' && (
+        <div className="space-y-4">
+          {/* 自分のステータス */}
+          <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl p-5">
+            <p className="text-xs text-gray-400 mb-1">今月の自分の開通数</p>
+            <div className="flex items-end gap-3">
+              <span className="text-4xl font-black text-indigo-600">{myActivation}<span className="text-lg font-bold ml-1">件</span></span>
+              {myBadge && (
+                <span className="text-sm font-bold mb-1">{myBadge.emoji} {myBadge.label}</span>
+              )}
+            </div>
+          </div>
+
+          {/* 個人別ランキング */}
+          {members.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+              <h2 className="text-sm font-bold text-gray-700 mb-4">🏅 今月の個人別開通数</h2>
+              <div className="space-y-3">
+                {members.map((m, i) => {
+                  const pct = total > 0 ? Math.round((m.activation / total) * 100) : 0
+                  const medals = ['🥇', '🥈', '🥉']
+                  return (
+                    <div key={m.id} className="flex items-center gap-3">
+                      <span className="text-base w-6 text-center shrink-0">
+                        {i < 3 ? medals[i] : <span className="text-xs text-gray-400 font-bold">{i + 1}</span>}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
+                            <ActivationBadge cumulative={m.activation} size="xs" />
+                          </div>
+                          <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
+                            style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-400 w-8 text-right shrink-0">{pct}%</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* バッジ一覧 */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <h2 className="text-sm font-bold text-gray-700 mb-3">🎖️ 称号バッジ一覧</h2>
+            <div className="grid grid-cols-1 gap-2">
+              {BADGE_DEFS.map(b => (
+                <div key={b.min} className={`flex items-center gap-3 px-3 py-2 rounded-xl ${myActivation >= b.min ? 'bg-indigo-50 border border-indigo-100' : 'bg-gray-50'}`}>
+                  <span className="text-xl w-7 text-center">{b.emoji}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-gray-800">{b.label}</span>
+                    <span className="text-xs text-gray-400 ml-2">{b.desc}</span>
+                  </div>
+                  {myActivation >= b.min && <span className="text-xs text-indigo-500 font-bold">達成</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
