@@ -26,9 +26,9 @@ export async function GET() {
     [session.userId]
   )
 
-  // Total cumulative openings from opening_calendar
+  // Total cumulative openings from activation_records
   const openRow = await dbQueryOne<{ total: number }>(
-    `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE user_id = $1 AND status = '○'`,
+    `SELECT COUNT(*)::int AS total FROM activation_records WHERE user_id = $1 AND activation = '○'`,
     [session.userId]
   )
   const totalOpenings = openRow?.total ?? 0
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Get total openings to determine max allowed steps
     const openRow = await dbQueryOne<{ total: number }>(
-      `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE user_id = $1 AND status = '○'`,
+      `SELECT COUNT(*)::int AS total FROM activation_records WHERE user_id = $1 AND activation = '○'`,
       [session.userId]
     )
     const totalOpenings = openRow?.total ?? 0
