@@ -863,22 +863,119 @@ export const CHARACTERS: CharDef[] = [
       },
     ],
   },
+  {
+    id: 'wizard',
+    name: 'ウィザード',
+    desc: '星の魔法を操る賢者',
+    unlockAt: 999,
+    palette: ['transparent', '#5e60ce', '#c77dff', '#fff', '#ffd166', '#48cae4', '#3a0ca3', '#f4a261'],
+    stages: [
+      {
+        name: 'たまご',
+        grid: [
+          [T,T,T,T,T,1,1,T,T,T,T,T],
+          [T,T,T,T,1,2,2,1,T,T,T,T],
+          [T,T,T,1,2,4,2,2,1,T,T,T],
+          [T,T,1,2,2,2,2,2,2,1,T,T],
+          [T,1,2,2,2,2,2,2,2,2,1,T],
+          [T,1,2,4,2,2,2,2,4,2,1,T],
+          [T,1,2,2,2,2,2,2,2,2,1,T],
+          [T,1,2,2,2,2,2,2,2,2,1,T],
+          [T,T,1,2,2,2,2,2,2,1,T,T],
+          [T,T,1,2,2,2,2,2,2,1,T,T],
+          [T,T,T,1,1,2,2,1,1,T,T,T],
+          [T,T,T,T,T,1,1,T,T,T,T,T],
+        ],
+      },
+      {
+        name: 'ウィザード Lv1',
+        grid: [
+          [T,T,T,T,T,4,T,T,T,T,T,T],
+          [T,T,T,T,1,1,1,T,T,T,T,T],
+          [T,T,T,1,1,2,1,1,T,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,T,1,5,2,5,1,T,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,T,T,1,2,1,T,T,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,T,T,1,2,1,T,T,T,T,T],
+          [T,T,T,T,T,1,T,T,T,T,T,T],
+          [T,T,T,T,T,T,T,T,T,T,T,T],
+        ],
+      },
+      {
+        name: 'ウィザード Lv2',
+        grid: [
+          [T,T,T,T,4,T,4,T,T,T,T,T],
+          [T,T,T,1,1,1,1,1,T,T,T,T],
+          [T,T,1,1,2,2,2,1,1,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,1,2,5,2,5,2,1,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,T,1,2,2,2,1,T,T,T,T],
+          [T,T,T,T,1,1,1,T,T,T,T,T],
+          [T,T,T,T,T,T,T,T,T,T,T,T],
+        ],
+      },
+      {
+        name: 'ウィザード Lv3',
+        grid: [
+          [T,T,4,T,T,T,T,T,4,T,T,T],
+          [T,T,T,1,1,1,1,1,T,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,1,2,5,2,5,2,1,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,1,2,6,2,6,2,1,T,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,1,2,2,2,2,2,2,2,1,T,T],
+          [T,1,2,2,2,2,2,2,2,1,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,T,1,1,1,1,1,T,T,T,T],
+          [T,T,T,T,T,T,T,T,T,T,T,T],
+        ],
+      },
+      {
+        name: 'ウィザード Final',
+        grid: [
+          [4,T,T,T,T,T,T,T,T,T,4,T],
+          [T,T,1,1,1,1,1,1,1,T,T,T],
+          [T,1,2,2,2,2,2,2,2,1,T,T],
+          [T,1,2,5,2,2,2,5,2,1,T,T],
+          [T,1,2,2,6,2,6,2,2,1,T,T],
+          [T,1,2,2,2,4,2,2,2,1,T,T],
+          [T,1,2,2,6,2,6,2,2,1,T,T],
+          [T,1,2,5,2,2,2,5,2,1,T,T],
+          [T,1,2,2,2,2,2,2,2,1,T,T],
+          [T,T,1,2,2,2,2,2,1,T,T,T],
+          [T,T,T,1,1,1,1,1,T,T,T,T],
+          [T,T,T,T,T,T,T,T,T,T,T,T],
+        ],
+      },
+    ],
+  },
 ]
 
 // Stage thresholds (cumulative openings to level up character)
 export const CHAR_STAGE_THRESHOLDS = [0, 10, 30, 60, 100]
 
-// Sugoroku stage sizes
-export const SUGOROKU_STAGES = [10, 20, 30, 40, 50]
+// Sugoroku stage sizes (total 100)
+export const SUGOROKU_STAGES = [10, 15, 20, 25, 30]
 
 // Event squares per stage (1-indexed positions within stage)
 export const STAGE_EVENTS: Record<number, number[]> = {
   0: [5],
-  1: [7, 14],
-  2: [8, 16, 24],
-  3: [10, 20, 30],
-  4: [12, 25, 38, 50],
+  1: [5, 10],
+  2: [5, 10, 15],
+  3: [5, 10, 15, 20],
+  4: [5, 10, 15, 20, 25],
 }
+
+// Characters awarded on each stage clear (index = stage index 0-4)
+export const STAGE_CLEAR_REWARDS = ['phoenix', 'unicorn', 'mermaid', 'golem', 'wizard']
 
 export function getCharStageIndex(totalOpenings: number): number {
   for (let i = CHAR_STAGE_THRESHOLDS.length - 1; i >= 0; i--) {

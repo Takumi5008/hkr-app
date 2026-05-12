@@ -27,6 +27,9 @@ export default function SugorokuPage() {
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'event' | 'clear' | 'error' } | null>(null)
   const [animation, setAnimation] = useState<'idle' | 'move' | 'event' | 'clear'>('idle')
   const [chest, setChest] = useState<{ open: boolean; opening: boolean; reward: ChestReward | null }>({ open: false, opening: false, reward: null })
+  const [diceRoll, setDiceRoll] = useState<number | null>(null)
+  const [diceDisplay, setDiceDisplay] = useState<number>(1)
+  const [actualAdvance, setActualAdvance] = useState<number | null>(null)
   const boardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { load() }, [])
@@ -50,24 +53,46 @@ export default function SugorokuPage() {
   async function advance() {
     if (!state || advancing) return
     setAdvancing(true)
-    const res = await fetch('/api/sugoroku', {
+    setDiceRoll(null)
+    setActualAdvance(null)
+
+    // Animate dice faces while waiting for server response
+    const interval = setInterval(() => {
+      setDiceDisplay(Math.floor(Math.random() * 6) + 1)
+    }, 80)
+
+    const fetchPromise = fetch('/api/sugoroku', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'advance' }),
     })
+    const [res] = await Promise.all([fetchPromise, new Promise<void>(r => setTimeout(r, 700))])
     const data = await res.json()
+
+    clearInterval(interval)
+
     if (!res.ok) {
       showToast(data.error, 'error')
       setAdvancing(false)
       return
     }
 
+    setDiceDisplay(data.diceRoll)
+    setDiceRoll(data.diceRoll)
+    setActualAdvance(data.actualAdvance)
+
     setAnimation('move')
     setTimeout(() => {
       setAnimation('idle')
-      if (data.newCharacter) {
+      const newChars: string[] = data.newCharacters ?? []
+      if (newChars.length > 0) {
         setAnimation('clear')
-        showToast(`ステージクリア！「${CHARACTERS.find(c => c.id === data.newCharacter)?.name}」をゲット！`, 'clear')
+        newChars.forEach((charId: string, i: number) => {
+          setTimeout(() => {
+            const char = CHARACTERS.find(c => c.id === charId)
+            showToast(`ステージクリア！「${char?.name}」をゲット！`, 'clear')
+          }, i * 2500)
+        })
       } else if (data.isEvent) {
         setAnimation('event')
         setChest({ open: true, opening: false, reward: null })
@@ -303,6 +328,22 @@ export default function SugorokuPage() {
             </div>
           </div>
 
+          {/* Dice result display */}
+          {(advancing || diceRoll !== null) && (
+            <div className="mb-3 bg-white border-2 border-violet-300 rounded-2xl p-4 text-center">
+              <p className={`text-6xl mb-1 transition-all select-none ${advancing ? 'animate-pulse' : ''}`}>
+                {['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'][diceDisplay - 1]}
+              </p>
+              {advancing ? (
+                <p className="text-xs text-violet-400 font-bold">振っています...</p>
+              ) : diceRoll !== null && (
+                <p className="text-sm font-bold text-gray-600">
+                  {diceRoll} が出た！{actualAdvance !== null ? ` ${actualAdvance}マス進んだ` : ''}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Advance button */}
           {steps < totalSize ? (
             <button
@@ -310,10 +351,10 @@ export default function SugorokuPage() {
               disabled={!character || !canAdvance || advancing}
               className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-black text-lg rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {advancing ? '移動中...' :
+              {advancing ? '振っています...' :
                !character ? 'キャラクターを選んでください' :
-               !canAdvance ? `次の開通まで待とう (あと${steps - totalOpenings < 0 ? totalOpenings - steps : 0}件)` :
-               '🎲 1マス進む'}
+               !canAdvance ? '開通数が足りません' :
+               '🎲 サイコロを振る'}
             </button>
           ) : (
             <div className="w-full py-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-white font-black text-lg rounded-2xl text-center shadow-lg">
@@ -323,7 +364,7 @@ export default function SugorokuPage() {
 
           {!canAdvance && character && steps < totalSize && (
             <p className="text-center text-xs text-gray-400 mt-2">
-              累計開通数 ({totalOpenings}) 分だけ進めます。あと {steps - totalOpenings} 件開通すれば進めます！
+              累計開通数 {totalOpenings} 件分だけ進めます。あと {steps - totalOpenings + 1} 件開通すれば進めます！
             </p>
           )}
         </>

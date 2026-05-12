@@ -5,8 +5,7 @@ import {
   CHARACTERS,
   SUGOROKU_STAGES,
   STAGE_EVENTS,
-  getCharStageIndex,
-  getCollectibleIds,
+  STAGE_CLEAR_REWARDS,
   getStarterIds,
 } from '@/lib/characters'
 
@@ -105,7 +104,7 @@ export async function POST(req: NextRequest) {
     const totalOpenings = openRow?.total ?? 0
 
     const currentSteps = user.game_steps
-    const totalBoardSize = SUGOROKU_STAGES.reduce((a, b) => a + b, 0) // 150
+    const totalBoardSize = SUGOROKU_STAGES.reduce((a, b) => a + b, 0) // 100
     if (currentSteps >= totalOpenings) {
       return NextResponse.json({ error: '開通数以上は進めません' }, { status: 400 })
     }
@@ -113,38 +112,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ゴール済みです！' }, { status: 400 })
     }
 
-    const newSteps = currentSteps + 1
+    // Roll dice 1-6, capped by remaining openings and board size
+    const diceRoll = Math.floor(Math.random() * 6) + 1
+    const maxAdvance = Math.min(totalOpenings - currentSteps, totalBoardSize - currentSteps)
+    const actualAdvance = Math.min(diceRoll, maxAdvance)
+    const newSteps = currentSteps + actualAdvance
+
     const collected: string[] = JSON.parse(user.game_collected ?? '[]')
     const starters = getStarterIds()
     const allCollected = new Set([...starters, ...collected])
 
-    // Check if this step is a stage clear
-    let newCharacter: string | null = null
-    let stageClearedIndex: number | null = null
+    // Check all stage boundaries crossed by this roll
+    const newCharacters: string[] = []
     let runningTotal = 0
     for (let i = 0; i < SUGOROKU_STAGES.length; i++) {
       runningTotal += SUGOROKU_STAGES[i]
-      if (newSteps === runningTotal && i < SUGOROKU_STAGES.length - 1) {
-        stageClearedIndex = i
-        break
+      if (currentSteps < runningTotal && newSteps >= runningTotal) {
+        const rewardId = STAGE_CLEAR_REWARDS[i]
+        if (rewardId && !allCollected.has(rewardId)) {
+          allCollected.add(rewardId)
+          newCharacters.push(rewardId)
+        }
       }
     }
 
-    if (stageClearedIndex !== null) {
-      // Award a random uncollected character
-      const collectibles = getCollectibleIds()
-      const uncollected = collectibles.filter(id => !allCollected.has(id))
-      if (uncollected.length > 0) {
-        const idx = Math.floor(Math.random() * uncollected.length)
-        newCharacter = uncollected[idx]
-        allCollected.add(newCharacter)
-      }
-    }
-
-    // Check if this step is an event square
+    // Check if final position is an event square
     let isEvent = false
-    let eventStageIndex = -1
-    let eventPosInStage = -1
     runningTotal = 0
     for (let i = 0; i < SUGOROKU_STAGES.length; i++) {
       const stageStart = runningTotal
@@ -153,8 +146,6 @@ export async function POST(req: NextRequest) {
         const posInStage = newSteps - stageStart
         if ((STAGE_EVENTS[i] ?? []).includes(posInStage)) {
           isEvent = true
-          eventStageIndex = i
-          eventPosInStage = posInStage
         }
         break
       }
@@ -170,10 +161,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       newSteps,
-      newCharacter,
+      diceRoll,
+      actualAdvance,
+      newCharacters,
       isEvent,
-      eventStageIndex,
-      eventPosInStage,
     })
   }
 
