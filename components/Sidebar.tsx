@@ -10,6 +10,7 @@ import UserAvatar from '@/components/UserAvatar'
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
+  { href: '/sugoroku', label: '開通双六', icon: Gamepad2 },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/activity', label: '行動表', icon: Table2 },
@@ -26,7 +27,6 @@ const navItems = [
 const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
   { href: '/performance', label: '実績', icon: Award },
-  { href: '/sugoroku', label: '開通双六', icon: Gamepad2 },
   { href: '/admin', label: '管理', icon: Settings },
 ]
 

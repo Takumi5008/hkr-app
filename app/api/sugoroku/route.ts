@@ -13,7 +13,7 @@ import {
 // GET: return current game state
 export async function GET() {
   const session = await getSession()
-  if (!session.userId || session.role !== 'manager') {
+  if (!session.userId) {
     return NextResponse.json({ error: '未認証' }, { status: 401 })
   }
 
@@ -51,7 +51,7 @@ export async function GET() {
 // POST: actions — select_character, advance
 export async function POST(req: NextRequest) {
   const session = await getSession()
-  if (!session.userId || session.role !== 'manager') {
+  if (!session.userId) {
     return NextResponse.json({ error: '未認証' }, { status: 401 })
   }
 
