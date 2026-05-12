@@ -7,13 +7,21 @@ export async function GET() {
   if (!session.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const user = await dbQueryOne('SELECT points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+  const user = await dbQueryOne('SELECT role, points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+
+  // Sync role from DB in case it was changed by an admin
+  const dbRole = (user as any)?.role
+  if (dbRole && dbRole !== session.role) {
+    session.role = dbRole
+    await session.save()
+  }
+
   return NextResponse.json({
     id: session.userId,
     userId: session.userId,
     name: session.name,
     email: session.email,
-    role: session.role,
+    role: dbRole ?? session.role,
     points: (user as any)?.points ?? 0,
     level: (user as any)?.level ?? 0,
     loginStreak: (user as any)?.login_streak ?? 0,
