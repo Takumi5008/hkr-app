@@ -962,13 +962,13 @@ export const CHARACTERS: CharDef[] = [
 // Stage thresholds (cumulative openings to level up character)
 export const CHAR_STAGE_THRESHOLDS = [0, 10, 30, 60, 100]
 
-// Sugoroku stage sizes (10 stages × 10 squares = 100 total)
-export const SUGOROKU_STAGES = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
+// Sugoroku stage sizes (10,20,...,100 = 550 total)
+export const SUGOROKU_STAGES = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
-// Event square per stage (position 5 within each 10-square stage)
+// Event square at midpoint of each stage
 export const STAGE_EVENTS: Record<number, number[]> = {
-  0: [5], 1: [5], 2: [5], 3: [5], 4: [5],
-  5: [5], 6: [5], 7: [5], 8: [5], 9: [5],
+  0: [5], 1: [10], 2: [15], 3: [20], 4: [25],
+  5: [30], 6: [35], 7: [40], 8: [45], 9: [50],
 }
 
 // Characters awarded on stage clear (null = no reward); rewards at stages 2,4,6,8,10

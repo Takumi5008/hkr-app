@@ -156,7 +156,7 @@ export default function SugorokuPage() {
 
   // Build board cells for current stage
   const stageEvents = STAGE_EVENTS[currentStageIdx] ?? []
-  const cols = 5
+  const cols = 10
   const rows = Math.ceil((stageSize + 1) / cols)
 
   // Build grid: boustrophedon (snake) layout
