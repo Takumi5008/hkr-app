@@ -14,7 +14,10 @@ interface GameState {
 }
 
 function getStageName(stageIndex: number) {
-  return ['森の始まり', '砂漠の試練', '海の彼方', '天空の城', '最終決戦'][stageIndex] ?? `ステージ${stageIndex + 1}`
+  return [
+    '森の始まり', '草原の道', '砂漠の試練', '雪山の峠', '海の彼方',
+    '天空への道', '竜の巣', '魔法の森', '天空の城', '最終決戦',
+  ][stageIndex] ?? `ステージ${stageIndex + 1}`
 }
 
 interface ChestReward { type: string; amount: number; message: string; emoji: string; newSteps?: number }

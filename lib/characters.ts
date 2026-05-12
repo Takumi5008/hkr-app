@@ -962,20 +962,19 @@ export const CHARACTERS: CharDef[] = [
 // Stage thresholds (cumulative openings to level up character)
 export const CHAR_STAGE_THRESHOLDS = [0, 10, 30, 60, 100]
 
-// Sugoroku stage sizes (total 100)
-export const SUGOROKU_STAGES = [10, 15, 20, 25, 30]
+// Sugoroku stage sizes (10 stages × 10 squares = 100 total)
+export const SUGOROKU_STAGES = [10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
 
-// Event squares per stage (1-indexed positions within stage)
+// Event square per stage (position 5 within each 10-square stage)
 export const STAGE_EVENTS: Record<number, number[]> = {
-  0: [5],
-  1: [5, 10],
-  2: [5, 10, 15],
-  3: [5, 10, 15, 20],
-  4: [5, 10, 15, 20, 25],
+  0: [5], 1: [5], 2: [5], 3: [5], 4: [5],
+  5: [5], 6: [5], 7: [5], 8: [5], 9: [5],
 }
 
-// Characters awarded on each stage clear (index = stage index 0-4)
-export const STAGE_CLEAR_REWARDS = ['phoenix', 'unicorn', 'mermaid', 'golem', 'wizard']
+// Characters awarded on stage clear (null = no reward); rewards at stages 2,4,6,8,10
+export const STAGE_CLEAR_REWARDS: (string | null)[] = [
+  null, 'phoenix', null, 'unicorn', null, 'mermaid', null, 'golem', null, 'wizard',
+]
 
 export function getCharStageIndex(totalOpenings: number): number {
   for (let i = CHAR_STAGE_THRESHOLDS.length - 1; i >= 0; i--) {
