@@ -63,7 +63,7 @@ export default function InputPage() {
           fetch('/api/users')
             .then((r) => r.json())
             .then((users: { id: number; name: string; role: string }[]) => {
-              setCalMembers(users.filter((u) => u.role !== 'viewer' && u.role !== 'shift_viewer'))
+              setCalMembers(users.filter((u) => u.role !== 'viewer'))
             })
         }
       })
