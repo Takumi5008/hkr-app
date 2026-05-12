@@ -10,7 +10,6 @@ import UserAvatar from '@/components/UserAvatar'
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
-  { href: '/quests', label: 'ミッション', icon: Swords },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/activity', label: '行動表', icon: Table2 },
