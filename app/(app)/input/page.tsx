@@ -250,8 +250,8 @@ export default function InputPage() {
     })
   }
 
-  const monthOptions = Array.from({ length: 24 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+  const monthOptions = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + 6 - i, 1)
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
 
