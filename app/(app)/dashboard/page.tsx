@@ -52,8 +52,8 @@ export default async function DashboardPage() {
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
-      `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2 AND cancel > 0`,
-      [session.userId, todayStr]
+      `SELECT actual_cancel FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3 AND actual_cancel > 0`,
+      [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
       `SELECT status FROM opening_calendar WHERE user_id = $1 AND year = $2 AND month = $3`,
