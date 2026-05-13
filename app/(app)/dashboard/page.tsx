@@ -51,9 +51,8 @@ export default async function DashboardPage() {
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
-    // 行動表の done 判定: ANY row exists today (not just cancel > 0)
     dbQuery(
-      `SELECT id FROM daily_activity WHERE user_id = $1 AND date = $2`,
+      `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2 AND cancel > 0`,
       [session.userId, todayStr]
     ).catch(() => []),
     dbQuery(
@@ -74,7 +73,7 @@ export default async function DashboardPage() {
     ).catch(() => []),
   ])
 
-  // 行動表: 今日がシフトの日か / 記入済みか
+  // 行動表: 今日がシフトの日か
   const todayInShift = (() => {
     if (!shiftRows.length) return false
     try {
@@ -82,24 +81,19 @@ export default async function DashboardPage() {
       return Array.isArray(workDates) && workDates.some((d: any) => Number(d.day) === currentDay)
     } catch { return false }
   })()
-  const activityExists = activityRows.length > 0
 
-  // 個人進捗: 本日 cancel > 0（別クエリで確認）
-  const cancelRows = await dbQuery(
-    `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2 AND cancel > 0`,
-    [session.userId, todayStr]
-  ).catch(() => [])
-  const hasPersonalProgress = cancelRows.length > 0
+  // 個人進捗: 本日 cancel > 0
+  const hasPersonalProgress = activityRows.length > 0
 
   // 開通カレンダー
   const hasCalendarEntries = calendarRows.length > 0
   const calendarCircleCount = (calendarRows as any[]).filter((r: any) => r.status === '○').length
 
-  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計 = まだ未入力
+  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計のとき表示
   const currentActivationTotal = (records as any[])
     .filter((r: any) => r.year === currentYear && r.month === currentMonth)
     .reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
-  const hkrInputDone = hasCalendarEntries && calendarCircleCount === currentActivationTotal
+  const needsHKRInput = hasCalendarEntries && calendarCircleCount !== currentActivationTotal
 
   // 開通表確認 / フォロー対応 (自分の分のみ)
   const followAlerts: FollowAlert[] = [
@@ -114,8 +108,8 @@ export default async function DashboardPage() {
   const todoItems: TodayTask[] = []
   if (hasFollowToday)      todoItems.push({ key: 'follow',   label: '開通表確認',           href: '/activation' })
   if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
-  if (hasCalendarEntries)  todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input', done: hkrInputDone })
-  if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity', done: activityExists })
+  if (needsHKRInput)       todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input' })
+  if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
   if (hasPersonalProgress) todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
 
   function getSummaries(year: number, month: number) {
