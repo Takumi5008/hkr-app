@@ -96,7 +96,7 @@ export default function AdminPage() {
       fetch(`/api/shifts/all?year=${year}&month=${month}`).then((r) => r.json()),
       fetch(`/api/deadlines?year=${year}&month=${month}`).then((r) => r.json()),
     ]).then(([s, dl]) => {
-      setShifts(s)
+      setShifts(Array.isArray(s) ? s : [])
       setDeadlineAt(dl.deadlineAt ?? '')
       setShiftsLoading(false)
     })

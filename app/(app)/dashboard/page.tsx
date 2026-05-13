@@ -21,42 +21,99 @@ export default async function DashboardPage() {
 
   const mm = String(currentMonth).padStart(2, '0')
   const dd = String(currentDay).padStart(2, '0')
+  const todayStr = `${currentYear}-${mm}-${dd}`
+
+  // Multiple date formats for matching against activation_records fields
   const todayFmts = [
-    `${currentYear}-${mm}-${dd}`, `${currentYear}/${mm}/${dd}`, `${currentYear}/${currentMonth}/${currentDay}`,
-    `${currentMonth}/${currentDay}`, `${mm}/${dd}`, `${currentMonth}月${currentDay}日`, `${mm}月${dd}日`,
+    todayStr,
+    `${currentYear}/${mm}/${dd}`,
+    `${currentYear}/${currentMonth}/${currentDay}`,
+    `${currentMonth}/${currentDay}`,
+    `${mm}/${dd}`,
+    `${currentMonth}月${currentDay}日`,
+    `${mm}月${dd}日`,
   ]
-  const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
+  // $2 onward because $1 = user_id
+  const ph = todayFmts.map((_, i) => `$${i + 2}`).join(', ')
 
   const productRows = await dbQuery('SELECT name FROM products ORDER BY sort_order, id')
   const products = productRows.map((p: any) => p.name)
+
   const records = await dbQuery(
     `SELECT * FROM records WHERE user_id = $1 AND ((year = $2 AND month = $3) OR (year = $4 AND month = $5))`,
     [session.userId, currentYear, currentMonth, twoAgo.year, twoAgo.month]
   )
 
-  // 今月入力済みの商材
-  const inputtedProducts = new Set(
-    records.filter((r: any) => r.year === currentYear && r.month === currentMonth && (r.activation_count > 0 || r.cancel_count > 0)).map((r: any) => r.product)
-  )
+  // Run all today's task condition queries in parallel
+  const [shiftRows, activityRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
+    dbQuery(
+      `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
+      [session.userId, currentYear, currentMonth]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2`,
+      [session.userId, todayStr]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT status FROM opening_calendar WHERE user_id = $1 AND year = $2 AND month = $3`,
+      [session.userId, currentYear, currentMonth]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph})`,
+      [session.userId, ...todayFmts]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph})`,
+      [session.userId, ...todayFmts]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`,
+      [session.userId, ...todayFmts]
+    ).catch(() => []),
+  ])
 
-  // 本日のフォロー対応アラート
-  let followAlerts: { name: string; staffName: string; typeLabel: string; fieldLabel: string }[] = []
-  try {
-    const [sonetRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`, todayFmts),
-    ])
-    followAlerts = [
-      ...sonetRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-      ...directRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-      ...postRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
-    ]
-  } catch {}
+  // 行動表: 今日がシフトの日か
+  const todayInShift = (() => {
+    if (!shiftRows.length) return false
+    try {
+      const workDates = JSON.parse(shiftRows[0].work_dates)
+      return Array.isArray(workDates) && workDates.some((d: any) => Number(d.day) === currentDay)
+    } catch { return false }
+  })()
+
+  // 個人進捗: 本日 cancel > 0
+  const hasPersonalProgress = activityRows.length > 0 && (activityRows[0].cancel ?? 0) > 0
+
+  // 開通カレンダー
+  const hasCalendarEntries = calendarRows.length > 0
+  const calendarCircleCount = (calendarRows as any[]).filter((r: any) => r.status === '○').length
+
+  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計
+  const currentActivationTotal = (records as any[])
+    .filter((r: any) => r.year === currentYear && r.month === currentMonth)
+    .reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
+  const needsHKRInput = hasCalendarEntries && calendarCircleCount !== currentActivationTotal
+
+  // 開通表確認 / フォロー対応 (自分の分のみ)
+  const followAlerts: { name: string; typeLabel: string; fieldLabel: string }[] = [
+    ...(sonetRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+    ...(directRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
+    ...(postRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
+  ]
+  const hasFollowToday = followAlerts.length > 0
+
+  // 今日やるべきタスク一覧（条件付き）
+  type TodoItem = { key: string; label: string; href: string }
+  const todoItems: TodoItem[] = []
+  if (hasFollowToday)       todoItems.push({ key: 'follow',   label: '開通表確認',          href: '/activation' })
+  if (hasCalendarEntries)   todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
+  if (needsHKRInput)        todoItems.push({ key: 'hkr',      label: 'HKR入力',             href: '/input' })
+  if (todayInShift)         todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
+  if (hasPersonalProgress)  todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
 
   function getSummaries(year: number, month: number) {
     return products.map((product: string) => {
-      const r = records.find((r: any) => r.year === year && r.month === month && r.product === product)
+      const r = (records as any[]).find((r: any) => r.year === year && r.month === month && r.product === product)
       const cancel = r?.cancel_count ?? 0
       const activation = r?.activation_count ?? 0
       return { product, cancel_count: cancel, activation_count: activation, hkr: calcHKR(activation, cancel) }
@@ -80,39 +137,40 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
           📋 今日やること
         </h2>
-        <div className="space-y-2">
-          {products.map((product: string) => {
-            const done = inputtedProducts.has(product)
-            return (
-              <div key={product} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
-                {done
-                  ? <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                  : <Circle size={16} className="text-gray-300 shrink-0" />}
-                <span className={`text-sm flex-1 ${done ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
-                  {product} HKR入力
-                </span>
-                {!done && (
-                  <Link href="/input" className="text-xs text-indigo-600 font-medium hover:underline shrink-0">入力する →</Link>
-                )}
+        {todoItems.length === 0 ? (
+          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-emerald-50">
+            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+            <span className="text-sm text-emerald-700 font-medium">本日のタスクはありません</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {todoItems.map((item) => (
+              <div key={item.key} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
+                <Circle size={16} className="text-gray-300 shrink-0" />
+                <span className="text-sm flex-1 text-gray-700 font-medium">{item.label}</span>
+                <Link href={item.href} className="text-xs text-indigo-600 font-medium hover:underline shrink-0">
+                  確認する →
+                </Link>
               </div>
-            )
-          })}
-          {followAlerts.length > 0 && (
-            <div className="flex items-start gap-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
-              <span className="text-base shrink-0 mt-0.5">🔔</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-700">本日のフォロー対応 {followAlerts.length}件</p>
-                <div className="mt-1 space-y-0.5">
-                  {followAlerts.map((item, i) => (
-                    <p key={i} className="text-xs text-amber-600">
-                      {item.staffName}さん：{item.typeLabel} — {item.name}さん（{item.fieldLabel}）
-                    </p>
-                  ))}
+            ))}
+
+            {hasFollowToday && (
+              <div className="flex items-start gap-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
+                <span className="text-base shrink-0 mt-0.5">🔔</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-700">本日のフォロー対応 {followAlerts.length}件</p>
+                  <div className="mt-1 space-y-0.5">
+                    {followAlerts.map((item, i) => (
+                      <p key={i} className="text-xs text-amber-600">
+                        {item.typeLabel} — {item.name}さん（{item.fieldLabel}）
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showBanner && (
