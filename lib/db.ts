@@ -307,6 +307,21 @@ async function initDb() {
       created_at       TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     );
   `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS knowledge_materials (
+      id          SERIAL PRIMARY KEY,
+      title       TEXT    NOT NULL,
+      description TEXT    NOT NULL DEFAULT '',
+      category    TEXT    NOT NULL CHECK (category IN ('recording', 'course')),
+      file_type   TEXT    NOT NULL CHECK (file_type IN ('audio', 'video', 'pdf', 'text')),
+      url         TEXT    NOT NULL,
+      file_name   TEXT    NOT NULL DEFAULT '',
+      file_size   BIGINT  NOT NULL DEFAULT 0,
+      uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      uploader_name TEXT NOT NULL DEFAULT '',
+      created_at  TEXT    NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )
+  `)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_character TEXT`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_steps INTEGER NOT NULL DEFAULT 0`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_collected TEXT NOT NULL DEFAULT '[]'`)

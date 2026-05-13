@@ -39,16 +39,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700">
+      {/* 浮遊オーブ */}
+      <div className="animate-orb-1 absolute top-[-10%] left-[-5%] w-[480px] h-[480px] rounded-full bg-blue-500/25 blur-3xl pointer-events-none" />
+      <div className="animate-orb-2 absolute bottom-[-15%] right-[-10%] w-[520px] h-[520px] rounded-full bg-violet-500/20 blur-3xl pointer-events-none" />
+      <div className="animate-orb-3 absolute top-[40%] right-[10%] w-[320px] h-[320px] rounded-full bg-indigo-400/20 blur-2xl pointer-events-none" />
+      <div className="animate-orb-4 absolute bottom-[20%] left-[5%] w-[280px] h-[280px] rounded-full bg-sky-400/15 blur-2xl pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur mb-4 shadow-lg ring-1 ring-white/30">
             <span className="text-lg font-black text-white">IP</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">インフラ管理</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">インフラ管理</h1>
+          <p className="text-sm text-indigo-300 mt-1">チームの成果を、一画面で。</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 ring-1 ring-white/20">
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -108,3 +115,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

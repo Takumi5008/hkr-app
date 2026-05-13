@@ -2,9 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2 } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import { getBadge } from '@/components/ActivationBadge'
 import UserAvatar from '@/components/UserAvatar'
 
 const navItems = [
@@ -21,6 +20,7 @@ const navItems = [
   { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
+  { href: '/knowledge', label: '知識向上', icon: GraduationCap },
   { href: '/howto', label: '使い方', icon: BookOpen },
 ]
 
@@ -56,25 +56,13 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
   const [pushSubscribed, setPushSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
-  const [myActivation, setMyActivation] = useState(0)
-  const [myLevel, setMyLevel] = useState<number>(0)
   const [myStreak, setMyStreak] = useState<number>(0)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
 
   useEffect(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = now.getMonth() + 1
-    fetch(`/api/records?year=${y}&month=${m}`)
-      .then((r) => r.json())
-      .then((data: { activation_count: number }[]) => {
-        if (Array.isArray(data)) setMyActivation(data.reduce((s, r) => s + (r.activation_count ?? 0), 0))
-      })
-      .catch(() => {})
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => {
-        if (typeof d.level === 'number') setMyLevel(d.level)
         if (typeof d.loginStreak === 'number') setMyStreak(d.loginStreak)
         if (d.avatar) setMyAvatar(d.avatar)
       })
@@ -218,20 +206,14 @@ export default function Sidebar({ name, role }: SidebarProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <p className="text-sm font-medium text-white truncate">{name}</p>
-              {(() => { const b = getBadge(myActivation); return b ? <span className="text-[10px] font-bold shrink-0 opacity-90">{b.emoji}</span> : null })()}
             </div>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-indigo-400">{roleLabel}{(() => { const b = getBadge(myActivation); return b ? ` · ${b.label}` : '' })()}</p>
-              <div className="flex items-center gap-1 flex-wrap">
-                <span className="text-[10px] font-bold text-violet-300 bg-violet-400/20 px-1.5 py-0.5 rounded-full shrink-0">
-                  Lv.{myLevel}
+              <p className="text-xs text-indigo-400">{roleLabel}</p>
+              {myStreak > 0 && (
+                <span className="text-[10px] font-bold text-orange-300 bg-orange-400/20 px-1.5 py-0.5 rounded-full shrink-0">
+                  🔥 {myStreak}日
                 </span>
-                {myStreak > 0 && (
-                  <span className="text-[10px] font-bold text-orange-300 bg-orange-400/20 px-1.5 py-0.5 rounded-full shrink-0">
-                    🔥 {myStreak}日
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </Link>
@@ -264,9 +246,14 @@ export default function Sidebar({ name, role }: SidebarProps) {
     <>
       {/* PC サイドバー */}
       <aside className="hidden sm:flex w-60 bg-gradient-to-b from-indigo-950 to-indigo-900 flex-col h-full fixed left-0 top-0 z-10 shadow-xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-indigo-800/60">
+        {/* 背景オーブ */}
+        <div className="animate-orb-1 absolute top-[-60px] left-[-60px] w-48 h-48 rounded-full bg-blue-500/20 blur-2xl pointer-events-none" />
+        <div className="animate-orb-3 absolute bottom-[80px] right-[-40px] w-40 h-40 rounded-full bg-violet-500/15 blur-2xl pointer-events-none" />
+        <div className="animate-orb-2 absolute top-[45%] left-[-30px] w-32 h-32 rounded-full bg-indigo-400/10 blur-xl pointer-events-none" />
+
+        <div className="relative z-10 px-6 py-5 border-b border-indigo-800/60">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center shadow-lg ring-1 ring-white/20">
               <span className="text-xs font-black text-white">IP</span>
             </div>
             <div>
@@ -274,11 +261,13 @@ export default function Sidebar({ name, role }: SidebarProps) {
             </div>
           </div>
         </div>
-        <NavContent />
+        <div className="relative z-10 flex flex-col flex-1 min-h-0">
+          <NavContent />
+        </div>
       </aside>
 
       {/* スマホ トップバー */}
-      <header className="sm:hidden fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-indigo-950 to-indigo-900 shadow-lg">
+      <header className="sm:hidden fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-950 shadow-lg overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
@@ -300,9 +289,11 @@ export default function Sidebar({ name, role }: SidebarProps) {
         <div className="sm:hidden fixed inset-0 z-30 flex">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
           <div className="relative w-72 bg-gradient-to-b from-indigo-950 to-indigo-900 h-full flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-indigo-800/60">
+            <div className="animate-orb-1 absolute top-[-40px] left-[-40px] w-40 h-40 rounded-full bg-blue-500/20 blur-2xl pointer-events-none" />
+            <div className="animate-orb-3 absolute bottom-[60px] right-[-30px] w-36 h-36 rounded-full bg-violet-500/15 blur-2xl pointer-events-none" />
+            <div className="relative z-10 flex items-center justify-between px-6 py-5 border-b border-indigo-800/60">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center shadow-lg ring-1 ring-white/20">
                   <span className="text-xs font-black text-white">IP</span>
                 </div>
                 <div>

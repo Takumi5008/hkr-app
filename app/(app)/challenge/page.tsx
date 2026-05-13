@@ -2,7 +2,6 @@ import { dbQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
-import ActivationBadge from '@/components/ActivationBadge'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
 
@@ -94,25 +93,45 @@ export default async function ChallengePage() {
         const phase = phases[phaseIdx]
         const dmg = Math.min(total - phase.threshold, 50)
         const hpPct = Math.max(0, Math.round(((50 - dmg) / 50) * 100))
+        const upcomingPhases = phases.slice(phaseIdx + 1)
         return (
-          <div className={`mt-4 bg-gradient-to-br ${phase.color} rounded-2xl p-4 text-white shadow`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">ボスイベント フェーズ{phaseIdx + 1}/4</span>
-              <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">⚔️ ミッションで詳細確認</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-5xl">{phase.icon}</span>
-              <div className="flex-1">
-                <p className="text-lg font-black mb-1">{phase.name}</p>
-                <div className="flex items-center justify-between text-xs mb-0.5">
-                  <span>HP</span><span>{50 - dmg}/50</span>
-                </div>
-                <div className="h-3 bg-white/30 rounded-full overflow-hidden">
-                  <div className="h-full bg-white rounded-full transition-all" style={{ width: `${hpPct}%` }} />
+          <>
+            <div className={`mt-4 bg-gradient-to-br ${phase.color} rounded-2xl p-4 text-white shadow`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">ボスイベント フェーズ{phaseIdx + 1}/4</span>
+                <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">⚔️ ミッションで詳細確認</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-5xl">{phase.icon}</span>
+                <div className="flex-1">
+                  <p className="text-lg font-black mb-1">{phase.name}</p>
+                  <div className="flex items-center justify-between text-xs mb-0.5">
+                    <span>HP</span><span>{50 - dmg}/50</span>
+                  </div>
+                  <div className="h-3 bg-white/30 rounded-full overflow-hidden">
+                    <div className="h-full bg-white rounded-full transition-all" style={{ width: `${hpPct}%` }} />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+            {upcomingPhases.length > 0 && (
+              <div className="mt-3 bg-white rounded-2xl border border-gray-200 p-4">
+                <p className="text-xs font-bold text-gray-500 mb-2">⚔️ 次のボス</p>
+                <div className="space-y-2">
+                  {upcomingPhases.map((p, i) => (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
+                      <span className="text-2xl">{p.icon}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-gray-700">{p.name}</p>
+                        <p className="text-xs text-gray-400">{p.threshold}件達成で出現</p>
+                      </div>
+                      <span className="text-xs font-bold text-gray-400">あと{p.threshold - total}件</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )
       })()}
 
@@ -166,7 +185,6 @@ export default async function ChallengePage() {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
                         <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
-                        <ActivationBadge cumulative={m.activation} size="xs" />
                       </div>
                       <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
                     </div>
@@ -185,28 +203,6 @@ export default async function ChallengePage() {
         </div>
       )}
 
-      {/* バッジ一覧 */}
-      <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
-        <h2 className="text-sm font-bold text-gray-700 mb-3">🎖️ 称号バッジ一覧</h2>
-        <div className="grid grid-cols-1 gap-2">
-          {[
-            { min: 20, emoji: '🏆', label: '開通レジェンド', desc: '今月20件以上' },
-            { min: 15, emoji: '👑', label: '開通マスター',   desc: '今月15件以上' },
-            { min: 10, emoji: '💎', label: '開通職人',       desc: '今月10件以上' },
-            { min: 7,  emoji: '🔥', label: '開通師',         desc: '今月7件以上' },
-            { min: 4,  emoji: '⚡', label: '開通士',         desc: '今月4件以上' },
-            { min: 1,  emoji: '🌱', label: '見習い',         desc: '今月1件以上' },
-          ].map((b) => (
-            <div key={b.min} className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-xl">
-              <span className="text-xl w-7 text-center">{b.emoji}</span>
-              <div className="flex-1">
-                <span className="text-sm font-bold text-gray-800">{b.label}</span>
-                <span className="text-xs text-gray-400 ml-2">{b.desc}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

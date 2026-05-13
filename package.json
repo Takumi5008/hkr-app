@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
+    "@vercel/blob": "^2.3.3",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
     "iron-session": "^8.0.4",

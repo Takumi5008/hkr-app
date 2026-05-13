@@ -281,7 +281,7 @@ export default function SugorokuPage() {
           {/* Progress bar for stage */}
           <div className="mb-4">
             <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>ステージ {currentStageIdx + 1}/5: {getStageName(currentStageIdx)}</span>
+              <span>ステージ {currentStageIdx + 1}/{SUGOROKU_STAGES.length}: {getStageName(currentStageIdx)}</span>
               <span>{stepsInStage}/{stageSize}</span>
             </div>
             <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
