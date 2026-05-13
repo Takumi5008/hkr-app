@@ -13,7 +13,6 @@ function SettingsContent() {
 
   const [myCard, setMyCard] = useState<any>(null)
   const [myCardStats, setMyCardStats] = useState<any>(null)
-  const [badges, setBadges] = useState<any[]>([])
 
   // プロフィール
   const [name, setName] = useState('')
@@ -39,14 +38,12 @@ function SettingsContent() {
     Promise.all([
       fetch('/api/auth/me').then((r) => r.json()),
       fetch('/api/my/card-stats').then((r) => r.json()),
-      fetch('/api/badges').then((r) => r.json()),
-    ]).then(([me, stats, bdg]) => {
+    ]).then(([me, stats]) => {
       setName(me.name)
       setEmail(me.email)
       setAvatar(me.avatar ?? null)
-      setMyCard({ id: me.id ?? me.userId, name: me.name, avatar: me.avatar ?? null, points: me.points ?? 0, loginCount: me.loginCount ?? 0, lastLoginAt: me.lastLoginAt ?? null })
+      setMyCard({ id: me.id ?? me.userId, name: me.name, avatar: me.avatar ?? null, loginCount: me.loginCount ?? 0, lastLoginAt: me.lastLoginAt ?? null })
       setMyCardStats(stats)
-      if (Array.isArray(bdg)) setBadges(bdg)
     })
   }, [])
 
@@ -186,22 +183,6 @@ function SettingsContent() {
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
       <div className="flex-1 min-w-0 w-full">
-
-      {/* バッジ */}
-      {badges.filter(b => b.earned).length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
-          <h2 className="text-base font-semibold text-gray-900 mb-3">獲得バッジ <span className="text-sm font-normal text-gray-400">({badges.filter(b => b.earned).length}/{badges.length})</span></h2>
-          <div className="flex flex-wrap gap-2">
-            {badges.map(b => (
-              <div key={b.id} title={b.desc}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border text-xs font-bold transition-opacity ${b.earned ? b.color : 'bg-gray-50 border-gray-200 text-gray-300 opacity-40 grayscale'}`}>
-                <span>{b.icon}</span>
-                <span>{b.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* アバター */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">

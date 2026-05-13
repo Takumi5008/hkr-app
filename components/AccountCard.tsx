@@ -1,11 +1,10 @@
 'use client'
 
 import UserAvatar from './UserAvatar'
-import { getBadge } from './ActivationBadge'
 import { HKR_TARGET } from '@/lib/hkr'
 
 interface AccountCardProps {
-  user: { id: number; name: string; avatar: string | null; points: number }
+  user: { id: number; name: string; avatar: string | null; points?: number }
   hkr: number | null
   totalActivation: number
   totalCancel: number
@@ -21,7 +20,6 @@ export default function AccountCard({
   user, hkr, totalActivation, totalCancel, loginCount, entryDays, mtgAbsent, strengths, improvements, compact = false
 }: AccountCardProps) {
   const hkrColor = hkr == null ? 'text-teal-200' : hkr >= HKR_TARGET ? 'text-emerald-200' : 'text-rose-200'
-  const badge = getBadge(totalActivation)
 
   return (
     <div className="flex-shrink-0 w-64 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -29,22 +27,10 @@ export default function AccountCard({
       <div className="bg-gradient-to-r from-teal-600 to-emerald-500 px-4 py-3 flex items-center gap-3">
         <UserAvatar name={user.name} avatar={user.avatar} size="md" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-1">
-            <p className="font-bold text-white text-sm truncate">{user.name}</p>
-            {(user.points ?? 0) > 0 && (
-              <span className="text-[11px] font-bold text-teal-100 shrink-0">{user.points}pt</span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-            <p className={`text-xs font-semibold ${hkrColor}`}>
-              HKR {hkr != null ? `${hkr}%` : '未入力'}
-            </p>
-            {badge && (
-              <span className="text-[10px] font-bold text-teal-100">
-                {badge.emoji} {badge.label}
-              </span>
-            )}
-          </div>
+          <p className="font-bold text-white text-sm truncate">{user.name}</p>
+          <p className={`text-xs font-semibold mt-0.5 ${hkrColor}`}>
+            HKR {hkr != null ? `${hkr}%` : '未入力'}
+          </p>
         </div>
       </div>
 
