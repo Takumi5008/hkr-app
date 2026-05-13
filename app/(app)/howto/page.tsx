@@ -28,7 +28,6 @@ const MEMBER_SECTIONS: Section[] = [
     color: 'bg-violet-50 border-violet-200',
     items: [
       { label: '実績を入力する', desc: '商材ごとに「キャンセル数」と「開通数」を入力して保存します。入力した月は画面上部のセレクターで切り替えできます。' },
-      { label: 'ポイント付与', desc: '開通1件 +5pt、解除1件 +1pt が自動で加算されます。' },
     ],
   },
   {
