@@ -23,6 +23,16 @@ const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
 const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
 const cycleConstruction = (s: string) => s === '' ? '🐜' : s === '🐜' ? '🍐' : ''
 
+// activation_date (free-form text) から日付の「日」部分を抽出してソート用数値に変換
+const extractDay = (dateStr: string): number => {
+  if (!dateStr) return 999
+  const m = dateStr.match(/(\d+)日$/) ||   // "5月31日"
+            dateStr.match(/\/(\d+)$/)  ||   // "5/31", "2026/5/31"
+            dateStr.match(/-(\d+)$/)   ||   // "2026-05-31"
+            dateStr.match(/^(\d+)$/)        // "31"
+  return m ? parseInt(m[1]) : 999
+}
+
 export default function InputPage() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -455,7 +465,7 @@ export default function InputPage() {
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">データがありません</td>
                     </tr>
                   )}
-                  {calEntries.map((entry) => {
+                  {[...calEntries].sort((a, b) => extractDay(a.activation_date) - extractDay(b.activation_date)).map((entry) => {
                     const isEditing = calEditingId === entry.id
                     const bg = entry.status === '○' ? 'bg-green-50/40' : entry.status === '×' ? 'bg-red-50/40' : ''
                     return (

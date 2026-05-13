@@ -6,6 +6,7 @@ import { calcHKR, HKR_TARGET, getPastMonths } from '@/lib/hkr'
 
 export default function TrendsPage() {
   const [tab, setTab] = useState<string>('合算')
+  const [period, setPeriod] = useState<6 | 12 | 24>(12)
   const [records, setRecords] = useState<any[]>([])
   const [products, setProducts] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,7 +44,7 @@ export default function TrendsPage() {
 
   const selectedName = allUsers.find((u) => u.id === selectedUserId)?.name ?? myName
 
-  const months = getPastMonths(12)
+  const months = getPastMonths(period)
   const tabs = [...products, '合算']
 
   const chartData = months.map(({ year, month, label }) => {
@@ -96,7 +97,7 @@ export default function TrendsPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Trends</p>
         <h1 className="text-2xl font-bold">マイ推移</h1>
         <p className="text-sm text-violet-100 mt-0.5">
-          {selectedName ? `${selectedName}さんの過去12ヶ月` : '過去12ヶ月のHKR推移'}
+          {selectedName ? `${selectedName}さんの過去${period}ヶ月` : `過去${period}ヶ月のHKR推移`}
         </p>
       </div>
 
@@ -115,13 +116,23 @@ export default function TrendsPage() {
         </div>
       )}
 
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-        {tabs.map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            {t}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          {tabs.map((t) => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+          {([6, 12, 24] as const).map((p) => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+              {p === 6 ? '半年' : p === 12 ? '1年' : '2年'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -211,7 +222,7 @@ export default function TrendsPage() {
                 <td />
               </tr>
               <tr className="bg-emerald-50 border-t border-emerald-200">
-                <td className="px-4 py-3 text-sm font-semibold text-emerald-700">12ヶ月合計</td>
+                <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{period}ヶ月合計</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-400">-</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">{totalCancel > 0 ? totalCancel : '-'}</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-indigo-500">{totalExpected > 0 ? totalExpected : '-'}</td>
