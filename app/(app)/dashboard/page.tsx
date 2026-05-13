@@ -100,12 +100,31 @@ export default async function DashboardPage() {
   ]
   const hasFollowToday = followAlerts.length > 0
 
+  // 月次振り返り: 今月の第1月曜〜第1金曜が受付期間
+  const reviewPeriodOpen = (() => {
+    const dow = new Date(currentYear, currentMonth - 1, 1).getDay()
+    const openDay = 1 + (8 - dow) % 7
+    const closeDay = openDay + 4
+    return currentDay >= openDay && currentDay <= closeDay
+  })()
+  const targetReviewMonth = currentMonth === 1
+    ? { year: currentYear - 1, month: 12 }
+    : { year: currentYear, month: currentMonth - 1 }
+  const [reviewRows] = await Promise.all([
+    dbQuery(
+      'SELECT id FROM monthly_reviews WHERE user_id = $1 AND year = $2 AND month = $3',
+      [session.userId, targetReviewMonth.year, targetReviewMonth.month]
+    ).catch(() => []),
+  ])
+  const reviewSubmitted = reviewRows.length > 0
+
   // 今日やるべきタスク一覧（条件付き）
   // done=undefined → 手動チェック(localStorage)、done=boolean → 自動判定
   const todoItems: TodayTask[] = []
   if (hasFollowToday)      todoItems.push({ key: 'follow',   label: '開通表確認',           href: '/activation' })
   if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
   if (needsHKRInput)       todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input' })
+  if (reviewPeriodOpen)    todoItems.push({ key: 'review',   label: '月次振り返り提出',      href: '/review', done: reviewSubmitted ? true : undefined })
   if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
   const progressEntered = progressRows.length > 0
   if (todayInShift)        todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress', done: progressEntered ? true : undefined })

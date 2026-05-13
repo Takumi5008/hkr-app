@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import UserAvatar from '@/components/UserAvatar'
 
@@ -21,6 +21,7 @@ const navItems = [
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
   { href: '/knowledge', label: '知識向上', icon: GraduationCap },
+  { href: '/review', label: '月次振り返り', icon: FileText },
   { href: '/howto', label: '使い方', icon: BookOpen },
 ]
 

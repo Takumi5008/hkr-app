@@ -323,6 +323,22 @@ async function initDb() {
     )
   `)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true`)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS monthly_reviews (
+      id           SERIAL PRIMARY KEY,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year         INTEGER NOT NULL,
+      month        INTEGER NOT NULL,
+      self_score   TEXT NOT NULL DEFAULT '',
+      good_points  TEXT NOT NULL DEFAULT '',
+      challenges   TEXT NOT NULL DEFAULT '',
+      next_goals   TEXT NOT NULL DEFAULT '',
+      app_good     TEXT NOT NULL DEFAULT '',
+      app_requests TEXT NOT NULL DEFAULT '',
+      submitted_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      UNIQUE(user_id, year, month)
+    )
+  `)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_character TEXT`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_steps INTEGER NOT NULL DEFAULT 0`)
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS game_collected TEXT NOT NULL DEFAULT '[]'`)
