@@ -46,9 +46,13 @@ export default async function DashboardPage() {
   )
 
   // Run all today's task condition queries in parallel
-  const [shiftRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
+  const [shiftRows, progressRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
     dbQuery(
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
+      [session.userId, currentYear, currentMonth]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT cancel_target FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
@@ -103,7 +107,8 @@ export default async function DashboardPage() {
   if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
   if (needsHKRInput)       todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input' })
   if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
-  if (todayInShift)        todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
+  const progressEntered = progressRows.length > 0
+  if (todayInShift)        todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress', done: progressEntered ? true : undefined })
 
   function getSummaries(year: number, month: number) {
     return products.map((product: string) => {
