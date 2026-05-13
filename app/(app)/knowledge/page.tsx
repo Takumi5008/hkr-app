@@ -92,7 +92,8 @@ export default function KnowledgePage() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const canEdit = myRole === 'manager' || myRole === 'admin'
+  const canUpload = !!myRole
+  const canDelete = myRole === 'manager' || myRole === 'admin'
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setMyRole(d.role ?? '')).catch(() => {})
@@ -180,7 +181,7 @@ export default function KnowledgePage() {
       </div>
 
       {/* アップロードボタン */}
-      {canEdit && (
+      {canUpload && (
         <button onClick={() => setShowUpload(true)}
           className="mb-5 flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors shadow-sm">
           <Plus size={15} />アップロード
@@ -194,7 +195,7 @@ export default function KnowledgePage() {
         <div className="text-center py-16 text-gray-400">
           <GraduationCap size={36} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">まだコンテンツがありません</p>
-          {canEdit && <p className="text-xs mt-1">「アップロード」ボタンから追加できます</p>}
+          {canUpload && <p className="text-xs mt-1">「アップロード」ボタンから追加できます</p>}
         </div>
       ) : (
         <div className="space-y-3">
@@ -226,7 +227,7 @@ export default function KnowledgePage() {
                     className="p-2 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-indigo-600 transition-colors">
                     <Download size={15} />
                   </a>
-                  {canEdit && (
+                  {canDelete && (
                     <button onClick={() => handleDelete(m.id)}
                       className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
                       <Trash2 size={15} />
