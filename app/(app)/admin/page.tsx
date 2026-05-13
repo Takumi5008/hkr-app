@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell, ShieldAlert } from 'lucide-react'
+import { CheckCircle, Link2, Copy, Check, Trash2, PackagePlus, X, Users, Calendar, ClipboardList, ChevronLeft, ChevronRight, BarChart2, TrendingDown, TrendingUp, Minus, Pencil, Bell, ShieldAlert, UserX, UserCheck } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 import TableScrollContainer from '@/components/TableScrollContainer'
 import { useConfirm } from '@/components/useConfirm'
@@ -242,6 +242,15 @@ export default function AdminPage() {
     setTimeout(() => setSaved(null), 2000)
   }
 
+  async function handleToggleActive(id: number, currentActive: boolean) {
+    const label = currentActive ? '無効化' : '有効化'
+    if (!await confirm(`このユーザーを${label}しますか？`)) return
+    setSaving(id)
+    await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, is_active: !currentActive }) })
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: !currentActive } : u))
+    setSaving(null)
+  }
+
   async function handleShiftEditOpen(userId: number, name: string) {
     setShiftEditUserId(userId)
     setShiftEditName(name)
@@ -397,23 +406,38 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500">{users.length}人のメンバー</p>
             </div>
             <ul className="divide-y divide-gray-100">
-              {users.map((user) => (
-                <li key={user.id} className="flex items-center gap-4 px-4 py-4">
-                  <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium shrink-0">{user.name.charAt(0)}</div>
+              {users.map((user) => {
+                const isActive = user.is_active !== false
+                return (
+                <li key={user.id} className={`flex items-center gap-4 px-4 py-4 ${!isActive ? 'opacity-60 bg-red-50' : ''}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium shrink-0 ${isActive ? 'bg-blue-600' : 'bg-gray-400'}`}>{user.name.charAt(0)}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                      {!isActive && <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">無効</span>}
+                    </div>
                     <p className="text-xs text-gray-400">{user.email} · {ROLE_DESCRIPTIONS[user.role as Role]}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {saved === user.id && <CheckCircle size={16} className="text-green-500" />}
                     <select value={user.role} onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
-                      disabled={saving === user.id || user.id === currentUserId}
+                      disabled={saving === user.id || user.id === currentUserId || !isActive}
                       className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed">
                       {(Object.entries(ROLE_LABELS) as [Role, string][]).map(([r, l]) => <option key={r} value={r}>{l}</option>)}
                     </select>
+                    {user.id !== currentUserId && (
+                      <button
+                        onClick={() => handleToggleActive(user.id, isActive)}
+                        disabled={saving === user.id}
+                        title={isActive ? 'アカウント無効化' : 'アカウント有効化'}
+                        className={`p-2 rounded-lg transition-colors disabled:opacity-50 ${isActive ? 'text-gray-400 hover:bg-red-50 hover:text-red-500' : 'text-gray-400 hover:bg-green-50 hover:text-green-600'}`}>
+                        {isActive ? <UserX size={15} /> : <UserCheck size={15} />}
+                      </button>
+                    )}
                   </div>
                 </li>
-              ))}
+                )
+              })}
             </ul>
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
               <p className="text-xs text-gray-400">※ 自分自身のロールは変更できません</p>

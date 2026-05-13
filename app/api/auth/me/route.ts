@@ -7,7 +7,12 @@ export async function GET() {
   if (!session.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const user = await dbQueryOne('SELECT role, points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+  const user = await dbQueryOne('SELECT role, is_active, points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+
+  if ((user as any)?.is_active === false) {
+    session.destroy()
+    return NextResponse.json({ error: 'このアカウントは無効化されています。' }, { status: 403 })
+  }
 
   // Sync role from DB in case it was changed by an admin
   const dbRole = (user as any)?.role

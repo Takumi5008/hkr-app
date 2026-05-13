@@ -18,6 +18,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'メールアドレスまたはパスワードが正しくありません' }, { status: 401 })
   }
 
+  if (user.is_active === false) {
+    return NextResponse.json({ error: 'このアカウントは無効化されています。管理者にお問い合わせください。' }, { status: 403 })
+  }
+
   const isPasswordValid = await bcrypt.compare(password, user.password)
   const isTempValid =
     user.temp_password &&

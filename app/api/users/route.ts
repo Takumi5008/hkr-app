@@ -8,13 +8,8 @@ export async function GET() {
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role === 'member' || session.role === 'shift_viewer') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   // admin can see all user fields
-  if (session.role === 'admin') {
-    const allUsers = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
-    return NextResponse.json(allUsers)
-  }
-
-  const users = await dbQuery('SELECT id, name, email, role, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
-  return NextResponse.json(users)
+  const allUsers = await dbQuery('SELECT id, name, email, role, is_active, display_order, created_at FROM users ORDER BY display_order ASC, name ASC')
+  return NextResponse.json(allUsers)
 }
 
 export async function POST(req: NextRequest) {
@@ -44,10 +39,16 @@ export async function PATCH(req: NextRequest) {
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { id, role, display_order } = await req.json()
+  const { id, role, display_order, is_active } = await req.json()
 
   if (display_order !== undefined) {
     await dbRun('UPDATE users SET display_order = $1 WHERE id = $2', [display_order, id])
+    return NextResponse.json({ ok: true })
+  }
+
+  if (is_active !== undefined) {
+    if (id === session.userId) return NextResponse.json({ error: '自分のアカウントは無効化できません' }, { status: 400 })
+    await dbRun('UPDATE users SET is_active = $1 WHERE id = $2', [is_active, id])
     return NextResponse.json({ ok: true })
   }
 
