@@ -93,11 +93,14 @@ export default function AdminPage() {
     if (adminTab !== 'shifts') return
     setShiftsLoading(true)
     Promise.all([
-      fetch(`/api/shifts/all?year=${year}&month=${month}`).then((r) => r.json()),
-      fetch(`/api/deadlines?year=${year}&month=${month}`).then((r) => r.json()),
+      fetch(`/api/shifts/all?year=${year}&month=${month}`).then((r) => r.json()).catch(() => []),
+      fetch(`/api/deadlines?year=${year}&month=${month}`).then((r) => r.json()).catch(() => ({})),
     ]).then(([s, dl]) => {
       setShifts(Array.isArray(s) ? s : [])
-      setDeadlineAt(dl.deadlineAt ?? '')
+      setDeadlineAt(dl?.deadlineAt ?? '')
+      setShiftsLoading(false)
+    }).catch(() => {
+      setShifts([])
       setShiftsLoading(false)
     })
   }, [adminTab, year, month])
@@ -106,7 +109,8 @@ export default function AdminPage() {
     if (adminTab !== 'progress') return
     fetch(`/api/progress/all?year=${progressYear}&month=${progressMonth}`)
       .then((r) => r.json())
-      .then(setProgressData)
+      .then((d) => setProgressData(Array.isArray(d) ? d : []))
+      .catch(() => setProgressData([]))
   }, [adminTab, progressYear, progressMonth])
 
   useEffect(() => {
@@ -271,8 +275,7 @@ export default function AdminPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ year, month, workDates: shiftEditDates, submitted: true }),
     })
-    // Update local shifts state
-    setShifts((prev) => prev.map((m) =>
+    setShifts((prev) => (Array.isArray(prev) ? prev : []).map((m) =>
       m.id === shiftEditUserId ? { ...m, workDates: shiftEditDates, submitted: true } : m
     ))
     setShiftEditSaving(false)
@@ -299,8 +302,9 @@ export default function AdminPage() {
   const daysInMonth = new Date(year, month, 0).getDate()
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
   const memberTotal = (member: any) => days.filter((d) => getWorkType(member.workDates, d)).length
-  const dayTotal = (d: number) => shifts.filter((m) => getWorkType(m.workDates, d)).length
-  const grandTotal = shifts.reduce((sum, m) => sum + memberTotal(m), 0)
+  const safeShifts = Array.isArray(shifts) ? shifts : []
+  const dayTotal = (d: number) => safeShifts.filter((m) => getWorkType(m.workDates, d)).length
+  const grandTotal = safeShifts.reduce((sum, m) => sum + memberTotal(m), 0)
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00')
@@ -458,7 +462,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900 text-sm">シフト一覧</h3>
               <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-                提出済み {shifts.filter((s) => s.submitted).length} / {shifts.length} 人
+                提出済み {safeShifts.filter((s) => s.submitted).length} / {safeShifts.length} 人
               </span>
             </div>
             {shiftsLoading ? (
@@ -487,7 +491,7 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...shifts].sort((a, b) => (b.submitted ? 1 : 0) - (a.submitted ? 1 : 0)).map((member, idx) => (
+                    {[...safeShifts].sort((a, b) => (b.submitted ? 1 : 0) - (a.submitted ? 1 : 0)).map((member, idx) => (
                       <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                         <td className="border border-gray-100 px-3 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit">
                           <div className="flex items-center gap-1.5">
@@ -517,10 +521,10 @@ export default function AdminPage() {
                         <td className="border border-gray-100 px-2 py-2 text-center bg-indigo-50 font-bold text-indigo-600">{memberTotal(member)}</td>
                       </tr>
                     ))}
-                    {shifts.length === 0 && (
+                    {safeShifts.length === 0 && (
                       <tr><td colSpan={daysInMonth + 3} className="text-center text-gray-400 py-8">シフトデータがありません</td></tr>
                     )}
-                    {shifts.length > 0 && (
+                    {safeShifts.length > 0 && (
                       <tr className="bg-indigo-50/60">
                         <td className="border border-gray-100 px-3 py-2 font-bold text-indigo-600 sticky left-0 bg-indigo-50/60">合計</td>
                         <td className="border border-gray-100 px-2 py-2" />
