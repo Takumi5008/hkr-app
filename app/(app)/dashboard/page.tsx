@@ -46,13 +46,9 @@ export default async function DashboardPage() {
   )
 
   // Run all today's task condition queries in parallel
-  const [shiftRows, activityRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
+  const [shiftRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
     dbQuery(
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
-      [session.userId, currentYear, currentMonth]
-    ).catch(() => []),
-    dbQuery(
-      `SELECT actual_cancel FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3 AND actual_cancel > 0`,
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
@@ -82,9 +78,6 @@ export default async function DashboardPage() {
     } catch { return false }
   })()
 
-  // 個人進捗: 本日 cancel > 0
-  const hasPersonalProgress = activityRows.length > 0
-
   // 開通カレンダー
   const hasCalendarEntries = calendarRows.length > 0
   const calendarCircleCount = (calendarRows as any[]).filter((r: any) => r.status === '○').length
@@ -110,7 +103,7 @@ export default async function DashboardPage() {
   if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
   if (needsHKRInput)       todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input' })
   if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
-  if (hasPersonalProgress) todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
+  if (todayInShift)        todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
 
   function getSummaries(year: number, month: number) {
     return products.map((product: string) => {
