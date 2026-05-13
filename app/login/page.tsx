@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import FireworksCanvas from '@/components/FireworksCanvas'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -41,6 +42,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen relative flex items-center justify-center px-4 overflow-hidden bg-[#020817]">
 
+      {/* 花火 */}
+      <FireworksCanvas />
+
       {/* グリッドオーバーレイ */}
       <div
         className="absolute inset-0 pointer-events-none opacity-40"
@@ -65,7 +69,7 @@ export default function LoginPage() {
       />
 
       {/* コンテンツ */}
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-sm" style={{ zIndex: 10 }}>
 
         {/* ロゴ */}
         <div className="text-center mb-10">
