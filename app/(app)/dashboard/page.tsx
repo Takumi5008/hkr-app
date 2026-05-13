@@ -2,7 +2,8 @@ import { getSession } from '@/lib/session'
 import { dbQuery } from '@/lib/db'
 import { calcHKR, formatMonth, getTwoMonthsAgo, isMonthlyCheckPeriod } from '@/lib/hkr'
 import HKRCard from '@/components/HKRCard'
-import { Bell, AlertCircle, PenLine, CheckCircle2, Circle } from 'lucide-react'
+import TodayTasksList, { type TodayTask, type FollowAlert } from '@/components/TodayTasksList'
+import { Bell, AlertCircle, PenLine } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -50,8 +51,9 @@ export default async function DashboardPage() {
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
+    // 行動表の done 判定: ANY row exists today (not just cancel > 0)
     dbQuery(
-      `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2`,
+      `SELECT id FROM daily_activity WHERE user_id = $1 AND date = $2`,
       [session.userId, todayStr]
     ).catch(() => []),
     dbQuery(
@@ -72,7 +74,7 @@ export default async function DashboardPage() {
     ).catch(() => []),
   ])
 
-  // 行動表: 今日がシフトの日か
+  // 行動表: 今日がシフトの日か / 記入済みか
   const todayInShift = (() => {
     if (!shiftRows.length) return false
     try {
@@ -80,22 +82,27 @@ export default async function DashboardPage() {
       return Array.isArray(workDates) && workDates.some((d: any) => Number(d.day) === currentDay)
     } catch { return false }
   })()
+  const activityExists = activityRows.length > 0
 
-  // 個人進捗: 本日 cancel > 0
-  const hasPersonalProgress = activityRows.length > 0 && (activityRows[0].cancel ?? 0) > 0
+  // 個人進捗: 本日 cancel > 0（別クエリで確認）
+  const cancelRows = await dbQuery(
+    `SELECT cancel FROM daily_activity WHERE user_id = $1 AND date = $2 AND cancel > 0`,
+    [session.userId, todayStr]
+  ).catch(() => [])
+  const hasPersonalProgress = cancelRows.length > 0
 
   // 開通カレンダー
   const hasCalendarEntries = calendarRows.length > 0
   const calendarCircleCount = (calendarRows as any[]).filter((r: any) => r.status === '○').length
 
-  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計
+  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計 = まだ未入力
   const currentActivationTotal = (records as any[])
     .filter((r: any) => r.year === currentYear && r.month === currentMonth)
     .reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
-  const needsHKRInput = hasCalendarEntries && calendarCircleCount !== currentActivationTotal
+  const hkrInputDone = hasCalendarEntries && calendarCircleCount === currentActivationTotal
 
   // 開通表確認 / フォロー対応 (自分の分のみ)
-  const followAlerts: { name: string; typeLabel: string; fieldLabel: string }[] = [
+  const followAlerts: FollowAlert[] = [
     ...(sonetRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
     ...(directRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
     ...(postRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
@@ -103,13 +110,13 @@ export default async function DashboardPage() {
   const hasFollowToday = followAlerts.length > 0
 
   // 今日やるべきタスク一覧（条件付き）
-  type TodoItem = { key: string; label: string; href: string }
-  const todoItems: TodoItem[] = []
-  if (hasFollowToday)       todoItems.push({ key: 'follow',   label: '開通表確認',          href: '/activation' })
-  if (hasCalendarEntries)   todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
-  if (needsHKRInput)        todoItems.push({ key: 'hkr',      label: 'HKR入力',             href: '/input' })
-  if (todayInShift)         todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
-  if (hasPersonalProgress)  todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
+  // done=undefined → 手動チェック(localStorage)、done=boolean → 自動判定
+  const todoItems: TodayTask[] = []
+  if (hasFollowToday)      todoItems.push({ key: 'follow',   label: '開通表確認',           href: '/activation' })
+  if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
+  if (hasCalendarEntries)  todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input', done: hkrInputDone })
+  if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity', done: activityExists })
+  if (hasPersonalProgress) todoItems.push({ key: 'progress', label: '個人進捗確認',          href: '/progress' })
 
   function getSummaries(year: number, month: number) {
     return products.map((product: string) => {
@@ -137,40 +144,7 @@ export default async function DashboardPage() {
         <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
           📋 今日やること
         </h2>
-        {todoItems.length === 0 ? (
-          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-emerald-50">
-            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-            <span className="text-sm text-emerald-700 font-medium">本日のタスクはありません</span>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {todoItems.map((item) => (
-              <div key={item.key} className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50">
-                <Circle size={16} className="text-gray-300 shrink-0" />
-                <span className="text-sm flex-1 text-gray-700 font-medium">{item.label}</span>
-                <Link href={item.href} className="text-xs text-indigo-600 font-medium hover:underline shrink-0">
-                  確認する →
-                </Link>
-              </div>
-            ))}
-
-            {hasFollowToday && (
-              <div className="flex items-start gap-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
-                <span className="text-base shrink-0 mt-0.5">🔔</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-amber-700">本日のフォロー対応 {followAlerts.length}件</p>
-                  <div className="mt-1 space-y-0.5">
-                    {followAlerts.map((item, i) => (
-                      <p key={i} className="text-xs text-amber-600">
-                        {item.typeLabel} — {item.name}さん（{item.fieldLabel}）
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <TodayTasksList items={todoItems} followAlerts={followAlerts} />
       </div>
 
       {showBanner && (
