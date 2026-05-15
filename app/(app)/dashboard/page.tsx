@@ -86,11 +86,6 @@ export default async function DashboardPage() {
   const hasCalendarEntries = calendarRows.length > 0
   const calendarCircleCount = (calendarRows as any[]).filter((r: any) => r.status === '○').length
 
-  // HKR入力: 開通カレンダーの○件数 ≠ 今月の records 開通件数合計のとき表示
-  const currentActivationTotal = (records as any[])
-    .filter((r: any) => r.year === currentYear && r.month === currentMonth)
-    .reduce((s: number, r: any) => s + (r.activation_count ?? 0), 0)
-  const needsHKRInput = hasCalendarEntries && calendarCircleCount !== currentActivationTotal
 
   // 開通表確認 / フォロー対応 (自分の分のみ)
   const followAlerts: FollowAlert[] = [
@@ -123,7 +118,6 @@ export default async function DashboardPage() {
   const todoItems: TodayTask[] = []
   if (hasFollowToday)      todoItems.push({ key: 'follow',   label: '開通表確認',           href: '/activation' })
   if (hasCalendarEntries)  todoItems.push({ key: 'calendar', label: '開通カレンダーチェック', href: '/input' })
-  if (needsHKRInput)       todoItems.push({ key: 'hkr',      label: 'HKR入力',              href: '/input' })
   if (reviewPeriodOpen)    todoItems.push({ key: 'review',   label: '月次振り返り提出',      href: '/review', done: reviewSubmitted ? true : undefined })
   if (todayInShift)        todoItems.push({ key: 'activity', label: '行動表記入',            href: '/activity' })
   const progressEntered = progressRows.length > 0
