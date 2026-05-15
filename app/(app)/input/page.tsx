@@ -54,6 +54,7 @@ export default function InputPage() {
   const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' })
   const [calMembers, setCalMembers] = useState<{ id: number; name: string }[]>([])
   const [calSelectedUserId, setCalSelectedUserId] = useState<number | null>(null)
+  const [inputSelectedUserId, setInputSelectedUserId] = useState<number | null>(null)
   const [resyncing, setResyncing] = useState(false)
 
   // 回線管理
@@ -115,7 +116,8 @@ export default function InputPage() {
   useEffect(() => {
     if (products.length === 0) return
     async function load() {
-      const res = await fetch(`/api/records?year=${year}&month=${month}`)
+      const userParam = inputSelectedUserId ? `&userId=${inputSelectedUserId}` : ''
+      const res = await fetch(`/api/records?year=${year}&month=${month}${userParam}`)
       if (!res.ok) return
       const data = await res.json()
       const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }]))
@@ -135,7 +137,7 @@ export default function InputPage() {
       setSavedActivation(savedAct)
     }
     load()
-  }, [year, month, products])
+  }, [year, month, products, inputSelectedUserId])
 
   function handleChange(product: string, field: 'cancel' | 'activation' | 'remaining' | 'expected', value: string) {
     if (value !== '' && !/^\d+$/.test(value)) return
@@ -158,6 +160,7 @@ export default function InputPage() {
           activation_count:  count,
           remaining_opening: parseInt(form[product].remaining  || '0', 10),
           expected_opening:  parseInt(form[product].expected   || '0', 10),
+          ...(inputSelectedUserId ? { userId: inputSelectedUserId } : {}),
         }),
       })
       if (!res.ok) { setError('保存に失敗しました'); setLoading(false); return }
@@ -328,6 +331,21 @@ export default function InputPage() {
       {/* データ入力タブ */}
       {tab === 'input' && (
         <>
+          {isManager && calMembers.length > 0 && (
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-sm text-gray-500 shrink-0">メンバー</span>
+              <select
+                value={inputSelectedUserId ?? ''}
+                onChange={(e) => setInputSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              >
+                <option value="">自分</option>
+                {calMembers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
             <select

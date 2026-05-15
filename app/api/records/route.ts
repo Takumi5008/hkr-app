@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening } = await req.json()
+  const { year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening, userId: bodyUserId } = await req.json()
+
+  const isManager = session.role === 'manager' || session.role === 'admin'
+  const targetUserId = isManager && bodyUserId ? bodyUserId : session.userId
 
   await dbRun(`
     INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening, updated_at)
@@ -50,31 +53,31 @@ export async function POST(req: NextRequest) {
                   expected_opening   = EXCLUDED.expected_opening,
                   confirmed_opening  = EXCLUDED.confirmed_opening,
                   updated_at         = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-  `, [session.userId, year, month, product, cancel_count ?? 0, activation_count ?? 0, remaining_opening ?? 0, expected_opening ?? 0, confirmed_opening ?? 0])
+  `, [targetUserId, year, month, product, cancel_count ?? 0, activation_count ?? 0, remaining_opening ?? 0, expected_opening ?? 0, confirmed_opening ?? 0])
 
   // 月合計開通数を集計してマイルストーンボーナスを付与
   const totals = await dbQueryOne<{ total: number }>(
     `SELECT COALESCE(SUM(activation_count), 0)::int AS total
      FROM records WHERE user_id = $1 AND year = $2 AND month = $3`,
-    [session.userId, year, month]
+    [targetUserId, year, month]
   )
   const total = totals?.total ?? 0
   for (const { threshold, bonus } of ACTIVATION_MILESTONES) {
     if (total >= threshold) {
       await addPointTransaction(
-        session.userId as number, bonus,
+        targetUserId as number, bonus,
         `月${threshold}開通ボーナス`,
         'milestone',
-        `${session.userId}-${year}-${month}-${threshold}`
+        `${targetUserId}-${year}-${month}-${threshold}`
       )
     }
   }
 
-  await syncUserPoints(session.userId as number)
+  await syncUserPoints(targetUserId as number)
 
   const record = await dbQueryOne(
     'SELECT * FROM records WHERE user_id = $1 AND year = $2 AND month = $3 AND product = $4',
-    [session.userId, year, month, product]
+    [targetUserId, year, month, product]
   )
 
   return NextResponse.json(record)
