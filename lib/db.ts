@@ -345,6 +345,19 @@ async function initDb() {
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
   await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
   await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS position TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS manager_id INTEGER`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS org_visible BOOLEAN NOT NULL DEFAULT true`)
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_memo TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS construction_type TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE opening_calendar ADD COLUMN IF NOT EXISTS activation_record_id INTEGER`)
+  await pool.query(`ALTER TABLE knowledge_materials ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE knowledge_materials ADD COLUMN IF NOT EXISTS subcategory TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`UPDATE knowledge_materials SET subcategory = '獲得録音' WHERE category = 'recording' AND subcategory = ''`)
+  await pool.query(`
+    ALTER TABLE knowledge_materials DROP CONSTRAINT IF EXISTS knowledge_materials_category_check;
+    ALTER TABLE knowledge_materials ADD CONSTRAINT knowledge_materials_category_check CHECK (category IN ('recording', 'course', 'minutes'));
+  `)
   await pool.query(`
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('member', 'viewer', 'manager', 'shift_viewer', 'admin'));

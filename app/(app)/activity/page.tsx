@@ -231,7 +231,7 @@ export default function ActivityPage() {
       </div>
 
       {/* 管理者：メンバー選択 */}
-      {(myRole === 'manager' || myRole === 'viewer') && members.length > 0 && (
+      {(myRole === 'manager' || myRole === 'viewer' || myRole === 'admin') && members.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <span className="text-sm text-gray-500 shrink-0">メンバー</span>
           <select
@@ -362,7 +362,7 @@ export default function ActivityPage() {
                     <tr key={r.user_id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}>
                       <td className="border border-gray-100 px-2 py-2 font-semibold text-gray-800 sticky left-0 bg-inherit whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          {myRole === 'manager' && (
+                          {(myRole === 'manager' || myRole === 'admin') && (
                             <div className="flex flex-col shrink-0">
                               <button onClick={() => moveRow(i, -1)} disabled={i === 0} className="text-gray-300 hover:text-teal-500 disabled:opacity-0 transition leading-none"><ChevronUp size={12} /></button>
                               <button onClick={() => moveRow(i, 1)} disabled={i === allData.length - 1} className="text-gray-300 hover:text-teal-500 disabled:opacity-0 transition leading-none"><ChevronDown size={12} /></button>

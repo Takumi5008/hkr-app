@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network } from 'lucide-react'
+import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect } from 'react'
 import UserAvatar from '@/components/UserAvatar'
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/memo', label: 'メモ', icon: StickyNote },
   { href: '/knowledge', label: '知識向上', icon: GraduationCap },
   { href: '/review', label: '月次振り返り', icon: FileText },
+  { href: '/org', label: '組織図', icon: Network },
   { href: '/howto', label: '使い方', icon: BookOpen },
 ]
 
@@ -71,7 +73,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   }, [])
 
   useEffect(() => {
-    if (role !== 'manager') return
+    if (role !== 'manager' && role !== 'admin') return
     fetch('/api/push/subscribe').then((r) => r.json()).then((d) => setPushSubscribed(d.subscribed ?? false)).catch(() => {})
   }, [role])
 
@@ -219,7 +221,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
           </div>
         </Link>
 
-        {role === 'manager' && (
+        {(role === 'manager' || role === 'admin') && (
           <button
             onClick={handlePushToggle}
             disabled={pushLoading}
@@ -252,11 +254,9 @@ export default function Sidebar({ name, role }: SidebarProps) {
         <div className="animate-orb-3 absolute bottom-[80px] right-[-40px] w-40 h-40 rounded-full bg-violet-500/15 blur-2xl pointer-events-none" />
         <div className="animate-orb-2 absolute top-[45%] left-[-30px] w-32 h-32 rounded-full bg-indigo-400/10 blur-xl pointer-events-none" />
 
-        <div className="relative z-10 px-6 py-5 border-b border-indigo-800/60">
+        <div className="sidebar-pc-top relative z-10 px-6 py-5 border-b border-indigo-800/60">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center shadow-lg ring-1 ring-white/20">
-              <span className="text-xs font-black text-white">IP</span>
-            </div>
+            <WifiAppIcon size={32} />
             <div>
               <h1 className="text-base font-bold text-white">インフラ管理</h1>
             </div>
@@ -269,11 +269,9 @@ export default function Sidebar({ name, role }: SidebarProps) {
 
       {/* スマホ トップバー */}
       <header className="sm:hidden fixed top-0 left-0 right-0 z-20 bg-gradient-to-r from-indigo-950 via-indigo-900 to-blue-950 shadow-lg overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="mobile-header-inner flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center shadow">
-              <span className="text-xs font-black text-white">IP</span>
-            </div>
+            <WifiAppIcon size={28} />
             <span className="text-base font-bold text-white">インフラ管理</span>
           </div>
           <button
@@ -294,9 +292,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
             <div className="animate-orb-3 absolute bottom-[60px] right-[-30px] w-36 h-36 rounded-full bg-violet-500/15 blur-2xl pointer-events-none" />
             <div className="relative z-10 flex items-center justify-between px-6 py-5 border-b border-indigo-800/60">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center shadow-lg ring-1 ring-white/20">
-                  <span className="text-xs font-black text-white">IP</span>
-                </div>
+                <WifiAppIcon size={32} />
                 <div>
                   <h1 className="text-base font-bold text-white">インフラ管理</h1>
                 </div>

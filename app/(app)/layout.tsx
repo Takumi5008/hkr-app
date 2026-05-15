@@ -4,6 +4,7 @@ import { dbQueryOne } from '@/lib/db'
 import Sidebar from '@/components/Sidebar'
 import NotificationBanner from '@/components/NotificationBanner'
 import VirtualKeyboardFix from '@/components/VirtualKeyboardFix'
+import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
@@ -23,8 +24,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar name={session.name} role={role} />
       <NotificationBanner />
       <VirtualKeyboardFix />
+      <ServiceWorkerRegister />
       {/* PC: サイドバー分マージン / スマホ: トップバー+ボトムナビ分パディング */}
-      <main className="sm:ml-60 flex-1 min-h-screen pt-14 sm:pt-0">{children}</main>
+      <main className="sm:ml-60 flex-1 min-h-screen main-content-mobile">{children}</main>
     </div>
   )
 }

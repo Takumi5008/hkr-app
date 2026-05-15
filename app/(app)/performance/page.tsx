@@ -76,6 +76,7 @@ export default function PerformancePage() {
   const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
   const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete' | 'sort'>('view')
+  const isManager = role === 'manager' || role === 'admin'
   const [sortedRecords, setSortedRecords] = useState<MemberPerformance[]>([])
   const [savingOrder, setSavingOrder] = useState(false)
   const [extraPersonalYears, setExtraPersonalYears] = useState<number[]>([])
@@ -504,7 +505,7 @@ export default function PerformancePage() {
               {r.name}
             </button>
           ))}
-          {role === 'manager' && (
+          {isManager && (
             showAddMember ? (
               <div className="flex items-center gap-1 shrink-0">
                 <input
@@ -617,7 +618,7 @@ export default function PerformancePage() {
       {tab === 'personal' && (
         <>
           {/* サブタブ：一覧 / 追加 / 削除 */}
-          {role === 'manager' && personalTab !== 'add' && (
+          {isManager && personalTab !== 'add' && (
             <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
               {(['view', 'sort', 'delete'] as const).map((t) => (
                 <button key={t} onClick={() => { setPersonalTab(t); setEditId(null); if (t === 'sort') setSortedRecords(records) }}
@@ -630,7 +631,7 @@ export default function PerformancePage() {
           )}
 
           {/* 追加・編集フォーム（追加タブ） */}
-          {personalTab === 'add' && role === 'manager' && (
+          {personalTab === 'add' && isManager && (
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-violet-100 mb-6 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 bg-violet-50 border-b border-violet-100">
                 <h2 className="text-sm font-bold text-violet-700">{editId !== null ? '編集' : '新規追加'}</h2>
@@ -709,7 +710,7 @@ export default function PerformancePage() {
           )}
 
           {/* 並び替えタブ */}
-          {personalTab === 'sort' && role === 'manager' && (
+          {personalTab === 'sort' && isManager && (
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
               {sortedRecords.length === 0 ? (
                 <p className="text-sm text-gray-300 text-center py-12">データがありません</p>
@@ -749,7 +750,7 @@ export default function PerformancePage() {
           )}
 
           {/* 削除タブ */}
-          {personalTab === 'delete' && role === 'manager' && (
+          {personalTab === 'delete' && isManager && (
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
               {records.length === 0 ? (
                 <p className="text-sm text-gray-300 text-center py-12">データがありません</p>
@@ -772,11 +773,11 @@ export default function PerformancePage() {
           )}
 
           {/* 一覧タブ */}
-          {(personalTab === 'view' || role !== 'manager' && role !== 'admin') && (
+          {(personalTab === 'view' || !isManager) && (
             records.length === 0 ? (
             <div className="text-center py-16 text-gray-300">
               <p className="text-sm font-medium">実績データがありません</p>
-              {role === 'manager' && (
+              {isManager && (
                 <div className="mt-4">
                   <p className="text-xs mb-3">「追加」タブから個別登録、または一括登録できます</p>
                   <button onClick={handleSeed} disabled={seeding}
@@ -892,7 +893,7 @@ export default function PerformancePage() {
                         <span className="text-xs font-semibold text-gray-400">解除時間生産性</span>
                         <span className="text-xs font-semibold text-gray-400">開通時間生産性</span>
                       </div>
-                      {role === 'manager' && <div className="w-7 shrink-0" />}
+                      {isManager && <div className="w-7 shrink-0" />}
                     </div>
                     <div className="divide-y divide-gray-50">
                       {filteredMemberMonthly.map((r) => {
@@ -934,13 +935,13 @@ export default function PerformancePage() {
                                   {openingTimeProductivity}
                                 </span>
                               </div>
-                              {role === 'manager' && !isEditing && (
+                              {isManager && !isEditing && (
                                 <button onClick={() => openEditPersonalMonth(r.month, r)}
                                   className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition shrink-0">
                                   <Pencil size={13} />
                                 </button>
                               )}
-                              {role === 'manager' && isEditing && (
+                              {isManager && isEditing && (
                                 <button onClick={() => setEditingPersonalMonth(null)}
                                   className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 transition shrink-0">
                                   <X size={13} />
@@ -1046,7 +1047,7 @@ export default function PerformancePage() {
                     <span className="text-xs font-semibold text-gray-400">解除数</span>
                     <span className="text-xs font-semibold text-gray-400">解除率</span>
                   </div>
-                  {role === 'manager' && <div className="w-7 shrink-0" />}
+                  {isManager && <div className="w-7 shrink-0" />}
                 </div>
                 <div className="divide-y divide-gray-50">
                   {filteredMonthly.map((r) => {
@@ -1071,13 +1072,13 @@ export default function PerformancePage() {
                               {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
                             </span>
                           </div>
-                          {role === 'manager' && !isEditing && (
+                          {isManager && !isEditing && (
                             <button onClick={() => openEditMonth(r)}
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition shrink-0">
                               <Pencil size={13} />
                             </button>
                           )}
-                          {role === 'manager' && isEditing && (
+                          {isManager && isEditing && (
                             <button onClick={() => setEditingMonth(null)}
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 transition shrink-0">
                               <X size={13} />

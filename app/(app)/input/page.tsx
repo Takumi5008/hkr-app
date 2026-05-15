@@ -54,6 +54,7 @@ export default function InputPage() {
   const [calForm, setCalForm] = useState({ activation_date: '', customer_name: '', line_type: '', construction_type: '', status: '' })
   const [calMembers, setCalMembers] = useState<{ id: number; name: string }[]>([])
   const [calSelectedUserId, setCalSelectedUserId] = useState<number | null>(null)
+  const [resyncing, setResyncing] = useState(false)
 
   // 回線管理
   const [productItems, setProductItems] = useState<{ id: number; name: string }[]>([])
@@ -86,7 +87,19 @@ export default function InputPage() {
       .then((data) => { if (Array.isArray(data)) setCalEntries(data) })
   }
 
-  useEffect(() => { if (tab === 'calendar') fetchCalendar(calSelectedUserId) }, [year, month, tab, calSelectedUserId])
+  // カレンダーデータ取得（メンバー切替・月切替・タブ切替で実行）
+  useEffect(() => {
+    if (tab !== 'calendar') return
+    fetchCalendar(calSelectedUserId)
+  }, [year, month, tab, calSelectedUserId])
+
+  // 再同期はタブを開いたときだけ（メンバー切替では走らせない）
+  useEffect(() => {
+    if (tab !== 'calendar') return
+    if (role === 'manager' || role === 'admin') {
+      fetch('/api/activation/resync', { method: 'POST' }).catch(() => {})
+    }
+  }, [tab, role])
 
   useEffect(() => {
     fetch('/api/products')
@@ -155,6 +168,13 @@ export default function InputPage() {
     const delta = products.reduce((sum, p) => sum + newActivation[p] - (savedActivation[p] ?? 0), 0)
     if (delta > 0) setCelebrationCount(delta)
     setSavedActivation(newActivation)
+  }
+
+  async function handleResync() {
+    setResyncing(true)
+    await fetch('/api/activation/resync', { method: 'POST' })
+    fetchCalendar(calSelectedUserId)
+    setResyncing(false)
   }
 
   async function handleCalSave() {
@@ -409,7 +429,7 @@ export default function InputPage() {
         <>
             {/* メンバー選択（マネージャーのみ） */}
             {isManager && calMembers.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 <button
                   onClick={() => { setCalSelectedUserId(null); setCalEditingId(null) }}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${calSelectedUserId === null ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50'}`}
@@ -425,6 +445,13 @@ export default function InputPage() {
                     {m.name}
                   </button>
                 ))}
+                <button
+                  onClick={handleResync}
+                  disabled={resyncing}
+                  className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                >
+                  {resyncing ? '同期中...' : '🔄 カレンダー再同期'}
+                </button>
               </div>
             )}
 

@@ -21,7 +21,7 @@ export default function TrendsPage() {
       setMyId(d.userId)
       setMyName(d.name)
       setSelectedUserId(d.userId)
-      if (d.role === 'manager' || d.role === 'viewer') {
+      if (d.role === 'manager' || d.role === 'viewer' || d.role === 'admin') {
         setIsManager(true)
         fetch('/api/users').then((r) => r.json()).then((users: { id: number; name: string; role: string }[]) => {
           setAllUsers(users.filter((u) => u.role !== 'viewer' && u.role !== 'shift_viewer'))

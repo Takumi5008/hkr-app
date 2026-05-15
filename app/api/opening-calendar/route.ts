@@ -15,11 +15,33 @@ export async function GET(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const targetId  = isManager && userId ? parseInt(userId) : session.userId
 
+  // year/month一致 OR activation_dateが該当月。同一customer_nameの重複はactivation_record_idありを優先して1件に絞る
+  const ym = `${year}-${String(month).padStart(2, '0')}%`
   const rows = await dbQuery(
-    'SELECT * FROM opening_calendar WHERE user_id = $1 AND year = $2 AND month = $3 ORDER BY created_at ASC',
-    [targetId, year, month]
+    `WITH filtered AS (
+       SELECT * FROM opening_calendar
+       WHERE user_id = $1 AND (
+         (year = $2 AND month = $3) OR
+         activation_date LIKE $4
+       )
+     )
+     SELECT DISTINCT ON (customer_name) *
+     FROM filtered
+     ORDER BY customer_name,
+              (activation_record_id IS NOT NULL) DESC,
+              created_at ASC`,
+    [targetId, year, month, ym]
   )
-  return NextResponse.json(rows)
+
+  // 苗字だけのエントリを除外（同じ結果内にフルネームが存在する場合）
+  const deduped = rows.filter((row: { customer_name: string; id: number }) =>
+    !rows.some((other: { customer_name: string; id: number }) =>
+      other.id !== row.id &&
+      other.customer_name.startsWith(row.customer_name) &&
+      other.customer_name.length > row.customer_name.length
+    )
+  )
+  return NextResponse.json(deduped)
 }
 
 export async function POST(req: NextRequest) {

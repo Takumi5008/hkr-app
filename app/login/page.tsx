@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import WifiAppIcon from '@/components/WifiAppIcon'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import FireworksCanvas from '@/components/FireworksCanvas'
@@ -73,11 +74,8 @@ export default function LoginPage() {
 
         {/* ロゴ */}
         <div className="text-center mb-10">
-          <div
-            className="animate-logo-glow inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
-            style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #4f46e5 50%, #2563eb 100%)' }}
-          >
-            <span className="text-xl font-black text-white tracking-tight">IP</span>
+          <div className="animate-logo-glow inline-flex mb-5">
+            <WifiAppIcon size={72} />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">インフラ管理</h1>
           <p className="text-sm text-white/40 mt-2 tracking-wide">チームの成果を、一画面で。</p>

@@ -18,6 +18,23 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* iOS PWA セーフエリア対応 */
+.mobile-header-inner {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 0.75rem;
+}
+.main-content-mobile {
+  padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+}
+@media (min-width: 640px) {
+  .main-content-mobile {
+    padding-top: 0;
+  }
+}
+.sidebar-pc-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 @keyframes orb-float-1 {
   0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
   25%       { transform: translate(60px, -80px) scale(1.12); opacity: 0.85; }

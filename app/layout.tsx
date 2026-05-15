@@ -18,11 +18,12 @@ export const metadata: Metadata = {
     title: "インフラ管理",
     description: "HKR・シフト管理システム",
     siteName: "インフラ管理",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
   appleWebApp: {
     capable: true,
     title: "インフラ管理",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
   manifest: "/manifest.json",
 };

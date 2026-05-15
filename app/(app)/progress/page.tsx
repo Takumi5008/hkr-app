@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 
+type User = { id: number; name: string }
+
 export default function ProgressPage() {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -16,17 +18,32 @@ export default function ProgressPage() {
   const [role, setRole] = useState<string>('member')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [members, setMembers] = useState<User[]>([])
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 
   const todayDay = today.getDate()
   const todayMonth = today.getMonth() + 1
   const todayYear = today.getFullYear()
   const isCurrentMonth = year === todayYear && month === todayMonth
 
-  // カレンダー操作がロックされるか（メンバーかつ締切過ぎ）
-  const calendarLocked = deadlinePassed && role !== 'manager' && role !== 'admin'
+  const isViewingOther = selectedUserId !== null
+  // カレンダー操作がロックされるか（メンバーかつ締切過ぎ、または他メンバー閲覧中）
+  const calendarLocked = isViewingOther || (deadlinePassed && role !== 'manager' && role !== 'admin')
 
   useEffect(() => {
-    fetch(`/api/progress?year=${year}&month=${month}`)
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
+      setRole(d.role ?? 'member')
+      if (d.role === 'manager' || d.role === 'admin') {
+        fetch('/api/users').then(r => r.json()).then((users: User[]) => {
+          setMembers(users.filter((u: any) => u.role !== 'viewer'))
+        })
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
+    fetch(`/api/progress?year=${year}&month=${month}${userParam}`)
       .then((r) => r.json())
       .then((d) => {
         setCancelTarget(d.cancelTarget)
@@ -34,9 +51,8 @@ export default function ProgressPage() {
         setActualCancel(d.actualCancel)
         setDeadlineAt(d.deadlineAt)
         setDeadlinePassed(d.deadlinePassed)
-        setRole(d.role)
       })
-  }, [year, month])
+  }, [year, month, selectedUserId])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
@@ -95,6 +111,27 @@ export default function ProgressPage() {
         <h1 className="text-2xl font-bold">個人進捗</h1>
         <p className="text-sm text-orange-100 mt-0.5">目標と稼働日を設定してペースを確認</p>
       </div>
+
+      {/* メンバー選択（マネージャー・管理者のみ） */}
+      {(role === 'manager' || role === 'admin') && members.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setSelectedUserId(null)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUserId === null ? 'bg-orange-500 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-orange-50'}`}
+          >
+            自分
+          </button>
+          {members.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => setSelectedUserId(m.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUserId === m.id ? 'bg-orange-500 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-orange-50'}`}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 月ナビ */}
       <div className="flex items-center justify-between mb-4">
@@ -183,14 +220,16 @@ export default function ProgressPage() {
         </div>
         <p className="text-xs text-gray-400 mt-2 text-right">稼働日数：<span className="font-bold text-orange-500">{workDates.length}日</span></p>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
-        >
-          <Save size={15} />
-          {saving ? '保存中...' : saved ? '✓ 保存しました' : '保存する'}
-        </button>
+        {!isViewingOther && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
+          >
+            <Save size={15} />
+            {saving ? '保存中...' : saved ? '✓ 保存しました' : '保存する'}
+          </button>
+        )}
       </div>
 
       {/* 今日の状況 */}

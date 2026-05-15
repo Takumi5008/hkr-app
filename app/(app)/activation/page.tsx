@@ -25,6 +25,7 @@ type ActivationRecord = {
   delivery_date: string
   week_after_delivery: string
   activation: string
+  construction_type: string
   fm_done: number
   week_after_done: number
   day_before_construction_done: number
@@ -43,6 +44,7 @@ const emptyRecord = {
   name: '', date: '', line: '', cancel: '', cancel_reason: '', neg_apply: '', neg_cancel: '', fm: '',
   week_after: '', day_before_construction: '', construction_date: '',
   day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
+  construction_type: '',
 }
 
 const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyRecord; label: string }[]> = {
@@ -57,6 +59,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'day_before_construction', label: '工事日前日' },
     { key: 'construction_date', label: '工事日' },
+    { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
@@ -208,7 +211,7 @@ export default function ActivationPage() {
     week_after: rec.week_after, day_before_construction: rec.day_before_construction,
     construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
     delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
-    activation: rec.activation,
+    activation: rec.activation, construction_type: rec.construction_type ?? '',
     ...overrides,
   })
 
@@ -242,6 +245,14 @@ export default function ActivationPage() {
     const newVal = cycleTextVal(rec.neg_cancel)
     setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, neg_cancel: newVal } : r))
     await patchRecord(buildPatch(rec, { neg_cancel: newVal }))
+  }
+
+  // 工事有無トグル（So-net用）: '' → '🐜' → '🍐' → ''
+  const toggleConstructionType = async (rec: ActivationRecord) => {
+    const vals = ['', '🐜', '🍐'] as const
+    const next = vals[(vals.indexOf(rec.construction_type as typeof vals[number]) + 1) % vals.length]
+    setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, construction_type: next } : r))
+    await patchRecord(buildPatch(rec, { construction_type: next }))
   }
 
   useEffect(() => {
@@ -298,7 +309,8 @@ export default function ActivationPage() {
       neg_apply: rec.neg_apply, neg_cancel: rec.neg_cancel, fm: rec.fm,
       week_after: rec.week_after, day_before_construction: rec.day_before_construction,
       construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
-      delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery, activation: rec.activation,
+      delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
+      activation: rec.activation, construction_type: rec.construction_type ?? '',
     })
   }
 
@@ -384,7 +396,7 @@ export default function ActivationPage() {
       </div>
 
       {/* 管理者：メンバー選択 */}
-      {(myRole === 'manager' || myRole === 'viewer') && members.length > 0 && (
+      {(myRole === 'manager' || myRole === 'viewer' || myRole === 'admin') && members.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <span className="text-sm text-gray-500 shrink-0">メンバー</span>
           <select
@@ -437,12 +449,13 @@ export default function ActivationPage() {
                   {LIST_COLS.map((c) => (
                     <th key={c.key} className="border border-gray-100 px-3 py-2.5 bg-gray-50 text-center text-gray-600 font-semibold whitespace-nowrap">{c.label}</th>
                   ))}
+                  <th className="border border-gray-100 px-2 py-2.5 bg-gray-50 w-14" />
                 </tr>
               </thead>
               <tbody>
                 {records.length === 0 && (
                   <tr>
-                    <td colSpan={LIST_COLS.length + 1} className="border border-gray-100 px-4 py-8 text-center text-gray-400 text-sm">
+                    <td colSpan={LIST_COLS.length + 2} className="border border-gray-100 px-4 py-8 text-center text-gray-400 text-sm">
                       データがありません
                     </td>
                   </tr>
@@ -512,6 +525,16 @@ export default function ActivationPage() {
                           </td>
                         )
                       })}
+                      <td className="border border-gray-100 px-2 py-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => openEdit(rec)} className="text-gray-300 hover:text-violet-500 transition">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => handleDelete(rec.id)} className="text-gray-300 hover:text-red-400 transition">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
@@ -586,6 +609,14 @@ export default function ActivationPage() {
                         ) : isNegCancel ? (
                           <button onClick={() => toggleNegCancel(rec)} className="text-lg leading-none">
                             {textEmoji(rec.neg_cancel)}
+                          </button>
+                        ) : c.key === 'construction_type' ? (
+                          <button
+                            onClick={() => toggleConstructionType(rec)}
+                            className="text-lg leading-none"
+                            title={rec.construction_type === '🐜' ? '工事あり' : rec.construction_type === '🍐' ? '工事なし' : '未設定'}
+                          >
+                            {rec.construction_type || '🔘'}
                           </button>
                         ) : isDoneField && rec[c.key] ? (
                           <div className="flex items-center justify-center gap-1">
@@ -670,6 +701,25 @@ export default function ActivationPage() {
               )
             })}
           </div>
+          {type === 'sonet' && (
+            <div className="flex items-center gap-3 mt-3">
+              <span className="text-xs text-gray-500">工事の有無</span>
+              {(['🐜', '🍐'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, construction_type: p.construction_type === v ? '' : v }))}
+                  className={`text-xl px-2 py-1 rounded-lg transition ${form.construction_type === v ? 'bg-violet-100 ring-2 ring-violet-400' : 'bg-gray-50 hover:bg-gray-100'}`}
+                  title={v === '🐜' ? '工事あり' : '工事なし'}
+                >
+                  {v}
+                </button>
+              ))}
+              {form.construction_type && (
+                <span className="text-xs text-gray-400">{form.construction_type === '🐜' ? '工事あり' : '工事なし'}</span>
+              )}
+            </div>
+          )}
           <div className="flex gap-2 mt-3">
             <button onClick={() => setEditingId(null)}
               className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">

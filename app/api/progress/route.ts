@@ -23,10 +23,13 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
+  const userId = searchParams.get('userId')
+  const isManager = session.role === 'manager' || session.role === 'admin' || session.role === 'viewer'
+  const targetUserId = isManager && userId ? parseInt(userId) : session.userId
 
   const [progress, shift, deadline] = await Promise.all([
-    dbQuery('SELECT * FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3', [session.userId, year, month]),
-    dbQuery('SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3', [session.userId, year, month]),
+    dbQuery('SELECT * FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
+    dbQuery('SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
     dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month]),
   ])
 
