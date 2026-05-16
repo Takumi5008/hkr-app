@@ -337,10 +337,10 @@ export default function KnowledgePage() {
       )}
 
       {/* タブ */}
-      <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+      <div className="flex flex-wrap gap-1 mb-5 bg-gray-100 p-1 rounded-lg">
         {tabs.map(({ id, label }) => (
           <button key={id} onClick={() => setTab(id)}
-            className={`shrink-0 px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${tab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${tab === id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             {label}
           </button>
         ))}
@@ -348,12 +348,12 @@ export default function KnowledgePage() {
 
       {/* 録音サブタブ */}
       {tab === 'recording' && (
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-0.5">
-          <span className="shrink-0 text-xs text-gray-400 font-medium">絞り込み:</span>
-          <div className="flex gap-1">
+        <div className="mb-4">
+          <span className="text-xs text-gray-400 font-medium mr-2">絞り込み:</span>
+          <div className="flex flex-wrap gap-1 mt-1">
             {RECORDING_SUBTABS.map(({ id, label }) => (
               <button key={id} onClick={() => setRecordingSubTab(id)}
-                className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold transition-colors whitespace-nowrap border ${
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors whitespace-nowrap border ${
                   recordingSubTab === id
                     ? 'bg-violet-500 text-white border-violet-500'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-violet-300 hover:text-violet-600'
