@@ -439,26 +439,26 @@ export default function KnowledgePage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 relative z-10">
                     {(m.file_type === 'audio' || m.file_type === 'video' || hasContent) && (
                       <button onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                        className="p-2 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-violet-600 transition-colors">
+                        className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-violet-600 transition-colors active:bg-gray-100">
                         {isExpanded
-                          ? (hasContent ? <ChevronUp size={15} /> : <Pause size={15} />)
-                          : (hasContent ? <ChevronDown size={15} /> : <Play size={15} />)
+                          ? (hasContent ? <ChevronUp size={16} /> : <Pause size={16} />)
+                          : (hasContent ? <ChevronDown size={16} /> : <Play size={16} />)
                         }
                       </button>
                     )}
                     {m.url && (
                       <button onClick={(e) => handleDownload(e, m.url, m.file_name)}
-                        className="p-2 rounded-lg text-gray-400 hover:bg-gray-50 hover:text-indigo-600 transition-colors">
-                        <Download size={15} />
+                        className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-indigo-600 transition-colors active:bg-gray-100">
+                        <Download size={16} />
                       </button>
                     )}
                     {canDelete && (
                       <button onClick={() => handleDelete(m.id)}
-                        className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                        <Trash2 size={15} />
+                        className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors active:bg-red-50">
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
