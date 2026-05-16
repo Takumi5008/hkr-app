@@ -232,22 +232,8 @@ export default function KnowledgePage() {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  async function handleDownload(e: React.MouseEvent, url: string, filename: string) {
-    e.preventDefault()
-    try {
-      const res = await fetch(url)
-      const blob = await res.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = filename || 'download'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(blobUrl)
-    } catch {
-      window.open(url, '_blank')
-    }
+  function handleDownload(url: string) {
+    window.open(url, '_blank')
   }
 
   async function handleUpload() {
@@ -450,7 +436,7 @@ export default function KnowledgePage() {
                       </button>
                     )}
                     {m.url && (
-                      <button onClick={(e) => handleDownload(e, m.url, m.file_name)}
+                      <button onClick={() => handleDownload(m.url)}
                         className="w-10 h-10 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-indigo-600 transition-colors active:bg-gray-100">
                         <Download size={16} />
                       </button>
