@@ -532,8 +532,8 @@ export default function KnowledgePage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">ファイル <span className="text-red-400">*</span></label>
-                  <div onClick={() => fileRef.current?.click()}
+                  <p className="block text-xs font-medium text-gray-700 mb-1">ファイル <span className="text-red-400">*</span></p>
+                  <label htmlFor="knowledge-file-input"
                     className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl py-6 cursor-pointer hover:border-violet-400 hover:bg-violet-50 transition-colors">
                     {file ? (
                       <>
@@ -544,11 +544,11 @@ export default function KnowledgePage() {
                     ) : (
                       <>
                         <Upload size={20} className="text-gray-300 mb-1" />
-                        <p className="text-xs text-gray-400">クリックしてファイルを選択</p>
+                        <p className="text-xs text-gray-400">タップしてファイルを選択</p>
                       </>
                     )}
-                  </div>
-                  <input ref={fileRef} type="file" accept={tab === 'recording' ? '*/*' : accept} className="hidden"
+                  </label>
+                  <input id="knowledge-file-input" ref={fileRef} type="file" accept={tab === 'recording' ? '*/*' : accept} className="hidden"
                     onChange={e => setFile(e.target.files?.[0] ?? null)} />
                 </div>
               )}
