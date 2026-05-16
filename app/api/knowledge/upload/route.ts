@@ -14,10 +14,17 @@ export async function POST(req: Request): Promise<NextResponse> {
       onBeforeGenerateToken: async (_pathname, _clientPayload) => {
         return {
           allowedContentTypes: [
-            'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/x-m4a',
-            'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo',
+            // audio
+            'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/wav', 'audio/x-wav',
+            'audio/ogg', 'audio/webm', 'audio/x-m4a', 'audio/m4a',
+            'audio/aac', 'audio/x-aac', 'audio/flac', 'audio/x-flac',
+            'audio/3gpp', 'audio/amr', 'audio/x-ms-wma',
+            // video
+            'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/mpeg',
+            // document
             'application/pdf',
             'text/plain',
+            'application/octet-stream',
           ],
           maximumSizeInBytes: 500 * 1024 * 1024,
           tokenPayload: JSON.stringify({ userId: session.userId }),

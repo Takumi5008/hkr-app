@@ -282,7 +282,8 @@ export default function KnowledgePage() {
       setShowUpload(false)
       resetForm()
     } catch (e: any) {
-      alert(`保存に失敗しました: ${e?.message ?? '不明なエラー'}`)
+      const msg = e?.message ?? '不明なエラー'
+      alert(`アップロードに失敗しました。\n\nエラー: ${msg}\n\nファイル形式: ${file?.type || '不明'}\nファイルサイズ: ${file ? Math.round(file.size / 1024) + 'KB' : '不明'}`)
     }
     setUploading(false)
   }
