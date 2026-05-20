@@ -149,7 +149,7 @@ export default function PerformancePage() {
   const monthsWithCancel = yearMonthly.filter((r) => r.total_cancel > 0)
   const monthsWithWork = yearMonthly.filter((r) => r.work_days > 0)
   const monthsWithWorkHours = yearMonthly.filter((r) => (r.work_hours ?? 0) > 0)
-  const monthsWithOpening = yearMonthly.filter((r) => (r.opening_count ?? 0) > 0)
+  const monthsWithOpening = yearMonthly.filter((r) => r.opening_count !== null && r.opening_count !== undefined)
   const allMonthsTotal = {
     activation: yearMonthly.reduce((s, r) => s + r.total_activation, 0),
     cancel: yearMonthly.reduce((s, r) => s + r.total_cancel, 0),
@@ -170,7 +170,7 @@ export default function PerformancePage() {
       ? Math.round(allMonthsTotal.openingCount / monthsWithOpening.length * 10) / 10 : 0,
   }
   // 解除数がある月だけを対象にHKRを計算（解除0の月の開通数を除外）
-  const hkrMonths = yearMonthly.filter((r) => r.total_cancel > 0 && (r.opening_count ?? 0) > 0)
+  const hkrMonths = yearMonthly.filter((r) => r.total_cancel > 0 && r.opening_count !== null && r.opening_count !== undefined)
   const hkrOpeningTotal = hkrMonths.reduce((s, r) => s + (r.opening_count ?? 0), 0)
   const hkrCancelTotal = hkrMonths.reduce((s, r) => s + r.total_cancel, 0)
   const avgHKR = hkrCancelTotal > 0
@@ -229,7 +229,7 @@ export default function PerformancePage() {
       totalCancel: data && data.total_cancel > 0 ? String(data.total_cancel) : '',
       workDays: data && data.work_days > 0 ? String(data.work_days) : '',
       workHours: data && data.work_hours > 0 ? String(data.work_hours) : '',
-      openingCount: data && data.opening_count > 0 ? String(data.opening_count) : '',
+      openingCount: data && data.opening_count !== null && data.opening_count !== undefined ? String(data.opening_count) : '',
     })
   }
 
@@ -248,7 +248,7 @@ export default function PerformancePage() {
         totalCancel: parseInt(personalMonthForm.totalCancel) || 0,
         workDays: parseInt(personalMonthForm.workDays) || 0,
         workHours: parseFloat(personalMonthForm.workHours) || 0,
-        openingCount: parseInt(personalMonthForm.openingCount) || 0,
+        openingCount: personalMonthForm.openingCount === '' ? null : (parseInt(personalMonthForm.openingCount) || 0),
       }),
     })
     if (res.ok) setMemberMonthly(await res.json())
@@ -906,7 +906,7 @@ export default function PerformancePage() {
                       {filteredMemberMonthly.map((r) => {
                         const hasData = r.total_activation > 0 || r.total_cancel > 0 || r.work_days > 0
                         const isEditing = editingPersonalMonth === r.month
-                        const hkr = r.total_cancel > 0 ? `${Math.round(((r.opening_count ?? 0) / r.total_cancel) * 1000) / 10}%` : '-'
+                        const hkr = (r.total_cancel > 0 && r.opening_count !== null && r.opening_count !== undefined) ? `${Math.round((r.opening_count / r.total_cancel) * 1000) / 10}%` : '-'
                         const cancelTimeProductivity = r.work_hours > 0 ? (r.total_cancel / r.work_hours).toFixed(2) : '-'
                         const openingTimeProductivity = r.work_hours > 0 && (r.opening_count ?? 0) > 0 ? ((r.opening_count ?? 0) / r.work_hours).toFixed(2) : '-'
                         return (
@@ -918,7 +918,7 @@ export default function PerformancePage() {
                                   {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                                 </span>
                                 <span className="text-sm font-bold text-indigo-600">
-                                  {r.opening_count > 0 ? <>{r.opening_count}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                                  {r.opening_count !== null && r.opening_count !== undefined ? <>{r.opening_count}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                                 </span>
                                 <span className="text-sm font-bold text-violet-600">
                                   {hasData ? <>{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}

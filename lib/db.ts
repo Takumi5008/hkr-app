@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 21
+const DB_VERSION = 22
 let initialized = false
 
 async function initDb() {
@@ -442,6 +442,12 @@ async function initDb() {
       display_order INTEGER NOT NULL DEFAULT 0
     )
   `)
+
+  // v22: opening_count を NULL 許容に変更（未入力と0を区別）
+  await pool.query(`ALTER TABLE member_monthly_stats ALTER COLUMN opening_count DROP NOT NULL`)
+  await pool.query(`ALTER TABLE member_monthly_stats ALTER COLUMN opening_count DROP DEFAULT`)
+  // 既存の0は未入力として NULL に戻す
+  await pool.query(`UPDATE member_monthly_stats SET opening_count = NULL WHERE opening_count = 0`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

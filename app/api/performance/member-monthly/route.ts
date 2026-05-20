@@ -33,6 +33,9 @@ export async function POST(req: NextRequest) {
 
   const { memberName, year, month, totalActivation, totalCancel, workDays, workHours, openingCount } = await req.json()
 
+  const openingCountVal = (openingCount === '' || openingCount === null || openingCount === undefined)
+    ? null : toInt(openingCount)
+
   await dbRun(
     `INSERT INTO member_monthly_stats (member_name, year, month, total_activation, total_cancel, work_days, work_hours, opening_count)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
        work_days        = EXCLUDED.work_days,
        work_hours       = EXCLUDED.work_hours,
        opening_count    = EXCLUDED.opening_count`,
-    [memberName, year, month, toInt(totalActivation), toInt(totalCancel), toInt(workDays), toFloat(workHours), toInt(openingCount)]
+    [memberName, year, month, toInt(totalActivation), toInt(totalCancel), toInt(workDays), toFloat(workHours), openingCountVal]
   )
 
   const rows = await dbQuery(
