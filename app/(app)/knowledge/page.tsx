@@ -118,7 +118,7 @@ export default function KnowledgePage() {
   const canDelete = myRole === 'manager' || myRole === 'admin'
 
   // テキスト直接入力モードかどうか
-  const isTextMode = form.fileType === 'text' || tab === 'minutes'
+  const isTextMode = form.fileType === 'text' || tab === 'minutes' || tab === 'course'
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -215,7 +215,7 @@ export default function KnowledgePage() {
     setForm({
       title: '',
       description: '',
-      fileType: tab === 'recording' ? 'audio' : tab === 'minutes' ? 'text' : 'video',
+      fileType: tab === 'recording' ? 'audio' : (tab === 'minutes' || tab === 'course') ? 'text' : 'video',
       content: '',
       subcategory: tab === 'recording' && recordingSubTab !== 'all' ? recordingSubTab : '',
     })
@@ -307,7 +307,7 @@ export default function KnowledgePage() {
 
   const tabs: { id: Category; label: string }[] = [
     { id: 'recording', label: '🎙️ 録音' },
-    { id: 'course', label: '📚 インフラ講座' },
+    { id: 'course', label: '📖 秘伝書' },
     { id: 'minutes', label: '📝 週次MTG議事録' },
   ]
 
@@ -369,7 +369,7 @@ export default function KnowledgePage() {
       {canUpload && (
         <button onClick={openUpload}
           className="mb-5 flex items-center gap-2 px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors shadow-sm">
-          <Plus size={15} />{tab === 'minutes' ? '議事録を投稿' : 'ファイルをアップロード'}
+          <Plus size={15} />{tab === 'minutes' ? '議事録を投稿' : tab === 'course' ? '秘伝書を投稿' : 'ファイルをアップロード'}
         </button>
       )}
 
@@ -384,7 +384,7 @@ export default function KnowledgePage() {
           <div className="text-center py-16 text-gray-400">
             <GraduationCap size={36} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm">まだコンテンツがありません</p>
-            {canUpload && <p className="text-xs mt-1">{tab === 'minutes' ? '「議事録を投稿」ボタンから追加できます' : '「アップロード」ボタンから追加できます'}</p>}
+            {canUpload && <p className="text-xs mt-1">{tab === 'minutes' ? '「議事録を投稿」ボタンから追加できます' : tab === 'course' ? '「秘伝書を投稿」ボタンから追加できます' : '「アップロード」ボタンから追加できます'}</p>}
           </div>
         ) : (
           <div className="space-y-3">
@@ -465,7 +465,7 @@ export default function KnowledgePage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-base font-bold text-gray-900">
-                {tab === 'minutes' ? '議事録を投稿' : isTextMode ? 'テキストを投稿' : 'ファイルをアップロード'}
+                {tab === 'minutes' ? '議事録を投稿' : tab === 'course' ? '秘伝書を投稿' : isTextMode ? 'テキストを投稿' : 'ファイルをアップロード'}
               </h2>
               <button onClick={() => { setShowUpload(false); resetForm() }} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
@@ -500,8 +500,8 @@ export default function KnowledgePage() {
                 </div>
               )}
 
-              {/* ファイル種類（minutes/recording以外のみ） */}
-              {tab !== 'minutes' && tab !== 'recording' && (
+              {/* ファイル種類（minutes/recording/course以外のみ） */}
+              {tab !== 'minutes' && tab !== 'recording' && tab !== 'course' && (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">種類 <span className="text-red-400">*</span></label>
                   <select value={form.fileType} onChange={e => { setForm(f => ({ ...f, fileType: e.target.value as FileType })); setFile(null); if (fileRef.current) fileRef.current.value = '' }}
@@ -520,13 +520,13 @@ export default function KnowledgePage() {
               {isTextMode ? (
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    {tab === 'minutes' ? '議事録内容' : 'テキスト'} <span className="text-red-400">*</span>
+                    {tab === 'minutes' ? '議事録内容' : tab === 'course' ? '秘伝書の内容' : 'テキスト'} <span className="text-red-400">*</span>
                   </label>
                   <textarea
                     value={form.content}
                     onChange={e => setForm(f => ({ ...f, content: e.target.value }))}
                     rows={10}
-                    placeholder={tab === 'minutes' ? '議事録をここに貼り付けてください...' : 'テキストをここに入力または貼り付けてください...'}
+                    placeholder={tab === 'minutes' ? '議事録をここに貼り付けてください...' : tab === 'course' ? 'テキストをここに貼り付けてください...' : 'テキストをここに入力または貼り付けてください...'}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 resize-y"
                   />
                 </div>
