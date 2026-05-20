@@ -62,6 +62,10 @@ export default function AdminPage() {
   const [progressYear, setProgressYear] = useState(today.getFullYear())
   const [progressMonth, setProgressMonth] = useState(today.getMonth() + 1)
   const [progressData, setProgressData] = useState<any[]>([])
+  const [progressEditMember, setProgressEditMember] = useState<any | null>(null)
+  const [progressEditTarget, setProgressEditTarget] = useState(0)
+  const [progressEditActual, setProgressEditActual] = useState(0)
+  const [progressEditSaving, setProgressEditSaving] = useState(false)
 
   // MTG
   const [mtgData, setMtgData] = useState<{ dates: string[]; members: any[]; map: Record<number, Record<string, any>> } | null>(null)
@@ -323,9 +327,74 @@ export default function AdminPage() {
 
   const statusLabel = (s: string) => s === 'present' ? { text: '出席', cls: 'text-emerald-600 bg-emerald-50' } : s === 'late' ? { text: '遅刻', cls: 'text-amber-600 bg-amber-50' } : { text: '欠席', cls: 'text-rose-600 bg-rose-50' }
 
+  async function handleProgressEditSave() {
+    if (!progressEditMember) return
+    setProgressEditSaving(true)
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: progressEditMember.id,
+        year: progressYear,
+        month: progressMonth,
+        cancelTarget: progressEditTarget,
+        workDates: progressEditMember.workDates ?? [],
+      }),
+    })
+    setProgressData((prev) =>
+      prev.map((m) => m.id === progressEditMember.id
+        ? { ...m, cancelTarget: progressEditTarget }
+        : m
+      )
+    )
+    setProgressEditSaving(false)
+    setProgressEditMember(null)
+  }
+
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {ConfirmDialog}
+
+      {/* 個人進捗 編集モーダル */}
+      {progressEditMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-gray-900">{progressEditMember.name} の進捗編集</h3>
+              <button onClick={() => setProgressEditMember(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-gray-400 mb-4">{progressYear}年 {progressMonth}月</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-gray-700 w-24 shrink-0">解除目標</label>
+                <input
+                  type="number" min={0}
+                  value={progressEditTarget || ''}
+                  onChange={(e) => setProgressEditTarget(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-24 text-center text-lg font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+                <span className="text-sm text-gray-500">件</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-gray-700 w-24 shrink-0">現状解除数</label>
+                <div className="w-24 text-center text-lg font-bold border border-gray-100 bg-gray-50 rounded-xl px-3 py-2 text-gray-700">
+                  {progressEditMember.actualCancel}
+                </div>
+                <span className="text-sm text-gray-500">件</span>
+                <span className="text-xs text-gray-400">自動</span>
+              </div>
+            </div>
+            <button
+              onClick={handleProgressEditSave}
+              disabled={progressEditSaving}
+              className="mt-6 w-full py-2.5 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
+            >
+              {progressEditSaving ? '保存中...' : '保存する'}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="mb-6 bg-gradient-to-r from-slate-700 to-slate-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">Admin</p>
         <h1 className="text-2xl font-bold">管理</h1>
@@ -753,7 +822,7 @@ export default function AdminPage() {
                   ? Math.round((m.cancelTarget * workDaysTodayCount) / total)
                   : 0
                 const diff = m.actualCancel - targetByToday
-                const hasData = m.cancelTarget > 0 || m.actualCancel > 0
+                const hasData = m.hasRecord || m.cancelTarget > 0 || m.actualCancel > 0
 
                 return (
                   <div key={m.id} className="flex items-center px-4 py-4 gap-3">
@@ -772,7 +841,7 @@ export default function AdminPage() {
                         <p className="text-xs text-gray-300">未設定</p>
                       )}
                     </div>
-                    {hasData && total > 0 && m.cancelTarget > 0 && (
+                    {hasData && total > 0 && (
                       <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-black shrink-0 ${
                         diff > 0 ? 'bg-emerald-50 text-emerald-600' :
                         diff < 0 ? 'bg-rose-50 text-rose-600' :

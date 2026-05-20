@@ -24,6 +24,7 @@ type MonthlyRecord = {
   month: number
   totalActivation: number
   totalCancel: number
+  totalOpening: number
   memberCount: number
   note: string
 }
@@ -64,7 +65,7 @@ export default function PerformancePage() {
   const [seeding, setSeeding] = useState(false)
   const [seedingMonthly, setSeedingMonthly] = useState(false)
   const [editingMonth, setEditingMonth] = useState<{ year: number; month: number } | null>(null)
-  const [monthForm, setMonthForm] = useState({ totalActivation: '', totalCancel: '', memberCount: '', note: '' })
+  const [monthForm, setMonthForm] = useState({ totalActivation: '', totalCancel: '', totalOpening: '', memberCount: '', note: '' })
   const [savingMonth, setSavingMonth] = useState(false)
   const [selectedFY, setSelectedFY] = useState<number>(0)
   const [selectedYear, setSelectedYear] = useState<number>(0)
@@ -168,8 +169,12 @@ export default function PerformancePage() {
     opening: monthsWithOpening.length > 0
       ? Math.round(allMonthsTotal.openingCount / monthsWithOpening.length * 10) / 10 : 0,
   }
-  const avgHKR = memberAvg.cancel > 0
-    ? Math.round((memberAvg.opening / memberAvg.cancel) * 1000) / 10 : null
+  // 解除数がある月だけを対象にHKRを計算（解除0の月の開通数を除外）
+  const hkrMonths = yearMonthly.filter((r) => r.total_cancel > 0)
+  const hkrOpeningTotal = hkrMonths.reduce((s, r) => s + (r.opening_count ?? 0), 0)
+  const hkrCancelTotal = hkrMonths.reduce((s, r) => s + r.total_cancel, 0)
+  const avgHKR = hkrCancelTotal > 0
+    ? Math.round((hkrOpeningTotal / hkrCancelTotal) * 1000) / 10 : null
   const hasMonthlyData = yearMonthly.length > 0
   const cancelTimeProductivity = allMonthsTotal.workHours > 0
     ? Math.round((allMonthsTotal.cancel / allMonthsTotal.workHours) * 100) / 100 : null
@@ -205,7 +210,7 @@ export default function PerformancePage() {
     )
     return Array.from({ length: 12 }, (_, i) => {
       const m = i + 1
-      return dataMap.get(m) ?? { year: selectedYear, month: m, totalActivation: 0, totalCancel: 0, memberCount: 0, note: '' }
+      return dataMap.get(m) ?? { year: selectedYear, month: m, totalActivation: 0, totalCancel: 0, totalOpening: 0, memberCount: 0, note: '' }
     })
   })()
 
@@ -213,8 +218,8 @@ export default function PerformancePage() {
   const teamTotal = monthly
     .filter((r) => r.year === selectedYear)
     .reduce(
-      (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel }),
-      { activation: 0, cancel: 0 }
+      (acc, r) => ({ activation: acc.activation + r.totalActivation, cancel: acc.cancel + r.totalCancel, opening: acc.opening + r.totalOpening }),
+      { activation: 0, cancel: 0, opening: 0 }
     )
 
   const openEditPersonalMonth = (month: number, data?: { total_activation: number; total_cancel: number; work_days: number; work_hours: number; opening_count: number }) => {
@@ -256,6 +261,7 @@ export default function PerformancePage() {
     setMonthForm({
       totalActivation: r.totalActivation > 0 ? String(r.totalActivation) : '',
       totalCancel: r.totalCancel > 0 ? String(r.totalCancel) : '',
+      totalOpening: r.totalOpening > 0 ? String(r.totalOpening) : '',
       memberCount: r.memberCount > 0 ? String(r.memberCount) : '',
       note: r.note ?? '',
     })
@@ -273,6 +279,7 @@ export default function PerformancePage() {
         month: editingMonth.month,
         totalActivation: parseInt(monthForm.totalActivation) || 0,
         totalCancel: parseInt(monthForm.totalCancel) || 0,
+        totalOpening: parseInt(monthForm.totalOpening) || 0,
         memberCount: parseInt(monthForm.memberCount) || 0,
         note: monthForm.note,
       }),
@@ -889,7 +896,7 @@ export default function PerformancePage() {
                         <span className="text-xs font-semibold text-gray-400">稼働日数</span>
                         <span className="text-xs font-semibold text-gray-400">稼働時間</span>
                         <span className="text-xs font-semibold text-gray-400">解除率</span>
-                        <span className="text-xs font-semibold text-gray-400">解除生産性</span>
+                        <span className="text-xs font-semibold text-gray-400">HKR</span>
                         <span className="text-xs font-semibold text-gray-400">解除時間生産性</span>
                         <span className="text-xs font-semibold text-gray-400">開通時間生産性</span>
                       </div>
@@ -899,7 +906,7 @@ export default function PerformancePage() {
                       {filteredMemberMonthly.map((r) => {
                         const hasData = r.total_activation > 0 || r.total_cancel > 0 || r.work_days > 0
                         const isEditing = editingPersonalMonth === r.month
-                        const cancelProductivity = r.work_days > 0 ? (r.total_cancel / r.work_days).toFixed(2) : '-'
+                        const hkr = r.total_cancel > 0 ? `${Math.round(((r.opening_count ?? 0) / r.total_cancel) * 1000) / 10}%` : '-'
                         const cancelTimeProductivity = r.work_hours > 0 ? (r.total_cancel / r.work_hours).toFixed(2) : '-'
                         const openingTimeProductivity = r.work_hours > 0 && (r.opening_count ?? 0) > 0 ? ((r.opening_count ?? 0) / r.work_hours).toFixed(2) : '-'
                         return (
@@ -925,8 +932,8 @@ export default function PerformancePage() {
                                 <span className="text-sm font-semibold text-emerald-600">
                                   {hasData ? cancelRate(r.total_activation, r.total_cancel) : '-'}
                                 </span>
-                                <span className="text-sm font-semibold text-blue-600">
-                                  {cancelProductivity}
+                                <span className="text-sm font-semibold text-teal-600">
+                                  {hkr}
                                 </span>
                                 <span className="text-sm font-semibold text-orange-500">
                                   {cancelTimeProductivity}
@@ -1022,7 +1029,7 @@ export default function PerformancePage() {
           ) : (
             <>
               {/* 年間合計カード */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-4 gap-3 mb-4">
                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
                   <p className="text-xs text-gray-400 mb-1">{selectedYear}年 獲得計</p>
                   <p className="text-xl font-black text-violet-600">{teamTotal.activation}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
@@ -1032,8 +1039,18 @@ export default function PerformancePage() {
                   <p className="text-xl font-black text-violet-600">{teamTotal.cancel}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
                 </div>
                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                  <p className="text-xs text-gray-400 mb-1">{selectedYear}年 開通計</p>
+                  <p className="text-xl font-black text-indigo-600">{teamTotal.opening}<span className="text-xs font-normal text-gray-400 ml-0.5">件</span></p>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
                   <p className="text-xs text-gray-400 mb-1">解除率</p>
                   <p className="text-xl font-black text-emerald-600">{cancelRate(teamTotal.activation, teamTotal.cancel)}</p>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 text-center">
+                  <p className="text-xs text-gray-400 mb-1">HKR</p>
+                  <p className="text-xl font-black text-teal-600">
+                    {teamTotal.cancel > 0 ? `${Math.round((teamTotal.opening / teamTotal.cancel) * 1000) / 10}%` : '-'}
+                  </p>
                 </div>
               </div>
 
@@ -1041,11 +1058,13 @@ export default function PerformancePage() {
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                 <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
                   <span className="text-xs font-semibold text-gray-400 w-8">月</span>
-                  <div className="flex-1 grid grid-cols-4 gap-1 text-right">
+                  <div className="flex-1 grid grid-cols-6 gap-1 text-right">
                     <span className="text-xs font-semibold text-gray-400">人数</span>
                     <span className="text-xs font-semibold text-gray-400">獲得数</span>
                     <span className="text-xs font-semibold text-gray-400">解除数</span>
+                    <span className="text-xs font-semibold text-gray-400">開通数</span>
                     <span className="text-xs font-semibold text-gray-400">解除率</span>
+                    <span className="text-xs font-semibold text-gray-400">HKR</span>
                   </div>
                   {isManager && <div className="w-7 shrink-0" />}
                 </div>
@@ -1053,12 +1072,13 @@ export default function PerformancePage() {
                   {filteredMonthly.map((r) => {
                     const hasData = r.totalActivation > 0 || r.totalCancel > 0
                     const isEditing = editingMonth?.year === r.year && editingMonth?.month === r.month
+                    const hkr = r.totalCancel > 0 ? `${Math.round((r.totalOpening / r.totalCancel) * 1000) / 10}%` : '-'
                     return (
                       <div key={r.month}>
                         {/* 通常表示行 */}
                         <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
                           <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
-                          <div className="flex-1 grid grid-cols-4 gap-1 text-right">
+                          <div className="flex-1 grid grid-cols-6 gap-1 text-right">
                             <span className="text-xs text-gray-500">
                               {hasData && r.memberCount > 0 ? `${r.memberCount}名` : '-'}
                             </span>
@@ -1068,8 +1088,14 @@ export default function PerformancePage() {
                             <span className="text-sm font-bold text-violet-600">
                               {hasData ? <>{r.totalCancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
                             </span>
+                            <span className="text-sm font-bold text-indigo-600">
+                              {r.totalOpening > 0 ? <>{r.totalOpening}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                            </span>
                             <span className="text-sm font-semibold text-emerald-600">
                               {hasData ? cancelRate(r.totalActivation, r.totalCancel) : '-'}
+                            </span>
+                            <span className="text-sm font-semibold text-teal-600">
+                              {hasData ? hkr : '-'}
                             </span>
                           </div>
                           {isManager && !isEditing && (
@@ -1092,7 +1118,7 @@ export default function PerformancePage() {
                         {/* 編集フォーム */}
                         {isEditing && (
                           <form onSubmit={handleSaveMonth} className="px-4 pb-4 bg-violet-50/40 space-y-2">
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <label className="text-xs text-gray-500 mb-0.5 block">獲得</label>
                                 <input type="number" min={0} value={monthForm.totalActivation}
@@ -1104,6 +1130,13 @@ export default function PerformancePage() {
                                 <label className="text-xs text-gray-500 mb-0.5 block">解除</label>
                                 <input type="number" min={0} value={monthForm.totalCancel}
                                   onChange={(e) => setMonthForm((p) => ({ ...p, totalCancel: e.target.value }))}
+                                  placeholder="0"
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">開通</label>
+                                <input type="number" min={0} value={monthForm.totalOpening}
+                                  onChange={(e) => setMonthForm((p) => ({ ...p, totalOpening: e.target.value }))}
                                   placeholder="0"
                                   className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
                               </div>

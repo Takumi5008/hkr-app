@@ -74,7 +74,7 @@ export default function ProgressPage() {
     await fetch('/api/progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year, month, cancelTarget, actualCancel, workDates }),
+      body: JSON.stringify({ year, month, cancelTarget, workDates }),
     })
     setSaving(false)
     setSaved(true)
@@ -114,22 +114,18 @@ export default function ProgressPage() {
 
       {/* メンバー選択（マネージャー・管理者のみ） */}
       {(role === 'manager' || role === 'admin') && members.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedUserId(null)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUserId === null ? 'bg-orange-500 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-orange-50'}`}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-gray-500 shrink-0">メンバー</span>
+          <select
+            value={selectedUserId ?? ''}
+            onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
           >
-            自分
-          </button>
-          {members.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setSelectedUserId(m.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUserId === m.id ? 'bg-orange-500 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-orange-50'}`}
-            >
-              {m.name}
-            </button>
-          ))}
+            <option value="">自分</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -160,15 +156,11 @@ export default function ProgressPage() {
         </div>
         <div className="flex items-center gap-3 mb-4">
           <label className="text-sm font-bold text-gray-700 w-24 shrink-0">現状解除数</label>
-          <input
-            type="number"
-            min={0}
-            value={actualCancel || ''}
-            onChange={(e) => { setActualCancel(parseInt(e.target.value) || 0); setSaved(false) }}
-            placeholder="0"
-            className="w-24 text-center text-lg font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
+          <div className="w-24 text-center text-lg font-bold border border-gray-100 bg-gray-50 rounded-xl px-3 py-2 text-gray-700">
+            {actualCancel}
+          </div>
           <span className="text-sm text-gray-500">件</span>
+          <span className="text-xs text-gray-400">（行動表から自動反映）</span>
         </div>
 
         {/* 稼働日カレンダー */}
@@ -233,7 +225,7 @@ export default function ProgressPage() {
       </div>
 
       {/* 今日の状況 */}
-      {total > 0 && cancelTarget > 0 && (
+      {total > 0 && (cancelTarget > 0 || actualCancel > 0) && (
         <div className={`rounded-2xl shadow-sm p-5 mb-4 text-white ${
           diff > 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
           diff < 0 ? 'bg-gradient-to-r from-rose-500 to-pink-500' :

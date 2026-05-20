@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbRun, dbQuery } from '@/lib/db'
+import { toInt } from '@/lib/parse'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
   if (session.role !== 'manager' && session.role !== 'admin') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
-  const { year, month, totalActivation, totalCancel, memberCount, note } = await req.json()
+  const { year, month, totalActivation, totalCancel, totalOpening, memberCount, note } = await req.json()
 
   await dbRun(
-    `INSERT INTO monthly_team_stats (year, month, total_activation, total_cancel, member_count, note)
-     VALUES ($1,$2,$3,$4,$5,$6)
+    `INSERT INTO monthly_team_stats (year, month, total_activation, total_cancel, total_opening, member_count, note)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
      ON CONFLICT (year, month) DO UPDATE SET
        total_activation = EXCLUDED.total_activation,
        total_cancel     = EXCLUDED.total_cancel,
+       total_opening    = EXCLUDED.total_opening,
        member_count     = EXCLUDED.member_count,
        note             = EXCLUDED.note`,
-    [year, month, totalActivation ?? 0, totalCancel ?? 0, memberCount ?? 0, note ?? '']
+    [year, month, toInt(totalActivation), toInt(totalCancel), toInt(totalOpening), toInt(memberCount), note ?? '']
   )
 
   const rows = await dbQuery(

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, useRef } from 'react'
+import { useState, useEffect, useCallback, Suspense, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
@@ -34,6 +34,10 @@ function SettingsContent() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
 
+  const refreshCardStats = useCallback(() => {
+    fetch('/api/my/card-stats').then((r) => r.json()).then(setMyCardStats)
+  }, [])
+
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/me').then((r) => r.json()),
@@ -45,7 +49,14 @@ function SettingsContent() {
       setMyCard({ id: me.id ?? me.userId, name: me.name, avatar: me.avatar ?? null, loginCount: me.loginCount ?? 0, lastLoginAt: me.lastLoginAt ?? null })
       setMyCardStats(stats)
     })
-  }, [])
+    const interval = setInterval(refreshCardStats, 30000)
+    const onVisibility = () => { if (document.visibilityState === 'visible') refreshCardStats() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [refreshCardStats])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

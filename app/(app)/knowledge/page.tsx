@@ -321,22 +321,18 @@ export default function KnowledgePage() {
 
       {/* メンバー選択（マネージャー・管理者のみ） */}
       {(myRole === 'manager' || myRole === 'admin') && members.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedUploader(null)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUploader === null ? 'bg-violet-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-violet-50'}`}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-sm text-gray-500 shrink-0">メンバー</span>
+          <select
+            value={selectedUploader ?? ''}
+            onChange={(e) => setSelectedUploader(e.target.value ? Number(e.target.value) : null)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white"
           >
-            全員
-          </button>
-          {members.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setSelectedUploader(m.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedUploader === m.id ? 'bg-violet-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-violet-50'}`}
-            >
-              {m.name}
-            </button>
-          ))}
+            <option value="">全員</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
         </div>
       )}
 

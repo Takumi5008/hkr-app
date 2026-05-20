@@ -35,7 +35,14 @@ export async function PATCH(req: Request) {
   if (!session.userId || session.role !== 'manager' && session.role !== 'admin') {
     return NextResponse.json({ error: '権限がありません' }, { status: 403 })
   }
-  const { oldName, newName } = await req.json()
+  const { oldName, newName, activationType } = await req.json()
+
+  // activation_type のみ更新
+  if (activationType !== undefined && !newName) {
+    await dbRun('UPDATE products SET activation_type = $1 WHERE name = $2', [activationType || null, oldName])
+    return NextResponse.json({ ok: true })
+  }
+
   if (!newName || typeof newName !== 'string' || !newName.trim()) {
     return NextResponse.json({ error: '新しい名前を入力してください' }, { status: 400 })
   }

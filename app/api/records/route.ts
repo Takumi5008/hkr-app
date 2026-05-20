@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { syncUserPoints, addPointTransaction } from '@/lib/points'
+import { toInt } from '@/lib/parse'
 
 const ACTIVATION_MILESTONES: { threshold: number; bonus: number }[] = [
   { threshold: 7,  bonus: 20  },
@@ -43,6 +44,13 @@ export async function POST(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'admin'
   const targetUserId = isManager && bodyUserId ? bodyUserId : session.userId
 
+  // 差分計算のために更新前の値を取得
+  const prev = await dbQueryOne<{ activation_count: number }>(
+    'SELECT activation_count FROM records WHERE user_id=$1 AND year=$2 AND month=$3 AND product=$4',
+    [targetUserId, year, month, product]
+  )
+  const prevCount = prev?.activation_count ?? 0
+
   await dbRun(`
     INSERT INTO records (user_id, year, month, product, cancel_count, activation_count, remaining_opening, expected_opening, confirmed_opening, updated_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
@@ -53,7 +61,17 @@ export async function POST(req: NextRequest) {
                   expected_opening   = EXCLUDED.expected_opening,
                   confirmed_opening  = EXCLUDED.confirmed_opening,
                   updated_at         = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-  `, [targetUserId, year, month, product, cancel_count ?? 0, activation_count ?? 0, remaining_opening ?? 0, expected_opening ?? 0, confirmed_opening ?? 0])
+  `, [targetUserId, year, month, product, toInt(cancel_count), toInt(activation_count), toInt(remaining_opening), toInt(expected_opening), toInt(confirmed_opening)])
+
+  // 差分が正なら速報ログに記録
+  const delta = (activation_count ?? 0) - prevCount
+  if (delta > 0) {
+    const today = new Date().toISOString().slice(0, 10)
+    await dbRun(
+      `INSERT INTO daily_activation_log (user_id, date, delta) VALUES ($1, $2, $3)`,
+      [targetUserId, today, delta]
+    )
+  }
 
   // 月合計開通数を集計してマイルストーンボーナスを付与
   const totals = await dbQueryOne<{ total: number }>(

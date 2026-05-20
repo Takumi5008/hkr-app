@@ -1,17 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle2, ClipboardList, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { CheckCircle2, ClipboardList, ChevronDown, ChevronUp, Loader2, Settings, Trash2 } from 'lucide-react'
 
 function getReviewPeriod(year: number, month: number) {
   const dow = new Date(year, month - 1, 1).getDay()
-  const openDay = 1 + (8 - dow) % 7
-  const closeDay = openDay + 4
+  // 第一金曜日を計算 (0=日,5=金)
+  const daysToFriday = (5 - dow + 7) % 7
+  const firstFriday = 1 + daysToFriday
   return {
-    openDate: new Date(year, month - 1, openDay, 0, 0, 0),
-    closeDate: new Date(year, month - 1, closeDay, 23, 59, 59),
-    openDay,
-    closeDay,
+    openDate: new Date(year, month - 1, 1, 0, 0, 0),
+    closeDate: new Date(year, month - 1, firstFriday, 20, 0, 0),
+    firstFriday,
   }
 }
 
@@ -41,12 +41,8 @@ export default function ReviewPage() {
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
 
-  const { openDate, closeDate, openDay, closeDay } = getReviewPeriod(currentYear, currentMonth)
+  const { firstFriday } = getReviewPeriod(currentYear, currentMonth)
   const target = getTargetMonth()
-
-  const isOpen = now >= openDate && now <= closeDate
-  const isBefore = now < openDate
-  const isAfter = now > closeDate
 
   const [myRole, setMyRole] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -55,6 +51,17 @@ export default function ReviewPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [editing, setEditing] = useState(false)
+
+  // 受付期間（DBから取得。なければデフォルトの第一金曜20時）
+  const [deadlineAt, setDeadlineAt] = useState<string | null>(null)
+  const [deadlineInput, setDeadlineInput] = useState('')
+  const [deadlineSaved, setDeadlineSaved] = useState(false)
+
+  const closeDate = deadlineAt ? new Date(deadlineAt) : getReviewPeriod(currentYear, currentMonth).closeDate
+  const openDate = getReviewPeriod(currentYear, currentMonth).openDate
+  const isOpen = now >= openDate && now <= closeDate
+  const isBefore = now < openDate
+  const isAfter = now > closeDate
 
   const [form, setForm] = useState({
     self_score: '' as Score | '',
@@ -67,6 +74,7 @@ export default function ReviewPage() {
 
   // Admin: all submissions
   const [allReviews, setAllReviews] = useState<any[]>([])
+  const [notSubmitted, setNotSubmitted] = useState<any[]>([])
   const [allLoading, setAllLoading] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [adminYear, setAdminYear] = useState(target.year)
@@ -75,24 +83,28 @@ export default function ReviewPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setMyRole(d.role ?? '')).catch(() => {})
     setLoading(true)
-    fetch(`/api/review?year=${target.year}&month=${target.month}`)
-      .then(r => r.json())
-      .then(d => {
-        if (d) {
-          setExisting(d)
-          setSubmitted(true)
-          setForm({
-            self_score: d.self_score ?? '',
-            good_points: d.good_points ?? '',
-            challenges: d.challenges ?? '',
-            next_goals: d.next_goals ?? '',
-            app_good: d.app_good ?? '',
-            app_requests: d.app_requests ?? '',
-          })
-        }
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    Promise.all([
+      fetch(`/api/review?year=${target.year}&month=${target.month}`).then(r => r.json()),
+      fetch(`/api/review/deadlines?year=${currentYear}&month=${currentMonth}`).then(r => r.json()),
+    ]).then(([reviewData, dlData]) => {
+      if (reviewData) {
+        setExisting(reviewData)
+        setSubmitted(true)
+        setForm({
+          self_score: reviewData.self_score ?? '',
+          good_points: reviewData.good_points ?? '',
+          challenges: reviewData.challenges ?? '',
+          next_goals: reviewData.next_goals ?? '',
+          app_good: reviewData.app_good ?? '',
+          app_requests: reviewData.app_requests ?? '',
+        })
+      }
+      if (dlData?.deadlineAt) {
+        setDeadlineAt(dlData.deadlineAt)
+        setDeadlineInput(dlData.deadlineAt.slice(0, 16))
+      }
+      setLoading(false)
+    }).catch(() => setLoading(false))
   }, [])
 
   useEffect(() => {
@@ -100,7 +112,11 @@ export default function ReviewPage() {
     setAllLoading(true)
     fetch(`/api/review/all?year=${adminYear}&month=${adminMonth}`)
       .then(r => r.json())
-      .then(d => { setAllReviews(Array.isArray(d) ? d : []); setAllLoading(false) })
+      .then(d => {
+        setAllReviews(Array.isArray(d.submitted) ? d.submitted : [])
+        setNotSubmitted(Array.isArray(d.notSubmitted) ? d.notSubmitted : [])
+        setAllLoading(false)
+      })
       .catch(() => setAllLoading(false))
   }, [myRole, adminYear, adminMonth])
 
@@ -121,6 +137,29 @@ export default function ReviewPage() {
     setTimeout(() => setSaved(false), 3000)
   }
 
+  async function handleSaveDeadline() {
+    if (!deadlineInput) return
+    const iso = new Date(deadlineInput).toISOString()
+    await fetch('/api/review/deadlines', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: currentYear, month: currentMonth, deadlineAt: iso }),
+    })
+    setDeadlineAt(iso)
+    setDeadlineSaved(true)
+    setTimeout(() => setDeadlineSaved(false), 2000)
+  }
+
+  async function handleDeleteDeadline() {
+    await fetch('/api/review/deadlines', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year: currentYear, month: currentMonth }),
+    })
+    setDeadlineAt(null)
+    setDeadlineInput('')
+  }
+
   const canEdit = isOpen || myRole === 'admin'
   const showForm = !submitted || editing
 
@@ -133,16 +172,50 @@ export default function ReviewPage() {
       </div>
 
       {/* 受付期間バナー */}
-      <div className={`mb-5 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2
+      <div className={`mb-3 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2
         ${isOpen ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}>
         <span>{isOpen ? '✅' : isBefore ? '🕐' : '🔒'}</span>
         <span>
-          {currentMonth}月の受付期間：{currentMonth}月{openDay}日（月）〜{currentMonth}月{closeDay}日（金）
+          {currentMonth}月の受付期間：{currentMonth}月1日〜
+          {deadlineAt
+            ? new Date(deadlineAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : `${currentMonth}月${firstFriday}日（第一金曜）20:00`}
           {isBefore && '（まだ受付前です）'}
           {isAfter && '（受付終了）'}
           {isOpen && '（受付中）'}
         </span>
       </div>
+
+      {/* 管理者向け期限設定 */}
+      {myRole === 'admin' && (
+        <div className="mb-5 bg-white border border-gray-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Settings size={14} className="text-gray-400" />
+            <span className="text-xs font-semibold text-gray-500">{currentMonth}月の受付締切設定</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="datetime-local"
+              value={deadlineInput}
+              onChange={(e) => setDeadlineInput(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+            <button
+              onClick={handleSaveDeadline}
+              disabled={!deadlineInput}
+              className="px-3 py-1.5 bg-teal-500 text-white text-xs font-semibold rounded-lg disabled:opacity-40 hover:bg-teal-600 transition"
+            >
+              {deadlineSaved ? '✓ 保存' : '設定'}
+            </button>
+            {deadlineAt && (
+              <button onClick={handleDeleteDeadline} className="p-1.5 text-gray-400 hover:text-rose-500 transition">
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">未設定の場合は第一金曜20:00がデフォルト</p>
+        </div>
+      )}
 
       {/* 提出済みバナー */}
       {submitted && !editing && (
@@ -256,7 +329,7 @@ export default function ReviewPage() {
       {!isOpen && !loading && !submitted && myRole !== 'admin' && (
         <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-gray-400 shadow-sm">
           <ClipboardList size={32} className="mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{isBefore ? `受付開始は${currentMonth}月${openDay}日（月）からです` : '今月の受付は終了しました'}</p>
+          <p className="text-sm">{isBefore ? `受付開始は${currentMonth}月1日からです` : '今月の受付は終了しました'}</p>
         </div>
       )}
 
@@ -285,9 +358,21 @@ export default function ReviewPage() {
 
           {allLoading ? (
             <div className="flex items-center justify-center py-8 text-gray-400"><Loader2 size={18} className="animate-spin mr-2" />読み込み中...</div>
-          ) : allReviews.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-400 text-sm">提出なし</div>
           ) : (
+            <>
+            {notSubmitted.length > 0 && (
+              <div className="mb-3 p-3 bg-red-50 border border-red-100 rounded-xl">
+                <p className="text-xs font-bold text-red-600 mb-1.5">⚠️ 未提出（{notSubmitted.length}名）</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {notSubmitted.map((u: any) => (
+                    <span key={u.id} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{u.name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {allReviews.length === 0 ? (
+              <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-400 text-sm">提出なし</div>
+            ) : (
             <div className="space-y-2">
               {allReviews.map(r => (
                 <div key={r.id} className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
@@ -325,6 +410,8 @@ export default function ReviewPage() {
                 </div>
               ))}
             </div>
+            )}
+            </>
           )}
         </div>
       )}

@@ -10,14 +10,14 @@ export async function GET() {
 
   const rows = await dbQuery(
     `SELECT u.name,
-            COALESCE(SUM(r.activation_count), 0)::int AS activation,
-            MAX(r.updated_at) AS last_updated
-     FROM records r
-     JOIN users u ON u.id = r.user_id
-     WHERE r.updated_at LIKE $1 AND r.activation_count > 0
+            COALESCE(SUM(d.delta), 0)::int AS activation,
+            MAX(d.created_at) AS last_updated
+     FROM daily_activation_log d
+     JOIN users u ON u.id = d.user_id
+     WHERE d.date = $1 AND d.delta > 0
      GROUP BY u.id, u.name
      ORDER BY last_updated DESC`,
-    [`${today}%`]
+    [today]
   )
 
   return NextResponse.json(rows)

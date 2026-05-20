@@ -3,14 +3,23 @@ import { Pool } from 'pg'
 const dbUrl = process.env.DATABASE_URL || ''
 const pool = new Pool({
   connectionString: dbUrl,
-  ssl: dbUrl.includes('.render.com') ? { rejectUnauthorized: false } : false,
+  ssl: (dbUrl.includes('.render.com') || dbUrl.includes('neon.tech') || dbUrl.includes('sslmode=require'))
+    ? { rejectUnauthorized: false }
+    : false,
 })
 
+const DB_VERSION = 21
 let initialized = false
 
 async function initDb() {
   if (initialized) return
   initialized = true
+
+  // バージョンテーブルを作成し、一致すればスキップ
+  await pool.query(`CREATE TABLE IF NOT EXISTS db_meta (version INTEGER PRIMARY KEY)`)
+  const { rows: ver } = await pool.query(`SELECT version FROM db_meta WHERE version = $1`, [DB_VERSION])
+  if (ver.length > 0) return
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id           SERIAL PRIMARY KEY,
@@ -160,6 +169,7 @@ async function initDb() {
       month        INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
       total_activation INTEGER NOT NULL DEFAULT 0,
       total_cancel     INTEGER NOT NULL DEFAULT 0,
+      total_opening    INTEGER NOT NULL DEFAULT 0,
       member_count     INTEGER NOT NULL DEFAULT 0,
       note             TEXT NOT NULL DEFAULT '',
       UNIQUE(year, month)
@@ -392,6 +402,48 @@ async function initDb() {
         ('日付の21時を過ぎて開通⭕️なし', -5)
     `)
   }
+
+  await pool.query(`ALTER TABLE monthly_team_stats ADD COLUMN IF NOT EXISTS total_opening INTEGER NOT NULL DEFAULT 0`)
+  await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS activation_type TEXT`)
+  await pool.query(`UPDATE products SET activation_type='sonet' WHERE name ILIKE '%so%' AND activation_type IS NULL`)
+  await pool.query(`UPDATE products SET activation_type='wimax' WHERE name ILIKE '%wimax%' AND activation_type IS NULL`)
+
+  // 全角数字を半角に正規化（既存データ修正）
+  await pool.query(`UPDATE daily_activity SET work_hours = TRANSLATE(work_hours, '０１２３４５６７８９。', '0123456789.') WHERE work_hours ~ '[０-９]'`)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS review_deadlines (
+      id          SERIAL PRIMARY KEY,
+      year        INTEGER NOT NULL,
+      month       INTEGER NOT NULL,
+      deadline_at TEXT    NOT NULL,
+      UNIQUE(year, month)
+    )
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS challenge_settings (
+      id    SERIAL PRIMARY KEY,
+      year  INTEGER NOT NULL,
+      month INTEGER NOT NULL,
+      goal  INTEGER NOT NULL DEFAULT 200,
+      UNIQUE(year, month)
+    )
+  `)
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS challenge_teams (
+      id            SERIAL PRIMARY KEY,
+      year          INTEGER NOT NULL,
+      month         INTEGER NOT NULL,
+      name          TEXT    NOT NULL DEFAULT '',
+      target        INTEGER NOT NULL DEFAULT 0,
+      member_ids    TEXT    NOT NULL DEFAULT '[]',
+      display_order INTEGER NOT NULL DEFAULT 0
+    )
+  `)
+
+  await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }
 
 export async function dbQuery<T = any>(sql: string, params?: any[]): Promise<T[]> {

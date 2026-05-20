@@ -40,8 +40,29 @@ export default function AttendancePage() {
   const [mtgSaving, setMtgSaving] = useState<string | null>(null)
   const [mtgMessage, setMtgMessage] = useState('')
 
+  // 管理者
+  const [myRole, setMyRole] = useState('')
+  const [shiftAll, setShiftAll] = useState<any[]>([])
+  const [mtgAll, setMtgAll] = useState<{ dates: string[]; members: any[]; map: Record<number, Record<string, any>> } | null>(null)
+
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setMyRole(d.role ?? '')).catch(() => {})
+  }, [])
+
+  // 管理者: シフト未提出取得
+  useEffect(() => {
+    if (tab !== 'shift' || (myRole !== 'manager' && myRole !== 'admin')) return
+    fetch(`/api/shifts/all?year=${year}&month=${month}`).then(r => r.json()).then(d => setShiftAll(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [tab, year, month, myRole])
+
+  // 管理者: MTG未提出取得
+  useEffect(() => {
+    if (tab !== 'mtg' || (myRole !== 'manager' && myRole !== 'admin')) return
+    fetch(`/api/mtg/all?year=${year}&month=${month}`).then(r => r.json()).then(d => setMtgAll(d)).catch(() => {})
+  }, [tab, year, month, myRole])
 
   // シフトデータ取得
   useEffect(() => {
@@ -293,6 +314,24 @@ export default function AttendancePage() {
                 </button>
               </div>
             )}
+
+            {/* 管理者: 未提出者一覧 */}
+            {(myRole === 'manager' || myRole === 'admin') && shiftAll.length > 0 && (() => {
+              const notSubmitted = shiftAll.filter(m => !m.submitted)
+              if (notSubmitted.length === 0) return (
+                <div className="mt-4 text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2 ring-1 ring-emerald-200">✅ 全員提出済み</div>
+              )
+              return (
+                <div className="mt-4 bg-red-50 rounded-xl px-3 py-2.5 ring-1 ring-red-100">
+                  <p className="text-xs font-bold text-red-600 mb-1.5">⚠️ 未提出（{notSubmitted.length}名）</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {notSubmitted.map(m => (
+                      <span key={m.id} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{m.name}</span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
           </>
         )}
 
@@ -376,6 +415,33 @@ export default function AttendancePage() {
                 )
               })}
             </div>
+
+            {/* 管理者: MTG未回答者一覧 */}
+            {(myRole === 'manager' || myRole === 'admin') && mtgAll && mtgAll.dates.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {mtgAll.dates.map(date => {
+                  const notAnswered = mtgAll.members.filter(m => !mtgAll.map[m.id]?.[date])
+                  const d = new Date(date + 'T00:00:00')
+                  const label = `${d.getMonth() + 1}/${d.getDate()}（金）`
+                  return (
+                    <div key={date} className={`rounded-xl px-3 py-2.5 ring-1 text-xs ${notAnswered.length === 0 ? 'bg-emerald-50 ring-emerald-200 text-emerald-600' : 'bg-red-50 ring-red-100'}`}>
+                      {notAnswered.length === 0 ? (
+                        <span>✅ {label} 全員回答済み</span>
+                      ) : (
+                        <>
+                          <p className="font-bold text-red-600 mb-1">⚠️ {label} 未回答（{notAnswered.length}名）</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {notAnswered.map(m => (
+                              <span key={m.id} className="bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{m.name}</span>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </>
         )}
       </div>

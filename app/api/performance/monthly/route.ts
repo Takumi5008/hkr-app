@@ -12,17 +12,19 @@ export async function GET() {
     month: number
     total_activation: string
     total_cancel: string
+    total_opening: string
     member_count: string
     note: string
   }>(
     `WITH manual AS (
-       SELECT year, month, total_activation, total_cancel, member_count, note
+       SELECT year, month, total_activation, total_cancel, total_opening, member_count, note
        FROM monthly_team_stats
      ),
      from_records AS (
        SELECT year, month,
               SUM(activation_count) AS total_activation,
               SUM(cancel_count)     AS total_cancel,
+              0                     AS total_opening,
               0                     AS member_count,
               ''                    AS note
        FROM records
@@ -33,6 +35,7 @@ export async function GET() {
        COALESCE(m.month, r.month)            AS month,
        COALESCE(m.total_activation, r.total_activation) AS total_activation,
        COALESCE(m.total_cancel,     r.total_cancel)     AS total_cancel,
+       COALESCE(m.total_opening,    r.total_opening)    AS total_opening,
        COALESCE(m.member_count,     r.member_count)     AS member_count,
        COALESCE(m.note, r.note)                         AS note
      FROM manual m
@@ -47,6 +50,7 @@ export async function GET() {
       month:           Number(r.month),
       totalActivation: Number(r.total_activation),
       totalCancel:     Number(r.total_cancel),
+      totalOpening:    Number(r.total_opening),
       memberCount:     Number(r.member_count),
       note:            r.note ?? '',
     }))

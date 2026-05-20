@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   const month = parseInt(searchParams.get('month') ?? '')
   if (!year || !month) return NextResponse.json({ error: 'year と month を指定してください' }, { status: 400 })
 
-  const rows = await dbQuery(
+  // 提出済み
+  const submitted = await dbQuery(
     `SELECT mr.*, u.name AS user_name
      FROM monthly_reviews mr
      JOIN users u ON u.id = mr.user_id
@@ -20,5 +21,13 @@ export async function GET(req: NextRequest) {
      ORDER BY mr.submitted_at ASC`,
     [year, month]
   )
-  return NextResponse.json(rows)
+  // 未提出メンバー（member/viewer/shift_viewer/manager）
+  const submittedIds = submitted.map((r: any) => r.user_id)
+  const allMembers = await dbQuery(
+    `SELECT id, name FROM users WHERE is_active = true AND role != 'admin' ORDER BY display_order, name`,
+    []
+  )
+  const notSubmitted = allMembers.filter((u: any) => !submittedIds.includes(u.id))
+
+  return NextResponse.json({ submitted, notSubmitted })
 }

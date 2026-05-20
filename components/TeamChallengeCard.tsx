@@ -1,20 +1,22 @@
 'use client'
 
-const CHALLENGE_GOAL = 200
-const MILESTONES = [
-  { count: 50,  emoji: '🌱', label: '50' },
-  { count: 100, emoji: '🔥', label: '100' },
-  { count: 150, emoji: '⚡', label: '150' },
-  { count: 200, emoji: '🏆', label: '200' },
-]
-
 interface Props {
   total: number
   year: number
   month: number
+  goal?: number
 }
 
-export default function TeamChallengeCard({ total, year, month }: Props) {
+export default function TeamChallengeCard({ total, year, month, goal = 200 }: Props) {
+  const CHALLENGE_GOAL = goal
+  const quarter = Math.floor(CHALLENGE_GOAL / 4)
+  const MILESTONES = [
+    { count: quarter,     emoji: '🌱', label: String(quarter) },
+    { count: quarter * 2, emoji: '🔥', label: String(quarter * 2) },
+    { count: quarter * 3, emoji: '⚡', label: String(quarter * 3) },
+    { count: CHALLENGE_GOAL, emoji: '🏆', label: String(CHALLENGE_GOAL) },
+  ]
+
   const progress = Math.min((total / CHALLENGE_GOAL) * 100, 100)
   const achieved = total >= CHALLENGE_GOAL
 
@@ -30,7 +32,7 @@ export default function TeamChallengeCard({ total, year, month }: Props) {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span className="text-xl">{achieved ? '🏆' : '🎯'}</span>
-          <span className="text-sm font-bold tracking-wide">チーム200開通チャレンジ</span>
+          <span className="text-sm font-bold tracking-wide">チーム{CHALLENGE_GOAL}開通チャレンジ</span>
         </div>
         <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
           {year}年{month}月
@@ -40,8 +42,11 @@ export default function TeamChallengeCard({ total, year, month }: Props) {
       <div className="flex items-end gap-2 mb-4 mt-3">
         <span className="text-5xl font-black leading-none">{total}</span>
         <span className="text-lg font-bold opacity-70 mb-1">/ {CHALLENGE_GOAL} 開通</span>
+        <span className="mb-1 ml-auto text-2xl font-black bg-white/20 px-3 py-1 rounded-xl">
+          {Math.round(progress)}%
+        </span>
         {achieved && (
-          <span className="mb-1 ml-auto text-sm font-bold bg-white text-yellow-600 px-3 py-1 rounded-full shadow">🎉 達成！</span>
+          <span className="text-sm font-bold bg-white text-yellow-600 px-3 py-1 rounded-full shadow">🎉 達成！</span>
         )}
       </div>
 

@@ -3,20 +3,30 @@ import { getSession } from '@/lib/session'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { addPointTransaction, removePointTransaction } from '@/lib/points'
 
+// WiMAX獲得日ベースの開通日計算：2026年5月以前は獲得日そのまま、6月以降は+7日
+function wimaxActivationDate(baseDate: string, year: number, month: number): string {
+  if (!baseDate || baseDate === '未定' || baseDate === '-' || baseDate.trim() === '') return ''
+  if (year < 2026 || (year === 2026 && month <= 5)) return baseDate
+  const d = new Date(baseDate + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + 7)
+  return d.toISOString().slice(0, 10)
+}
+
 async function syncCalendar(userId: number, recordId: number) {
   const rec = await dbQueryOne<{
     id: number; type: string; name: string; construction_type: string
     week_after: string; construction_date: string; week_after_delivery: string
+    date: string; delivery_date: string; delivery_date_done: number
     activation: string; cancel: string; year: number; month: number; user_id: number
   }>(
     `SELECT id, type, name, construction_type, week_after, construction_date,
-     week_after_delivery, activation, cancel, year, month, user_id
+     week_after_delivery, date, delivery_date, delivery_date_done,
+     activation, cancel, year, month, user_id
      FROM activation_records WHERE id = $1`,
     [recordId]
   )
   if (!rec) return
 
-  // レコードの実際のオーナーを使う（マネージャーが操作しても正しいユーザーのカレンダーに入る）
   const ownerUserId = rec.user_id
 
   const existing = await dbQueryOne<{ id: number }>(
@@ -24,27 +34,33 @@ async function syncCalendar(userId: number, recordId: number) {
     [recordId, ownerUserId]
   )
 
-  // 解除⭕️のときだけカレンダーに載せる
-  if (rec.cancel !== '○') {
-    if (existing) await dbRun('DELETE FROM opening_calendar WHERE id = $1', [existing.id])
-    return
+  // タイプ別トリガー判定
+  let shouldSync = false
+  let activationDate = ''
+
+  if (rec.type === 'sonet') {
+    // So-net: 解除⭕️のときのみ
+    shouldSync = rec.cancel === '○'
+    activationDate = rec.construction_date
+  } else if (rec.type === 'wimax_direct') {
+    // WiMAX直せち: 置いたら（date設定時）カレンダーへ
+    shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
+    activationDate = wimaxActivationDate(rec.date, rec.year, rec.month)
+  } else {
+    // WiMAX後送り: 受取日に⭕️ついたらカレンダーへ
+    shouldSync = rec.delivery_date_done >= 1
+    activationDate = wimaxActivationDate(rec.delivery_date, rec.year, rec.month)
   }
 
-  const activationDate = rec.type === 'sonet' ? rec.construction_date
-    : rec.type === 'wimax_direct' ? rec.week_after
-    : rec.week_after_delivery
-
-  // 未定・ハイフン・空欄はカレンダーに載せない
-  const invalidDate = !activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === ''
-  if (invalidDate) {
+  if (!shouldSync || !activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === '') {
     if (existing) await dbRun('DELETE FROM opening_calendar WHERE id = $1', [existing.id])
     return
   }
 
   const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
-  const status = rec.activation === '○' ? '○' : ''
+  const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
-  const dateMatch = (activationDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const dateMatch = activationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   const calYear = dateMatch ? parseInt(dateMatch[1]) : rec.year
   const calMonth = dateMatch ? parseInt(dateMatch[2]) : rec.month
 

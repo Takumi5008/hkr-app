@@ -96,9 +96,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'キャラクターを選んでください' }, { status: 400 })
     }
 
-    // Get total openings to determine max allowed steps
+    // Get total openings to determine max allowed steps (GETと同じソース)
     const openRow = await dbQueryOne<{ total: number }>(
-      `SELECT COUNT(*)::int AS total FROM activation_records WHERE user_id = $1 AND activation = '○'`,
+      `SELECT COUNT(*)::int AS total FROM opening_calendar WHERE user_id = $1 AND status = '○'`,
       [session.userId]
     )
     const totalOpenings = openRow?.total ?? 0

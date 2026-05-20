@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbRun, dbQuery } from '@/lib/db'
+import { toInt } from '@/lib/parse'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
@@ -15,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       total_cancel=$9, note=$10, sort_order=$11,
       updated_at=TO_CHAR(NOW(),'YYYY-MM-DD"T"HH24:MI:SS"Z"')
      WHERE id=$12`,
-    [name, activationTarget ?? 0, cancelTarget ?? 0, workDaysTarget ?? 0, periodStart ?? '', periodEnd ?? '', totalWork ?? 0, totalActivation ?? 0, totalCancel ?? 0, note ?? '', sortOrder ?? 0, id]
+    [name, toInt(activationTarget), toInt(cancelTarget), toInt(workDaysTarget), periodStart ?? '', periodEnd ?? '', toInt(totalWork), toInt(totalActivation), toInt(totalCancel), note ?? '', toInt(sortOrder), id]
   )
   const rows = await dbQuery('SELECT * FROM member_performance WHERE id=$1', [id])
   return NextResponse.json(rows[0])

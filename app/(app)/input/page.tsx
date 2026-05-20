@@ -56,9 +56,13 @@ export default function InputPage() {
   const [calSelectedUserId, setCalSelectedUserId] = useState<number | null>(null)
   const [inputSelectedUserId, setInputSelectedUserId] = useState<number | null>(null)
   const [resyncing, setResyncing] = useState(false)
+  const [suggestions, setSuggestions] = useState<Record<string, { cancel: number; activation: number }>>({})
+  const [applying, setApplying] = useState(false)
+  const [syncingAll, setSyncingAll] = useState(false)
+  const [syncAllResult, setSyncAllResult] = useState<string | null>(null)
 
   // 回線管理
-  const [productItems, setProductItems] = useState<{ id: number; name: string }[]>([])
+  const [productItems, setProductItems] = useState<{ id: number; name: string; activation_type: string | null }[]>([])
   const [newProduct, setNewProduct] = useState('')
   const [productError, setProductError] = useState('')
   const [addingProduct, setAddingProduct] = useState(false)
@@ -105,7 +109,7 @@ export default function InputPage() {
   useEffect(() => {
     fetch('/api/products')
       .then((r) => r.json())
-      .then((data: { id: number; name: string }[]) => {
+      .then((data: { id: number; name: string; activation_type: string | null }[]) => {
         setProductItems(data)
         const names = data.map((p) => p.name)
         setProducts(names)
@@ -117,7 +121,10 @@ export default function InputPage() {
     if (products.length === 0) return
     async function load() {
       const userParam = inputSelectedUserId ? `&userId=${inputSelectedUserId}` : ''
-      const res = await fetch(`/api/records?year=${year}&month=${month}${userParam}`)
+      const [res, suggestRes] = await Promise.all([
+        fetch(`/api/records?year=${year}&month=${month}${userParam}`),
+        fetch(`/api/records/suggest?year=${year}&month=${month}${userParam}`),
+      ])
       if (!res.ok) return
       const data = await res.json()
       const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }]))
@@ -135,6 +142,7 @@ export default function InputPage() {
       }
       setForm(next)
       setSavedActivation(savedAct)
+      if (suggestRes.ok) setSuggestions(await suggestRes.json())
     }
     load()
   }, [year, month, products, inputSelectedUserId])
@@ -171,6 +179,62 @@ export default function InputPage() {
     const delta = products.reduce((sum, p) => sum + newActivation[p] - (savedActivation[p] ?? 0), 0)
     if (delta > 0) setCelebrationCount(delta)
     setSavedActivation(newActivation)
+  }
+
+  async function handleApplySuggestions() {
+    if (Object.keys(suggestions).length === 0) return
+    setApplying(true)
+    setForm((prev) => {
+      const next = { ...prev }
+      for (const [product, sg] of Object.entries(suggestions)) {
+        if (next[product]) {
+          next[product] = {
+            ...next[product],
+            cancel: String(sg.cancel),
+            activation: String(sg.activation),
+          }
+        }
+      }
+      return next
+    })
+    setApplying(false)
+  }
+
+  async function handleSyncAll() {
+    setSyncingAll(true)
+    setSyncAllResult(null)
+    const res = await fetch('/api/records/sync-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year, month }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setSyncAllResult(`✅ ${data.updated} 件を更新しました`)
+      // 自分の分も再読込
+      const userParam = inputSelectedUserId ? `&userId=${inputSelectedUserId}` : ''
+      const [recs, sugg] = await Promise.all([
+        fetch(`/api/records?year=${year}&month=${month}${userParam}`).then((r) => r.json()),
+        fetch(`/api/records/suggest?year=${year}&month=${month}${userParam}`).then((r) => r.json()),
+      ])
+      const next: FormData = Object.fromEntries(products.map((n) => [n, { cancel: '', activation: '', remaining: '', expected: '' }]))
+      for (const r of recs) {
+        if (next[r.product] !== undefined) {
+          next[r.product] = {
+            cancel: String(r.cancel_count),
+            activation: String(r.activation_count),
+            remaining: r.remaining_opening > 0 ? String(r.remaining_opening) : '',
+            expected: r.expected_opening > 0 ? String(r.expected_opening) : '',
+          }
+        }
+      }
+      setForm(next)
+      setSuggestions(sugg)
+    } else {
+      setSyncAllResult('❌ 反映に失敗しました')
+    }
+    setSyncingAll(false)
+    setTimeout(() => setSyncAllResult(null), 4000)
   }
 
   async function handleResync() {
@@ -331,6 +395,19 @@ export default function InputPage() {
       {/* データ入力タブ */}
       {tab === 'input' && (
         <>
+          {isManager && (
+            <div className="mb-4">
+              <button
+                onClick={handleSyncAll} disabled={syncingAll}
+                className="w-full py-2.5 px-4 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {syncingAll ? '反映中...' : '🔄 全員の開通表データを一括反映'}
+              </button>
+              {syncAllResult && (
+                <p className="mt-2 text-sm text-center text-gray-600">{syncAllResult}</p>
+              )}
+            </div>
+          )}
           {isManager && calMembers.length > 0 && (
             <div className="flex items-center gap-3 mb-4">
               <span className="text-sm text-gray-500 shrink-0">メンバー</span>
@@ -362,22 +439,47 @@ export default function InputPage() {
             </select>
           </div>
 
+          {Object.keys(suggestions).length > 0 && (
+            <button
+              onClick={handleApplySuggestions} disabled={applying}
+              className="w-full mb-4 py-2.5 px-4 bg-teal-600 text-white text-sm font-medium rounded-xl hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            >
+              📋 開通表から一括反映
+            </button>
+          )}
+
           <div className="space-y-4">
             {products.map((product) => {
               const cancel = parseInt(form[product]?.cancel || '0', 10)
               const activation = parseInt(form[product]?.activation || '0', 10)
               const hkr = cancel > 0 ? calcHKR(activation, cancel) : null
+              const sg = suggestions[product]
 
               return (
                 <div key={product} className="bg-white rounded-xl border border-gray-200 p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900">{product}</h3>
-                    {hkr !== null && (
-                      <span className={`text-sm font-bold ${hkr >= 80 ? 'text-green-600' : 'text-red-600'}`}>
-                        HKR: {hkr}%
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {sg && (
+                        <button
+                          onClick={() => setForm((prev) => ({ ...prev, [product]: { ...prev[product], cancel: String(sg.cancel), activation: String(sg.activation) } }))}
+                          className="text-xs px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg border border-teal-200 hover:bg-teal-100 transition-colors font-medium"
+                        >
+                          開通表から反映
+                        </button>
+                      )}
+                      {hkr !== null && (
+                        <span className={`text-sm font-bold ${hkr >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                          HKR: {hkr}%
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {sg && (
+                    <div className="mb-3 px-3 py-2 bg-teal-50 rounded-lg text-xs text-teal-700 flex gap-4">
+                      <span>📊 開通表実績：解除 <strong>{sg.cancel}</strong> 件 / 開通 <strong>{sg.activation}</strong> 件</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">解除数</label>
@@ -447,22 +549,18 @@ export default function InputPage() {
         <>
             {/* メンバー選択（マネージャーのみ） */}
             {isManager && calMembers.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                <button
-                  onClick={() => { setCalSelectedUserId(null); setCalEditingId(null) }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${calSelectedUserId === null ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50'}`}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-sm text-gray-500 shrink-0">メンバー</span>
+                <select
+                  value={calSelectedUserId ?? ''}
+                  onChange={(e) => { setCalSelectedUserId(e.target.value ? Number(e.target.value) : null); setCalEditingId(null) }}
+                  className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                 >
-                  自分
-                </button>
-                {calMembers.map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => { setCalSelectedUserId(m.id); setCalEditingId(null) }}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${calSelectedUserId === m.id ? 'bg-blue-600 text-white shadow' : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50'}`}
-                  >
-                    {m.name}
-                  </button>
-                ))}
+                  <option value="">自分</option>
+                  {calMembers.map((m) => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
                 <button
                   onClick={handleResync}
                   disabled={resyncing}
@@ -732,6 +830,24 @@ export default function InputPage() {
                 ) : (
                   <>
                     <span className="flex-1 text-sm text-gray-800 font-medium">{p.name}</span>
+                    <select
+                      value={p.activation_type ?? ''}
+                      onChange={async (e) => {
+                        const val = e.target.value || null
+                        await fetch('/api/products', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ oldName: p.name, activationType: val }),
+                        })
+                        setProductItems((prev) => prev.map((x) => x.id === p.id ? { ...x, activation_type: val } : x))
+                      }}
+                      className="text-xs border border-gray-200 rounded-md px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                      title="開通表との紐付け"
+                    >
+                      <option value="">— 紐付けなし</option>
+                      <option value="sonet">So-net系</option>
+                      <option value="wimax">WiMAX系</option>
+                    </select>
                     <button
                       onClick={() => { setEditingId(p.id); setEditingName(p.name); setProductError('') }}
                       className="text-gray-400 hover:text-blue-500 transition-colors"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
+import { toInt, toFloat } from '@/lib/parse'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
        work_days        = EXCLUDED.work_days,
        work_hours       = EXCLUDED.work_hours,
        opening_count    = EXCLUDED.opening_count`,
-    [memberName, year, month, totalActivation ?? 0, totalCancel ?? 0, workDays ?? 0, workHours ?? 0, openingCount ?? 0]
+    [memberName, year, month, toInt(totalActivation), toInt(totalCancel), toInt(workDays), toFloat(workHours), toInt(openingCount)]
   )
 
   const rows = await dbQuery(

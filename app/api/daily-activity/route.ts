@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
+import { toInt, toFloat } from '@/lib/parse'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
       `SELECT
          u.id AS user_id, u.name,
          COUNT(CASE WHEN da.work_hours IS NOT NULL AND da.work_hours != '' THEN 1 END)::int AS work_days,
-         ROUND(COALESCE(SUM(CASE WHEN da.work_hours ~ '^[0-9]+(\\.[0-9]+)?$' THEN da.work_hours::numeric END), 0), 1) AS work_hours,
+         ROUND(COALESCE(SUM(NULLIF(TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.'), '')::numeric), 0), 1) AS work_hours,
          COALESCE(SUM(da.pin_count), 0)::int      AS pin_count,
          COALESCE(SUM(da.pingpong_count), 0)::int AS pingpong_count,
          COALESCE(SUM(da.intercom_count), 0)::int AS intercom_count,
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest) {
 
   const { date, workHours, pinCount, pingpongCount, intercomCount, faceOther, faceUnused, hearingSheet, consentForm, wimax, sonet, cancel } = await req.json()
 
+  // 全角数字を半角に正規化してからDBへ
+  const normWorkHours = String(workHours ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+
   await dbRun(
     `INSERT INTO daily_activity
      (user_id, date, work_hours, pin_count, pingpong_count, intercom_count, face_other, face_unused, hearing_sheet, consent_form, wimax, sonet, cancel)
@@ -65,8 +69,8 @@ export async function POST(req: NextRequest) {
        work_hours=$3, pin_count=$4, pingpong_count=$5, intercom_count=$6,
        face_other=$7, face_unused=$8, hearing_sheet=$9, consent_form=$10,
        wimax=$11, sonet=$12, cancel=$13`,
-    [session.userId, date, workHours ?? '', pinCount ?? 0, pingpongCount ?? 0, intercomCount ?? 0,
-     faceOther ?? 0, faceUnused ?? 0, hearingSheet ?? 0, consentForm ?? 0, wimax ?? 0, sonet ?? 0, cancel ?? 0]
+    [session.userId, date, normWorkHours, toInt(pinCount), toInt(pingpongCount), toInt(intercomCount),
+     toInt(faceOther), toInt(faceUnused), toInt(hearingSheet), toInt(consentForm), toInt(wimax), toInt(sonet), toInt(cancel)]
   )
 
   const rows = await dbQuery(

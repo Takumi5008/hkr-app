@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
+import { toInt } from '@/lib/parse'
 
 function extractWorkDays(workDatesJson: string): number[] {
   const raw = JSON.parse(workDatesJson ?? '[]')
@@ -27,23 +28,27 @@ export async function GET(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'admin' || session.role === 'viewer'
   const targetUserId = isManager && userId ? parseInt(userId) : session.userId
 
-  const [progress, shift, deadline] = await Promise.all([
+  const dateLike = `${year}-${String(month).padStart(2, '0')}-%`
+
+  const [progress, shift, deadline, activityRow] = await Promise.all([
     dbQuery('SELECT * FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
     dbQuery('SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
     dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month]),
+    dbQuery('SELECT COALESCE(SUM(cancel), 0)::int AS total FROM daily_activity WHERE user_id = $1 AND date LIKE $2', [targetUserId, dateLike]),
   ])
 
-  // シフト日程をベースに、進捗側に保存済みなければシフトから自動反映
+  // シフト管理の変更を常に優先反映。シフト未提出の場合のみ保存済みにフォールバック
   const shiftDays = shift[0] ? extractWorkDays(shift[0].work_dates) : []
-  const savedDays = progress[0] ? extractWorkDays(progress[0].work_dates) : null
-  const workDates = savedDays !== null && savedDays.length > 0 ? savedDays : shiftDays
+  const savedDays = progress[0] ? extractWorkDays(progress[0].work_dates) : []
+  const workDates = shiftDays.length > 0 ? shiftDays : savedDays
 
   const deadlineAt = deadline[0]?.deadline_at ?? null
   const deadlinePassed = deadlineAt ? new Date(deadlineAt) < new Date() : false
+  const actualCancel: number = activityRow[0]?.total ?? 0
 
   return NextResponse.json({
     cancelTarget: progress[0]?.cancel_target ?? 0,
-    actualCancel: progress[0]?.actual_cancel ?? 0,
+    actualCancel,
     workDates,
     shiftDays,
     deadlineAt,
@@ -55,10 +60,15 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  const { year, month, cancelTarget, actualCancel, workDates } = await req.json()
+  const { year, month, cancelTarget, actualCancel, workDates, userId: bodyUserId } = await req.json()
+  const safeTarget = toInt(cancelTarget)
+  const safeActual = toInt(actualCancel)
 
-  // 締切チェック（マネージャーは除外）
-  if (session.role !== 'manager' && session.role !== 'admin') {
+  const isAdmin = session.role === 'manager' || session.role === 'admin'
+  const targetUserId = isAdmin && bodyUserId ? parseInt(bodyUserId) : session.userId
+
+  // 締切チェック（マネージャー・管理者は除外）
+  if (!isAdmin) {
     const deadline = await dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
     const deadlineAt = deadline[0]?.deadline_at
     if (deadlineAt && new Date(deadlineAt) < new Date()) {
@@ -67,7 +77,7 @@ export async function POST(req: NextRequest) {
         `INSERT INTO monthly_progress (user_id, year, month, cancel_target, actual_cancel, work_dates)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (user_id, year, month) DO UPDATE SET cancel_target = $4, actual_cancel = $5`,
-        [session.userId, year, month, cancelTarget, actualCancel ?? 0, JSON.stringify(workDates)]
+        [targetUserId, year, month, safeTarget, safeActual, JSON.stringify(workDates)]
       )
       return NextResponse.json({ ok: true, workDateLocked: true })
     }
@@ -77,7 +87,7 @@ export async function POST(req: NextRequest) {
     `INSERT INTO monthly_progress (user_id, year, month, cancel_target, actual_cancel, work_dates)
      VALUES ($1, $2, $3, $4, $5, $6)
      ON CONFLICT (user_id, year, month) DO UPDATE SET cancel_target = $4, actual_cancel = $5, work_dates = $6`,
-    [session.userId, year, month, cancelTarget, actualCancel ?? 0, JSON.stringify(workDates)]
+    [targetUserId, year, month, safeTarget, safeActual, JSON.stringify(workDates)]
   )
   return NextResponse.json({ ok: true })
 }

@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 
-// 全ての cancel='○' レコードの開通カレンダーを正しいオーナーに再同期する
+// WiMAX獲得日ベースの開通日計算：2026年5月以前は獲得日そのまま、6月以降は+7日
+function wimaxActivationDate(baseDate: string, year: number, month: number): string {
+  if (!baseDate || baseDate === '未定' || baseDate === '-' || baseDate.trim() === '') return ''
+  if (year < 2026 || (year === 2026 && month <= 5)) return baseDate
+  const d = new Date(baseDate + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() + 7)
+  return d.toISOString().slice(0, 10)
+}
+
+// 全レコードの開通カレンダーを再同期する
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
@@ -12,11 +21,13 @@ export async function POST(req: NextRequest) {
   const records = await dbQuery<{
     id: number; user_id: number; type: string; name: string; construction_type: string
     week_after: string; construction_date: string; week_after_delivery: string
+    date: string; delivery_date: string; delivery_date_done: number
     activation: string; cancel: string; year: number; month: number
   }>(
     `SELECT id, user_id, type, name, construction_type, week_after, construction_date,
-     week_after_delivery, activation, cancel, year, month
-     FROM activation_records WHERE cancel = '○'`,
+     week_after_delivery, date, delivery_date, delivery_date_done,
+     activation, cancel, year, month
+     FROM activation_records`,
     []
   )
 
@@ -52,18 +63,29 @@ export async function POST(req: NextRequest) {
 
   let synced = 0
   for (const rec of records) {
-    const activationDate = rec.type === 'sonet' ? rec.construction_date
-      : rec.type === 'wimax_direct' ? rec.week_after
-      : rec.week_after_delivery
+    // タイプ別トリガー判定と開通日計算
+    let shouldSync = false
+    let activationDate = ''
 
-    // 未定・ハイフン・空欄はスキップ
-    if (!activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === '') {
+    if (rec.type === 'sonet') {
+      shouldSync = rec.cancel === '○'
+      activationDate = rec.construction_date
+    } else if (rec.type === 'wimax_direct') {
+      shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
+      activationDate = wimaxActivationDate(rec.date, rec.year, rec.month)
+    } else {
+      // wimax_post
+      shouldSync = rec.delivery_date_done >= 1
+      activationDate = wimaxActivationDate(rec.delivery_date, rec.year, rec.month)
+    }
+
+    if (!shouldSync || !activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === '') {
       await dbRun('DELETE FROM opening_calendar WHERE activation_record_id = $1', [rec.id])
       continue
     }
 
     const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
-    const status = rec.activation === '○' ? '○' : ''
+    const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
     const dateMatch = (activationDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
     const calYear = dateMatch ? parseInt(dateMatch[1]) : rec.year
