@@ -170,7 +170,7 @@ export default function PerformancePage() {
       ? Math.round(allMonthsTotal.openingCount / monthsWithOpening.length * 10) / 10 : 0,
   }
   // 解除数がある月だけを対象にHKRを計算（解除0の月の開通数を除外）
-  const hkrMonths = yearMonthly.filter((r) => r.total_cancel > 0)
+  const hkrMonths = yearMonthly.filter((r) => r.total_cancel > 0 && (r.opening_count ?? 0) > 0)
   const hkrOpeningTotal = hkrMonths.reduce((s, r) => s + (r.opening_count ?? 0), 0)
   const hkrCancelTotal = hkrMonths.reduce((s, r) => s + r.total_cancel, 0)
   const avgHKR = hkrCancelTotal > 0
