@@ -6,6 +6,7 @@ import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X,
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect } from 'react'
 import UserAvatar from '@/components/UserAvatar'
+import ActivationBadge from '@/components/ActivationBadge'
 
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
@@ -60,6 +61,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const [pushLoading, setPushLoading] = useState(false)
   const [myStreak, setMyStreak] = useState<number>(0)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
+  const [myMonthlyOpening, setMyMonthlyOpening] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -67,6 +69,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
       .then((d) => {
         if (typeof d.loginStreak === 'number') setMyStreak(d.loginStreak)
         if (d.avatar) setMyAvatar(d.avatar)
+        if (typeof d.monthlyOpening === 'number') setMyMonthlyOpening(d.monthlyOpening)
       })
       .catch(() => {})
   }, [])
@@ -208,6 +211,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <p className="text-sm font-medium text-white truncate">{name}</p>
+              {myMonthlyOpening !== null && <ActivationBadge cumulative={myMonthlyOpening} size="xs" />}
             </div>
             <div className="flex items-center gap-2">
               <p className="text-xs text-indigo-400">{roleLabel}</p>

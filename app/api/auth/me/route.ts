@@ -7,7 +7,11 @@ export async function GET() {
   if (!session.userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const user = await dbQueryOne('SELECT role, is_active, points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId])
+  const now = new Date()
+  const [user, monthlyStats] = await Promise.all([
+    dbQueryOne('SELECT role, is_active, points, level, login_streak, avatar, login_count, last_login_at FROM users WHERE id = $1', [session.userId]),
+    dbQueryOne('SELECT opening_count FROM member_monthly_stats WHERE member_name=$1 AND year=$2 AND month=$3', [session.name, now.getFullYear(), now.getMonth() + 1]),
+  ])
 
   if ((user as any)?.is_active === false) {
     session.destroy()
@@ -33,5 +37,6 @@ export async function GET() {
     avatar: (user as any)?.avatar ?? null,
     loginCount: (user as any)?.login_count ?? 0,
     lastLoginAt: (user as any)?.last_login_at ?? null,
+    monthlyOpening: (monthlyStats as any)?.opening_count ?? null,
   })
 }

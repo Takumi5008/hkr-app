@@ -14,13 +14,14 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     workDates: shift ? JSON.parse(shift.work_dates) : [],
     submitted: shift ? !!shift.submitted : false,
+    weekendReasons: shift?.weekend_reasons ? JSON.parse(shift.weekend_reasons) : {},
   })
 }
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
-  const { year, month, workDates, submitted } = await req.json()
+  const { year, month, workDates, submitted, weekendReasons } = await req.json()
   if (!year || !month || !Array.isArray(workDates)) return NextResponse.json({ error: '不正なリクエストです' }, { status: 400 })
   if (session.role !== 'manager' && session.role !== 'admin') {
     const deadline = await dbQueryOne('SELECT * FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
@@ -28,11 +29,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '提出期限が終了しています' }, { status: 403 })
     }
   }
+  const reasonsJson = JSON.stringify(weekendReasons ?? {})
   await dbRun(
-    `INSERT INTO shifts (user_id, year, month, work_dates, submitted, updated_at)
-     VALUES ($1, $2, $3, $4, $5, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
-     ON CONFLICT (user_id, year, month) DO UPDATE SET work_dates = $4, submitted = $5, updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
-    [session.userId, year, month, JSON.stringify(workDates), submitted ? 1 : 0]
+    `INSERT INTO shifts (user_id, year, month, work_dates, submitted, weekend_reasons, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+     ON CONFLICT (user_id, year, month) DO UPDATE SET work_dates = $4, submitted = $5, weekend_reasons = $6, updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
+    [session.userId, year, month, JSON.stringify(workDates), submitted ? 1 : 0, reasonsJson]
   )
 
   // 期限内に提出完了したら +1pt（月ごとに1回のみ）

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
 import AccountCard from '@/components/AccountCard'
+import ActivationBadge from '@/components/ActivationBadge'
 import { calcHKR, HKR_TARGET } from '@/lib/hkr'
 
 function SettingsContent() {
@@ -13,6 +14,7 @@ function SettingsContent() {
 
   const [myCard, setMyCard] = useState<any>(null)
   const [myCardStats, setMyCardStats] = useState<any>(null)
+  const [monthlyOpening, setMonthlyOpening] = useState<number | null>(null)
 
   // プロフィール
   const [name, setName] = useState('')
@@ -48,6 +50,7 @@ function SettingsContent() {
       setAvatar(me.avatar ?? null)
       setMyCard({ id: me.id ?? me.userId, name: me.name, avatar: me.avatar ?? null, loginCount: me.loginCount ?? 0, lastLoginAt: me.lastLoginAt ?? null })
       setMyCardStats(stats)
+      if (typeof me.monthlyOpening === 'number') setMonthlyOpening(me.monthlyOpening)
     })
     const interval = setInterval(refreshCardStats, 30000)
     const onVisibility = () => { if (document.visibilityState === 'visible') refreshCardStats() }
@@ -201,6 +204,11 @@ function SettingsContent() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <UserAvatar name={name || '?'} avatar={avatar} size="xl" />
+            {monthlyOpening !== null && (
+              <div className="absolute -bottom-1 -right-1">
+                <ActivationBadge cumulative={monthlyOpening} size="xs" />
+              </div>
+            )}
             {avatarLoading && (
               <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import ActivationBadge from '@/components/ActivationBadge'
 
 interface Row { id: number; name: string; weekly: number }
 
@@ -50,7 +51,10 @@ export default function WeeklyRankingCard() {
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-sm font-medium text-gray-800 truncate">{row.name}</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-sm font-medium text-gray-800 truncate">{row.name}</span>
+                  <ActivationBadge cumulative={row.weekly} size="xs" />
+                </div>
                 <span className="text-sm font-bold text-emerald-600 shrink-0 ml-2">{row.weekly}件</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">

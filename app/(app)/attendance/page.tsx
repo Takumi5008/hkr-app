@@ -26,6 +26,7 @@ export default function AttendancePage() {
 
   // シフト
   const [workMap, setWorkMap] = useState<Record<number, string>>({})
+  const [weekendReasons, setWeekendReasons] = useState<Record<number, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -37,8 +38,10 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState<Record<string, any>>({})
   const [mtgDeadlineAt, setMtgDeadlineAt] = useState<string | null>(null)
   const [mtgDeadlinePassed, setMtgDeadlinePassed] = useState(false)
-  const [mtgSaving, setMtgSaving] = useState<string | null>(null)
+  const [mtgSaving, setMtgSaving] = useState(false)
+  const [mtgSubmitted, setMtgSubmitted] = useState(false)
   const [mtgMessage, setMtgMessage] = useState('')
+  const [mtgErrors, setMtgErrors] = useState<Record<string, string>>({})
 
   // 管理者
   const [myRole, setMyRole] = useState('')
@@ -79,6 +82,7 @@ export default function AttendancePage() {
         })
       }
       setWorkMap(map)
+      setWeekendReasons(shift.weekendReasons ?? {})
       setSubmitted(shift.submitted)
       setDeadlineAt(dl.deadlineAt)
       setDeadlinePassed(dl.deadlineAt ? new Date(dl.deadlineAt) < new Date() : false)
@@ -90,13 +94,17 @@ export default function AttendancePage() {
     if (tab !== 'mtg') return
     Promise.all([
       fetch(`/api/mtg/fridays?year=${year}&month=${month}`).then((r) => r.json()),
-      fetch('/api/mtg/my').then((r) => r.json()),
+      fetch(`/api/mtg/my?year=${year}&month=${month}`).then((r) => r.json()),
       fetch(`/api/mtg/deadlines?year=${year}&month=${month}`).then((r) => r.json()),
-    ]).then(([dates, map, dl]) => {
+      fetch(`/api/mtg/submit?year=${year}&month=${month}`).then((r) => r.json()),
+    ]).then(([dates, map, dl, sub]) => {
       setFridays(dates)
       setAttendance(map)
       setMtgDeadlineAt(dl.deadlineAt)
       setMtgDeadlinePassed(dl.deadlineAt ? new Date(dl.deadlineAt) < new Date() : false)
+      setMtgSubmitted(sub.submitted ?? false)
+      setMtgErrors({})
+      setMtgMessage('')
     })
   }, [year, month, tab])
 
@@ -115,7 +123,25 @@ export default function AttendancePage() {
     setMessage('')
   }
 
+  const getWeekendOffDays = () => {
+    const days = new Date(year, month, 0).getDate()
+    const first = new Date(year, month - 1, 1).getDay()
+    const result: number[] = []
+    for (let day = 1; day <= days; day++) {
+      const dow = (first + day - 1) % 7
+      if ((dow === 0 || dow === 6) && !workMap[day]) result.push(day)
+    }
+    return result
+  }
+
   const handleSave = async (isSubmit: boolean) => {
+    if (isSubmit) {
+      const missing = getWeekendOffDays().filter((d) => !weekendReasons[d]?.trim())
+      if (missing.length > 0) {
+        setMessage(`土日休みの理由を入力してください（${missing.map((d) => `${d}日`).join('・')}）`)
+        return
+      }
+    }
     setSaving(true)
     setMessage('')
     try {
@@ -123,7 +149,7 @@ export default function AttendancePage() {
       const res = await fetch('/api/shifts/my', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year, month, workDates, submitted: isSubmit }),
+        body: JSON.stringify({ year, month, workDates, submitted: isSubmit, weekendReasons }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
       setSubmitted(isSubmit)
@@ -144,49 +170,61 @@ export default function AttendancePage() {
     return `${d.getMonth() + 1}/${d.getDate()}（${days[d.getDay()]}）`
   }
 
-  const handleStatus = async (date: string, status: string) => {
+  const handleStatus = (date: string, status: string) => {
     if (mtgDeadlinePassed || date < todayStr) return
-    setMtgSaving(date)
-    setMtgMessage('')
-    const current = attendance[date] || {}
-    try {
-      const res = await fetch('/api/mtg/my', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, status, reason: current.reason || '', lateTime: current.late_time || '' }),
-      })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
-      setAttendance((prev) => ({ ...prev, [date]: { ...current, date, status } }))
-      setMtgMessage('保存しました')
-      setTimeout(() => setMtgMessage(''), 2000)
-    } catch (err: any) {
-      setMtgMessage(err.message)
-    } finally {
-      setMtgSaving(null)
+    setAttendance((prev) => ({ ...prev, [date]: { ...(prev[date] || {}), date, status } }))
+    if (status === 'absent' || status === 'late') {
+      setMtgErrors((prev) => ({ ...prev, [date]: status === 'absent' ? '欠席理由を入力してください' : '遅刻理由を入力してください' }))
+    } else {
+      setMtgErrors((prev) => { const n = { ...prev }; delete n[date]; return n })
     }
+    setMtgSubmitted(false)
+    setMtgMessage('')
   }
 
   const handleField = (date: string, field: string, value: string) => {
     setAttendance((prev) => ({ ...prev, [date]: { ...(prev[date] || {}), [field]: value } }))
+    if (field === 'reason' && value.trim()) {
+      setMtgErrors((prev) => { const n = { ...prev }; delete n[date]; return n })
+    }
+    setMtgSubmitted(false)
+    setMtgMessage('')
   }
 
-  const handleFieldBlur = async (date: string, field: string, value: string) => {
-    const current = attendance[date]
-    if (!current || current.status === 'present') return
-    if (mtgDeadlinePassed || date < todayStr) return
-    setMtgSaving(date)
+  const handleMtgSave = async (isSubmit: boolean) => {
+    if (isSubmit) {
+      const errors: Record<string, string> = {}
+      for (const date of fridays) {
+        const rec = attendance[date]
+        if (!rec) continue
+        if ((rec.status === 'absent' || rec.status === 'late') && !rec.reason?.trim()) {
+          errors[date] = rec.status === 'absent' ? '欠席理由を入力してください' : '遅刻理由を入力してください'
+        }
+      }
+      if (Object.keys(errors).length > 0) {
+        setMtgErrors(errors)
+        setMtgMessage('欠席の理由を入力してから提出してください')
+        return
+      }
+    }
+    setMtgSaving(true)
+    setMtgMessage('')
     try {
-      const reason = field === 'reason' ? value : current.reason || ''
-      const lateTime = field === 'late_time' ? value : current.late_time || ''
-      await fetch('/api/mtg/my', {
+      const attendances = fridays
+        .filter((d) => attendance[d]?.status)
+        .map((d) => ({ date: d, status: attendance[d].status, reason: attendance[d].reason || '', lateTime: attendance[d].late_time || '' }))
+      const res = await fetch('/api/mtg/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, status: current.status, reason, lateTime }),
+        body: JSON.stringify({ year, month, attendances, submitted: isSubmit }),
       })
-      setMtgMessage('保存しました')
-      setTimeout(() => setMtgMessage(''), 2000)
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
+      setMtgSubmitted(isSubmit)
+      setMtgMessage(isSubmit ? '提出しました！' : '保存しました')
+    } catch (err: any) {
+      setMtgMessage(err.message)
     } finally {
-      setMtgSaving(null)
+      setMtgSaving(false)
     }
   }
 
@@ -294,6 +332,44 @@ export default function AttendancePage() {
               )}
             </div>
 
+            {/* 土日休み理由入力 */}
+            {!deadlinePassed && (() => {
+              const weekendOff = getWeekendOffDays()
+              if (weekendOff.length === 0) return null
+              const weeks = ['日', '月', '火', '水', '木', '金', '土']
+              return (
+                <div className="mt-4 bg-amber-50 rounded-xl ring-1 ring-amber-200 px-4 py-3 space-y-2">
+                  <p className="text-xs font-bold text-amber-700">⚠️ 土日休みの理由（必須）</p>
+                  {weekendOff.map((day) => {
+                    const dow = (firstDay + day - 1) % 7
+                    return (
+                      <div key={day} className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-amber-800 shrink-0 w-14">
+                          {month}/{day}（{weeks[dow]}）
+                        </span>
+                        <input
+                          type="text"
+                          placeholder="休む理由を入力"
+                          value={weekendReasons[day] || ''}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setWeekendReasons((prev) => {
+                              const n = { ...prev }
+                              if (v) n[day] = v; else delete n[day]
+                              return n
+                            })
+                            setSubmitted(false)
+                            setMessage('')
+                          }}
+                          className={`flex-1 border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300 ${weekendReasons[day] ? 'border-gray-200 bg-white' : 'border-rose-300 bg-rose-50'}`}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+
             {message && (
               <div className={`mt-3 text-sm rounded-xl px-4 py-2.5 ${
                 message.includes('！') || message === '保存しました'
@@ -356,10 +432,6 @@ export default function AttendancePage() {
               <h3 className="text-base font-bold text-gray-800">金曜MTG出欠</h3>
             </div>
 
-            {mtgMessage && (
-              <div className="mb-4 text-sm text-emerald-700 bg-emerald-50 rounded-xl px-4 py-2.5 ring-1 ring-emerald-200">{mtgMessage}</div>
-            )}
-
             {fridays.length === 0 && (
               <p className="text-center text-gray-400 text-sm py-6">この月に金曜日はありません</p>
             )}
@@ -367,8 +439,7 @@ export default function AttendancePage() {
             <div className="space-y-2">
               {fridays.map((date) => {
                 const rec = attendance[date] || {}
-                const isPast = date < todayStr
-                const locked = isPast || mtgDeadlinePassed
+                const locked = mtgDeadlinePassed
                 return (
                   <div key={date} className={`rounded-xl ring-1 overflow-hidden ${locked ? 'ring-gray-100 opacity-75' : 'ring-indigo-100'}`}>
                     <div className={`flex items-center justify-between px-4 py-2.5 ${locked ? 'bg-gray-50' : 'bg-indigo-50/50'}`}>
@@ -387,7 +458,7 @@ export default function AttendancePage() {
                           <button
                             key={status}
                             onClick={() => handleStatus(date, status)}
-                            disabled={mtgSaving === date || locked}
+                            disabled={mtgSaving || locked}
                             className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition ${
                               rec.status === status ? active : `bg-white text-gray-600 border border-gray-200 ${hover}`
                             } disabled:opacity-50`}
@@ -396,25 +467,75 @@ export default function AttendancePage() {
                       </div>
                     </div>
                     {(rec.status === 'late' || rec.status === 'absent') && (
-                      <div className="px-4 py-2.5 bg-white border-t border-gray-100 flex gap-2">
-                        {rec.status === 'late' && (
-                          <input type="text" placeholder="遅れる時間（例: 30分）" value={rec.late_time || ''}
+                      <div className="px-4 py-2.5 bg-white border-t border-gray-100 space-y-1.5">
+                        <div className="flex gap-2">
+                          {rec.status === 'late' && (
+                            <input type="text" placeholder="遅れる時間（例: 30分）" value={rec.late_time || ''}
+                              disabled={locked}
+                              onChange={(e) => handleField(date, 'late_time', e.target.value)}
+                              className="w-36 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300 bg-gray-50 disabled:opacity-50" />
+                          )}
+                          <input
+                            type="text"
+                            placeholder={rec.status === 'absent' ? '欠席理由を入力（必須）' : '遅刻理由を入力（必須）'}
+                            value={rec.reason || ''}
                             disabled={locked}
-                            onChange={(e) => handleField(date, 'late_time', e.target.value)}
-                            onBlur={(e) => handleFieldBlur(date, 'late_time', e.target.value)}
-                            className="w-36 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-300 bg-gray-50 disabled:opacity-50" />
+                            onChange={(e) => handleField(date, 'reason', e.target.value)}
+                            className={`flex-1 border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 bg-gray-50 disabled:opacity-50 ${
+                              !rec.reason?.trim()
+                                ? 'border-rose-300 focus:ring-rose-300'
+                                : 'border-gray-200 focus:ring-rose-300'
+                            }`}
+                          />
+                        </div>
+                        {mtgErrors[date] && (
+                          <p className="text-xs text-rose-600 font-medium">{mtgErrors[date]}</p>
                         )}
-                        <input type="text" placeholder="理由を入力（任意）" value={rec.reason || ''}
-                          disabled={locked}
-                          onChange={(e) => handleField(date, 'reason', e.target.value)}
-                          onBlur={(e) => handleFieldBlur(date, 'reason', e.target.value)}
-                          className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-rose-300 bg-gray-50 disabled:opacity-50" />
                       </div>
                     )}
                   </div>
                 )
               })}
             </div>
+
+            <div className="mt-5 flex items-center justify-between text-sm">
+              <span className="text-gray-500">回答済み：<span className="font-bold text-indigo-600">{fridays.filter(d => attendance[d]?.status).length}/{fridays.length}件</span></span>
+              {mtgSubmitted && (
+                <span className="flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 px-3 py-1 rounded-full text-xs">
+                  ✓ 提出済み
+                </span>
+              )}
+            </div>
+
+            {mtgMessage && (
+              <div className={`mt-3 text-sm rounded-xl px-4 py-2.5 ${
+                mtgMessage.includes('！') || mtgMessage === '保存しました'
+                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                  : 'bg-rose-50 text-rose-600 ring-1 ring-rose-200'
+              }`}>{mtgMessage}</div>
+            )}
+
+            {!mtgDeadlinePassed && (
+              <div className="mt-4 flex gap-2">
+                {mtgSubmitted ? (
+                  <button onClick={() => { setMtgSubmitted(false); setMtgMessage('') }}
+                    className="flex-1 border-2 border-indigo-300 text-indigo-600 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-50 transition">
+                    修正する
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => handleMtgSave(false)} disabled={mtgSaving}
+                      className="flex-1 border-2 border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 transition">
+                      一時保存
+                    </button>
+                    <button onClick={() => handleMtgSave(true)} disabled={mtgSaving}
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:from-indigo-700 hover:to-violet-700 disabled:opacity-50 transition shadow-md shadow-indigo-200">
+                      提出する
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* 管理者: MTG未回答者一覧 */}
             {(myRole === 'manager' || myRole === 'admin') && mtgAll && mtgAll.dates.length > 0 && (

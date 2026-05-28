@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 22
+const DB_VERSION = 24
 let initialized = false
 
 async function initDb() {
@@ -448,6 +448,21 @@ async function initDb() {
   await pool.query(`ALTER TABLE member_monthly_stats ALTER COLUMN opening_count DROP DEFAULT`)
   // 既存の0は未入力として NULL に戻す
   await pool.query(`UPDATE member_monthly_stats SET opening_count = NULL WHERE opening_count = 0`)
+
+  // v23: シフトに土日休み理由カラム追加
+  await pool.query(`ALTER TABLE shifts ADD COLUMN IF NOT EXISTS weekend_reasons TEXT NOT NULL DEFAULT '{}'`)
+
+  // v24: MTG月次提出管理テーブル
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS mtg_submissions (
+      id           SERIAL PRIMARY KEY,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year         INTEGER NOT NULL,
+      month        INTEGER NOT NULL,
+      submitted_at TEXT    NOT NULL,
+      UNIQUE(user_id, year, month)
+    )
+  `)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

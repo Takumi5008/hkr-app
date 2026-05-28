@@ -5,16 +5,26 @@ import TeamChallengeCard from '@/components/TeamChallengeCard'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
 import RecentActivationFeed from '@/components/RecentActivationFeed'
 import ChallengeAdminPanel from '@/components/ChallengeAdminPanel'
+import ActivationBadge from '@/components/ActivationBadge'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ChallengePage() {
+export default async function ChallengePage({ searchParams }: { searchParams: Promise<{ year?: string; month?: string }> }) {
   const session = await getSession()
   if (!session.userId) redirect('/login')
 
+  const params = await searchParams
   const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
+  const year = params.year ? parseInt(params.year) : now.getFullYear()
+  const month = params.month ? parseInt(params.month) : now.getMonth() + 1
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+
+  const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 }
+  const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 }
+  const isNextFuture = nextMonth.year > now.getFullYear() || (nextMonth.year === now.getFullYear() && nextMonth.month > now.getMonth() + 1)
+
   const day = now.getDate()
 
   const mm = String(month).padStart(2, '0')
@@ -26,7 +36,7 @@ export default async function ChallengePage() {
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
   let followAlerts: { name: string; staffName: string; typeLabel: string; fieldLabel: string }[] = []
-  try {
+  if (isCurrentMonth) try {
     const [sonetRows, directRows, postRows] = await Promise.all([
       dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph})`, todayFmts),
       dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph})`, todayFmts),
@@ -98,7 +108,24 @@ export default async function ChallengePage() {
       <div className="mb-6 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Challenge</p>
         <h1 className="text-2xl font-bold">チームチャレンジ</h1>
-        <p className="text-sm text-violet-200 mt-0.5">{year}年{month}月</p>
+        <div className="flex items-center gap-3 mt-2">
+          <Link href={`/challenge?year=${prevMonth.year}&month=${prevMonth.month}`} className="p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+            <ChevronLeft size={18} />
+          </Link>
+          <span className="text-sm font-bold min-w-[6rem] text-center">
+            {year}年{month}月
+            {isCurrentMonth && <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">今月</span>}
+          </span>
+          {!isNextFuture ? (
+            <Link href={`/challenge?year=${nextMonth.year}&month=${nextMonth.month}`} className="p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+              <ChevronRight size={18} />
+            </Link>
+          ) : (
+            <span className="p-1 rounded-lg bg-white/10 opacity-30 cursor-not-allowed">
+              <ChevronRight size={18} />
+            </span>
+          )}
+        </div>
       </div>
 
       <TeamChallengeCard total={total} year={year} month={month} goal={goal} />
@@ -201,20 +228,25 @@ export default async function ChallengePage() {
                     />
                   </div>
                 )}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {team.members.map((m: any) => {
                     const memberPct = team.teamTotal > 0 ? Math.round((m.activation / team.teamTotal) * 100) : 0
                     return (
-                      <div key={m.id} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-600 w-20 shrink-0 truncate">{m.name}</span>
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
-                            style={{ width: `${memberPct}%` }}
-                          />
+                      <div key={m.id} className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-gray-600">{m.name}</span>
+                          <ActivationBadge cumulative={m.activation} size="xs" />
                         </div>
-                        <span className="text-xs font-bold text-indigo-600 w-8 text-right shrink-0">{m.activation}</span>
-                        <span className="text-xs text-gray-400 w-8 text-right shrink-0">{memberPct}%</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full"
+                              style={{ width: `${memberPct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-indigo-600 w-8 text-right shrink-0">{m.activation}</span>
+                          <span className="text-xs text-gray-400 w-8 text-right shrink-0">{memberPct}%</span>
+                        </div>
                       </div>
                     )
                   })}
@@ -250,8 +282,8 @@ export default async function ChallengePage() {
         </div>
       )}
 
-      <RecentActivationFeed />
-      <WeeklyRankingCard />
+      {isCurrentMonth && <RecentActivationFeed />}
+      {isCurrentMonth && <WeeklyRankingCard />}
 
       {/* 個人別月次ランキング */}
       {memberRows.length > 0 && (
@@ -270,7 +302,10 @@ export default async function ChallengePage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-800 truncate">{m.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-gray-800">{m.name}</span>
+                        <ActivationBadge cumulative={m.activation} size="xs" />
+                      </div>
                       <span className="text-sm font-bold text-indigo-600 shrink-0 ml-2">{m.activation}件</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
