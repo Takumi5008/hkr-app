@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       activationDate = rec.construction_date
     } else if (rec.type === 'wimax_direct') {
       shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
-      activationDate = wimaxActivationDate(rec.date, rec.year, rec.month)
+      activationDate = rec.date  // 直せちは獲得日＝開通日なので+7日しない
     } else {
       // wimax_post
       shouldSync = rec.delivery_date_done >= 1
