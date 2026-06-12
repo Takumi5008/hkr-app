@@ -23,36 +23,20 @@ const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
 const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
 const cycleConstruction = (s: string) => s === '' ? '🐜' : s === '🐜' ? '🍐' : ''
 
-// 日付を数値に変換（ISO形式なら年月日込みで比較、それ以外は月日のみ）
-const sortKey = (dateStr: string): number => {
-  if (!dateStr) return 99999999
-  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (iso) return parseInt(iso[1]) * 10000 + parseInt(iso[2]) * 100 + parseInt(iso[3])
-  const md = dateStr.match(/^(\d{1,2})[\/月](\d{1,2})/)
-  if (md) return parseInt(md[1]) * 100 + parseInt(md[2])
-  const d = dateStr.match(/^(\d+)$/)
-  if (d) return parseInt(d[1])
-  return 99999999
-}
-
-// 業務月：25日以降は当月、24日以前は前月
-function getBusinessMonth(d: Date): { year: number; month: number } {
-  if (d.getDate() >= 25) return { year: d.getFullYear(), month: d.getMonth() + 1 }
-  if (d.getMonth() === 0) return { year: d.getFullYear() - 1, month: 12 }
-  return { year: d.getFullYear(), month: d.getMonth() }
-}
-
-// 業務期間ラベル: month=5 → "5/25〜6/24"
-function periodLabel(m: number): string {
-  const nm = m === 12 ? 1 : m + 1
-  return `${m}/25〜${nm}/24`
+// activation_date (free-form text) から日付の「日」部分を抽出してソート用数値に変換
+const extractDay = (dateStr: string): number => {
+  if (!dateStr) return 999
+  const m = dateStr.match(/(\d+)日$/) ||   // "5月31日"
+            dateStr.match(/\/(\d+)$/)  ||   // "5/31", "2026/5/31"
+            dateStr.match(/-(\d+)$/)   ||   // "2026-05-31"
+            dateStr.match(/^(\d+)$/)        // "31"
+  return m ? parseInt(m[1]) : 999
 }
 
 export default function InputPage() {
   const now = new Date()
-  const bm = getBusinessMonth(now)
-  const [year, setYear] = useState(bm.year)
-  const [month, setMonth] = useState(bm.month)
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
   const [products, setProducts] = useState<string[]>([])
   const [form, setForm] = useState<FormData>({})
   const [loading, setLoading] = useState(false)
@@ -589,7 +573,7 @@ export default function InputPage() {
 
             {/* 月選択 */}
             <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1">対象期間</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
               <select
                 value={`${year}-${month}`}
                 onChange={(e) => {
@@ -599,7 +583,7 @@ export default function InputPage() {
                 className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {monthOptions.map(({ year: y, month: m }) => (
-                  <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年 {periodLabel(m)}</option>
+                  <option key={`${y}-${m}`} value={`${y}-${m}`}>{formatMonth(y, m)}</option>
                 ))}
               </select>
             </div>
@@ -611,7 +595,7 @@ export default function InputPage() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-10">状態</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-20">日付</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-20">開通日</th>
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">お客様名</th>
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-24">回線</th>
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-12">工事</th>
@@ -624,7 +608,7 @@ export default function InputPage() {
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">データがありません</td>
                     </tr>
                   )}
-                  {[...calEntries].sort((a, b) => sortKey(a.activation_date) - sortKey(b.activation_date)).map((entry) => {
+                  {[...calEntries].sort((a, b) => extractDay(a.activation_date) - extractDay(b.activation_date)).map((entry) => {
                     const isEditing = calEditingId === entry.id
                     const bg = entry.status === '○' ? 'bg-green-50/40' : entry.status === '×' ? 'bg-red-50/40' : ''
                     return (
@@ -644,7 +628,7 @@ export default function InputPage() {
                               <input
                                 type="text" value={calForm.activation_date}
                                 onChange={(e) => setCalForm((p) => ({ ...p, activation_date: e.target.value }))}
-                                placeholder={calForm.construction_type === '🐜' ? '獲得日 (3/1)' : calForm.construction_type === '🍐' ? '受取日 (3/1)' : '3/1'}
+                                placeholder="3/1"
                                 className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                             </td>
@@ -685,11 +669,7 @@ export default function InputPage() {
                           </>
                         ) : (
                           <>
-                            <td className="px-3 py-2 text-gray-700 text-xs">
-                              {entry.construction_type === '🐜' && <span className="text-violet-500 font-semibold mr-1">獲得日</span>}
-                              {entry.construction_type === '🍐' && <span className="text-orange-500 font-semibold mr-1">受取日</span>}
-                              {entry.activation_date || '-'}
-                            </td>
+                            <td className="px-3 py-2 text-gray-700 text-xs">{entry.activation_date || '-'}</td>
                             <td className="px-3 py-2 text-gray-800 text-xs font-medium">{entry.customer_name || '-'}</td>
                             <td className="px-3 py-2 text-gray-600 text-xs">{entry.line_type || '-'}</td>
                             <td className="px-3 py-2 text-center">
@@ -731,7 +711,7 @@ export default function InputPage() {
                           autoFocus
                           type="text" value={calForm.activation_date}
                           onChange={(e) => setCalForm((p) => ({ ...p, activation_date: e.target.value }))}
-                          placeholder={calForm.construction_type === '🐜' ? '獲得日 (3/1)' : calForm.construction_type === '🍐' ? '受取日 (3/1)' : '3/1'}
+                          placeholder="3/1"
                           className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
@@ -788,7 +768,7 @@ export default function InputPage() {
 
             {/* サマリー */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-xs font-semibold text-gray-500 mb-3">{year}年 {periodLabel(month)} まとめ</p>
+              <p className="text-xs font-semibold text-gray-500 mb-3">{formatMonth(year, month)} まとめ</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { label: '開通数', value: calConfirmed, color: 'text-emerald-600' },
