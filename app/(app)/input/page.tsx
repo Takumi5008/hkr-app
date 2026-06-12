@@ -603,7 +603,7 @@ export default function InputPage() {
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-10">状態</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-20">開通日</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-20">日付</th>
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">お客様名</th>
                     <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 w-24">回線</th>
                     <th className="px-3 py-2.5 text-center text-xs font-medium text-gray-500 w-12">工事</th>
@@ -636,7 +636,7 @@ export default function InputPage() {
                               <input
                                 type="text" value={calForm.activation_date}
                                 onChange={(e) => setCalForm((p) => ({ ...p, activation_date: e.target.value }))}
-                                placeholder="3/1"
+                                placeholder={calForm.construction_type === '🐜' ? '獲得日 (3/1)' : calForm.construction_type === '🍐' ? '受取日 (3/1)' : '3/1'}
                                 className="w-full px-2 py-1 border border-blue-400 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                               />
                             </td>
@@ -677,7 +677,11 @@ export default function InputPage() {
                           </>
                         ) : (
                           <>
-                            <td className="px-3 py-2 text-gray-700 text-xs">{entry.activation_date || '-'}</td>
+                            <td className="px-3 py-2 text-gray-700 text-xs">
+                              {entry.construction_type === '🐜' && <span className="text-violet-500 font-semibold mr-1">獲得日</span>}
+                              {entry.construction_type === '🍐' && <span className="text-orange-500 font-semibold mr-1">受取日</span>}
+                              {entry.activation_date || '-'}
+                            </td>
                             <td className="px-3 py-2 text-gray-800 text-xs font-medium">{entry.customer_name || '-'}</td>
                             <td className="px-3 py-2 text-gray-600 text-xs">{entry.line_type || '-'}</td>
                             <td className="px-3 py-2 text-center">
