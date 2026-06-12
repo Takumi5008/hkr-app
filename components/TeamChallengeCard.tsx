@@ -21,11 +21,22 @@ export default function TeamChallengeCard({ total, year, month, goal = 200 }: Pr
   const achieved = total >= CHALLENGE_GOAL
 
   const now = new Date()
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
-  const daysInMonth = new Date(year, month, 0).getDate()
-  const today = now.getDate()
-  const paceTarget = isCurrentMonth ? Math.round(CHALLENGE_GOAL * (today / daysInMonth)) : null
-  const paceStatus = paceTarget !== null ? total - paceTarget : null
+  // 業務月：25日以降は当月、24日以前は前月
+  const bmMonth = now.getDate() >= 25 ? now.getMonth() + 1 : (now.getMonth() === 0 ? 12 : now.getMonth())
+  const bmYear  = now.getDate() >= 25 ? now.getFullYear() : (now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear())
+  const isCurrentMonth = year === bmYear && month === bmMonth
+
+  // 業務期間: M/25 〜 (M+1)/24
+  const periodStart = new Date(year, month - 1, 25)
+  const periodEnd   = new Date(year, month, 24)
+  const totalDays   = Math.round((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1
+  const daysElapsed = isCurrentMonth
+    ? Math.min(Math.max(Math.round((now.getTime() - periodStart.getTime()) / 86400000) + 1, 1), totalDays)
+    : null
+  const paceTarget  = daysElapsed !== null ? Math.round(CHALLENGE_GOAL * (daysElapsed / totalDays)) : null
+  const paceStatus  = paceTarget !== null ? total - paceTarget : null
+
+  const nm = month === 12 ? 1 : month + 1
 
   return (
     <div className={`rounded-2xl p-5 shadow-sm border ${achieved ? 'bg-gradient-to-br from-yellow-400 to-amber-500 border-yellow-300' : 'bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-500'} text-white`}>
@@ -35,7 +46,7 @@ export default function TeamChallengeCard({ total, year, month, goal = 200 }: Pr
           <span className="text-sm font-bold tracking-wide">チーム{CHALLENGE_GOAL}開通チャレンジ</span>
         </div>
         <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
-          {year}年{month}月
+          {year}年 {month}/25〜{nm}/24
         </span>
       </div>
 

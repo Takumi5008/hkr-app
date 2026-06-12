@@ -22,17 +22,24 @@ function getTargetMonth() {
   return m === 1 ? { year: y - 1, month: 12 } : { year: y, month: m - 1 }
 }
 
+// 現在月から3ヶ月前
+function getThreeMonthsAgo() {
+  const d = new Date()
+  d.setMonth(d.getMonth() - 3)
+  return { year: d.getFullYear(), month: d.getMonth() + 1 }
+}
+
 function fmt(y: number, m: number) {
   return `${y}年${m}月`
 }
 
-const SCORE_OPTIONS = ['達成', 'ほぼ達成', '未達'] as const
+const SCORE_OPTIONS = ['未達', '達成', 'アド'] as const
 type Score = typeof SCORE_OPTIONS[number]
 
 const SCORE_COLOR: Record<Score, string> = {
-  '達成': 'bg-green-500 text-white border-green-500',
-  'ほぼ達成': 'bg-yellow-400 text-white border-yellow-400',
   '未達': 'bg-red-500 text-white border-red-500',
+  '達成': 'bg-green-500 text-white border-green-500',
+  'アド': 'bg-violet-500 text-white border-violet-500',
 }
 const SCORE_IDLE = 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
 
@@ -43,6 +50,7 @@ export default function ReviewPage() {
 
   const { firstFriday } = getReviewPeriod(currentYear, currentMonth)
   const target = getTargetMonth()
+  const threeAgo = getThreeMonthsAgo()
 
   const [myRole, setMyRole] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -70,6 +78,9 @@ export default function ReviewPage() {
     next_goals: '',
     app_good: '',
     app_requests: '',
+    result_acquired:  '',
+    result_cancelled: '',
+    result_activated: '',
   })
 
   // Admin: all submissions
@@ -97,6 +108,9 @@ export default function ReviewPage() {
           next_goals: reviewData.next_goals ?? '',
           app_good: reviewData.app_good ?? '',
           app_requests: reviewData.app_requests ?? '',
+          result_acquired:  reviewData.result_acquired != null ? String(reviewData.result_acquired) : '',
+          result_cancelled: reviewData.result_cancelled != null ? String(reviewData.result_cancelled) : '',
+          result_activated: reviewData.result_activated != null ? String(reviewData.result_activated) : '',
         })
       }
       if (dlData?.deadlineAt) {
@@ -122,13 +136,21 @@ export default function ReviewPage() {
 
   const set = (key: keyof typeof form, val: string) => setForm(f => ({ ...f, [key]: val }))
 
+  const canSubmit = !!form.self_score && !!form.app_good && !!form.app_requests &&
+    form.result_acquired !== '' && form.result_cancelled !== '' && form.result_activated !== ''
+
   async function handleSubmit() {
-    if (!form.self_score) return
+    if (!canSubmit) return
     setSaving(true)
     await fetch('/api/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year: target.year, month: target.month, ...form }),
+      body: JSON.stringify({
+        year: target.year, month: target.month, ...form,
+        result_acquired:  parseInt(form.result_acquired)  || 0,
+        result_cancelled: parseInt(form.result_cancelled) || 0,
+        result_activated: parseInt(form.result_activated) || 0,
+      }),
     })
     setSaving(false)
     setSaved(true)
@@ -237,10 +259,16 @@ export default function ReviewPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400">自己評価</span>
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                form.self_score === 'アド' ? 'bg-violet-100 text-violet-700' :
                 form.self_score === '達成' ? 'bg-green-100 text-green-700' :
-                form.self_score === 'ほぼ達成' ? 'bg-yellow-100 text-yellow-700' :
                 'bg-red-100 text-red-700'}`}>{form.self_score}</span>
             </div>
+            {(form.result_acquired !== '' || form.result_cancelled !== '' || form.result_activated !== '') && (
+              <div>
+                <p className="text-xs text-gray-400">{fmt(threeAgo.year, threeAgo.month)}の結果</p>
+                <p className="text-sm text-gray-700">獲得 {form.result_acquired}件 ／ 解除 {form.result_cancelled}件 ／ 開通 {form.result_activated}件</p>
+              </div>
+            )}
             {[
               { key: 'good_points', label: '良かったこと' },
               { key: 'challenges', label: '課題・反省点' },
@@ -261,6 +289,32 @@ export default function ReviewPage() {
       {showForm && (isOpen || myRole === 'admin') && !loading && (
         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
           <h2 className="text-sm font-bold text-gray-700 border-b border-gray-100 pb-2">📊 業務振り返り</h2>
+
+          {/* 3ヶ月前の結果 */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+              {fmt(threeAgo.year, threeAgo.month)}の結果（3ヶ月前）<span className="text-red-400">*</span>
+            </label>
+            <p className="text-xs text-gray-400 mb-2">獲得した件数のうち、解除・開通がいくつあったかを入力してください</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { key: 'result_acquired',  label: '獲得' },
+                { key: 'result_cancelled', label: '解除' },
+                { key: 'result_activated', label: '開通' },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}数</label>
+                  <input
+                    type="number" min="0"
+                    value={form[key as keyof typeof form]}
+                    onChange={e => set(key as keyof typeof form, e.target.value)}
+                    placeholder="0"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* 自己評価 */}
           <div>
@@ -296,17 +350,17 @@ export default function ReviewPage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400" />
           </div>
 
-          <h2 className="text-sm font-bold text-gray-700 border-b border-gray-100 pb-2 pt-1">📱 アプリフィードバック（任意）</h2>
+          <h2 className="text-sm font-bold text-gray-700 border-b border-gray-100 pb-2 pt-1">📱 アプリフィードバック <span className="text-red-400">*</span></h2>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">アプリの良かった点</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">アプリの良かった点 <span className="text-red-400">*</span></label>
             <textarea value={form.app_good} onChange={e => set('app_good', e.target.value)}
               rows={2} placeholder="使いやすかった機能、便利だった点など"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">改善・機能追加の要望</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">改善・機能追加の要望 <span className="text-red-400">*</span></label>
             <textarea value={form.app_requests} onChange={e => set('app_requests', e.target.value)}
               rows={2} placeholder="あったらいい機能、使いにくかった点など"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-teal-400" />
@@ -318,7 +372,7 @@ export default function ReviewPage() {
                 キャンセル
               </button>
             )}
-            <button onClick={handleSubmit} disabled={!form.self_score || saving}
+            <button onClick={handleSubmit} disabled={!canSubmit || saving}
               className="flex-1 py-2.5 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
               {saving ? <><Loader2 size={14} className="animate-spin" />送信中...</> : saved ? <><CheckCircle2 size={14} />提出しました！</> : '提出する'}
             </button>
@@ -385,14 +439,20 @@ export default function ReviewPage() {
                         <p className="text-xs text-gray-400">{r.submitted_at?.slice(0, 10)} 提出</p>
                       </div>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ml-1 ${
+                        r.self_score === 'アド' ? 'bg-violet-100 text-violet-700' :
                         r.self_score === '達成' ? 'bg-green-100 text-green-700' :
-                        r.self_score === 'ほぼ達成' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'}`}>{r.self_score}</span>
                     </div>
                     {expandedId === r.id ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                   </button>
                   {expandedId === r.id && (
                     <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      {(r.result_acquired != null || r.result_cancelled != null || r.result_activated != null) && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-400 mb-0.5">3ヶ月前の結果</p>
+                          <p className="text-sm text-gray-700">獲得 {r.result_acquired ?? '-'}件 ／ 解除 {r.result_cancelled ?? '-'}件 ／ 開通 {r.result_activated ?? '-'}件</p>
+                        </div>
+                      )}
                       {[
                         { label: '良かったこと', val: r.good_points },
                         { label: '課題・反省点', val: r.challenges },

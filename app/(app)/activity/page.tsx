@@ -96,13 +96,11 @@ export default function ActivityPage() {
 
   useEffect(() => {
     fetch('/api/progress').then((r) => r.json()).then((data) => {
-      const role = data.role ?? ''
-      setMyRole(role)
-      if (role === 'manager' || role === 'viewer' || role === 'admin') {
-        fetch('/api/users').then((r) => r.json()).then((users: User[]) => {
-          setMembers(users.filter((u) => u.role !== 'viewer'))
-        })
-      }
+      setMyRole(data.role ?? '')
+    })
+    // 全ロールがメンバー一覧を取得（他人の行動表を閲覧するため）
+    fetch('/api/users').then((r) => r.json()).then((users: User[]) => {
+      setMembers(users.filter((u) => u.role !== 'viewer'))
     })
   }, [])
 
@@ -230,8 +228,8 @@ export default function ActivityPage() {
         <p className="text-sm text-teal-100 mt-0.5">日別の行動記録</p>
       </div>
 
-      {/* 管理者：メンバー選択 */}
-      {(myRole === 'manager' || myRole === 'viewer' || myRole === 'admin') && members.length > 0 && (
+      {/* メンバー選択（全員が閲覧可、全員集計は管理者のみ） */}
+      {members.length > 0 && (
         <div className="flex items-center gap-3 mb-4">
           <span className="text-sm text-gray-500 shrink-0">メンバー</span>
           <select
@@ -243,7 +241,9 @@ export default function ActivityPage() {
             className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-400 bg-white"
           >
             <option value="">自分</option>
-            <option value="all">全員</option>
+            {(myRole === 'manager' || myRole === 'viewer' || myRole === 'admin') && (
+              <option value="all">全員</option>
+            )}
             {members.map((u) => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
@@ -496,8 +496,10 @@ export default function ActivityPage() {
         </div>
       )}
 
-      {selectedUserId !== 'all' && tab === 'activity' && (
-      <>{/* テーブル */}
+      {selectedUserId !== 'all' && tab === 'activity' && (() => {
+      // 他人のデータを閲覧中は編集不可
+      const isOtherMember = selectedUserId !== null
+      return (<>{/* テーブル */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
         <TableScrollContainer>
           <table className="text-xs border-collapse" style={{ minWidth: '700px', width: '100%' }}>
@@ -520,39 +522,49 @@ export default function ActivityPage() {
                 const isToday = day === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear()
                 return (
                   <Fragment key={day}>
-                    <tr className={`${!hasData ? 'opacity-40' : ''} ${day % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}`}>
-                      <td className={`border border-gray-100 px-2 py-2 text-center font-bold sticky left-0 z-10 bg-inherit
-                        ${isToday ? 'bg-teal-500 !text-white' : dow === 0 ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'}`}>
+                    <tr
+                      className={`${!hasData && !isToday ? 'opacity-40' : ''} ${isToday ? 'bg-red-50' : day % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} ${!isEditing && !isOtherMember ? 'cursor-pointer hover:bg-red-50/60 active:bg-red-50' : ''} transition-colors`}
+                      onClick={() => { if (!isEditing && !isOtherMember) openEdit(day) }}
+                    >
+                      <td className={`border px-2 py-3 text-center font-bold sticky left-0 z-10 bg-inherit
+                        ${isToday ? 'border-red-300 bg-red-500 !text-white' : `border-gray-100 ${dow === 0 ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'}`}`}>
                         {day}
+                        {isToday && <span className="block text-[9px] font-normal leading-none mt-0.5 opacity-80">今日</span>}
                       </td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.work_hours)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.pin_count)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.pingpong_count)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.intercom_count)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.face_other)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.face_unused)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.hearing_sheet)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.consent_form)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.wimax)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.sonet)}</td>
-                      <td className="border border-gray-100 px-2 py-2 text-center">{cell(rec?.cancel)}</td>
-                      <td className="border border-gray-100 px-1 py-2 text-center">
-                        {isEditing ? (
-                          <button onClick={() => setEditingDay(null)} className="text-gray-300 hover:text-gray-500 transition">
-                            <X size={13} />
-                          </button>
-                        ) : (
-                          <button onClick={() => openEdit(day)} className="text-gray-300 hover:text-teal-500 transition">
-                            <Pencil size={13} />
-                          </button>
-                        )}
-                      </td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.work_hours)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.pin_count)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.pingpong_count)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.intercom_count)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.face_other)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.face_unused)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.hearing_sheet)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.consent_form)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.wimax)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.sonet)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.cancel)}</td>
+                      {!isOtherMember && (
+                        <td className="border border-gray-100 px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          {isEditing ? (
+                            <button onClick={() => setEditingDay(null)} className="p-1.5 text-gray-400 hover:text-gray-600 transition rounded-lg hover:bg-gray-100">
+                              <X size={15} />
+                            </button>
+                          ) : (
+                            <button onClick={() => openEdit(day)} className="p-1.5 text-gray-300 hover:text-teal-500 transition rounded-lg hover:bg-teal-50">
+                              <Pencil size={15} />
+                            </button>
+                          )}
+                        </td>
+                      )}
+                      {isOtherMember && <td className="border border-gray-100 w-7" />}
                     </tr>
 
                     {isEditing && (
                       <tr>
                         <td colSpan={13} className="border border-gray-100 p-3 bg-teal-50/40">
                           <form onSubmit={handleSave} className="space-y-2">
+                            <p className="text-sm font-bold text-teal-700">
+                              {year}年{month}月{day}日（{['日','月','火','水','木','金','土'][new Date(year, month - 1, day).getDay()]}）の記入
+                            </p>
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                               {COLS.map((c) => (
                                 <div key={c.key}>
@@ -623,7 +635,8 @@ export default function ActivityPage() {
           </table>
         </TableScrollContainer>
       </div>
-      </>)}
+      </>)
+      })()}
     </div>
   )
 }

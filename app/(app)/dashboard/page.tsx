@@ -60,15 +60,15 @@ export default async function DashboardPage() {
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph})`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph})`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
   ])

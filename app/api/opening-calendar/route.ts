@@ -15,14 +15,17 @@ export async function GET(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const targetId  = isManager && userId ? parseInt(userId) : session.userId
 
-  // year/month一致 OR activation_dateが該当月。同一customer_nameの重複はactivation_record_idありを優先して1件に絞る
-  const ym = `${year}-${String(month).padStart(2, '0')}%`
+  // 業務月の期間: month/25 〜 (month+1)/24 の範囲
+  const nm = month === 12 ? 1 : month + 1
+  const ny = month === 12 ? year + 1 : year
+  const startDate = `${year}-${String(month).padStart(2, '0')}-25`
+  const endDate   = `${ny}-${String(nm).padStart(2, '0')}-24`
   const rows = await dbQuery(
     `WITH filtered AS (
        SELECT * FROM opening_calendar
        WHERE user_id = $1 AND (
          (year = $2 AND month = $3) OR
-         activation_date LIKE $4
+         (activation_date >= $4 AND activation_date <= $5)
        )
      )
      SELECT DISTINCT ON (customer_name) *
@@ -30,7 +33,7 @@ export async function GET(req: NextRequest) {
      ORDER BY customer_name,
               (activation_record_id IS NOT NULL) DESC,
               created_at ASC`,
-    [targetId, year, month, ym]
+    [targetId, year, month, startDate, endDate]
   )
 
   // 苗字だけのエントリを除外（同じ結果内にフルネームが存在する場合）

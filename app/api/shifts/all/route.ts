@@ -14,12 +14,17 @@ export async function GET(req: NextRequest) {
   const shifts = await dbQuery('SELECT * FROM shifts WHERE year = $1 AND month = $2', [year, month])
   const shiftMap: Record<number, any> = {}
   shifts.forEach((s) => {
-    shiftMap[s.user_id] = { workDates: JSON.parse(s.work_dates), submitted: !!s.submitted }
+    shiftMap[s.user_id] = {
+      workDates: JSON.parse(s.work_dates),
+      submitted: !!s.submitted,
+      weekendReasons: s.weekend_reasons ? JSON.parse(s.weekend_reasons) : {},
+    }
   })
   return NextResponse.json(members.map((m) => ({
     id: m.id,
     name: m.name,
     workDates: shiftMap[m.id]?.workDates ?? [],
     submitted: shiftMap[m.id]?.submitted ?? false,
+    weekendReasons: shiftMap[m.id]?.weekendReasons ?? {},
   })))
 }

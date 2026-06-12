@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const userId = searchParams.get('userId')
 
-  // 全員集計モード
+  // 全員集計モード（管理者のみ）
   if (userId === 'all') {
     if (!isManager) return NextResponse.json({ error: '権限なし' }, { status: 403 })
     const rows = await dbQuery(
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows)
   }
 
-  const targetUserId = isManager && userId ? userId : session.userId
+  // 全メンバーが他のメンバーのデータを閲覧可能（編集はPOSTで自分のみ制限）
+  const targetUserId = userId ? userId : session.userId
 
   const rows = await dbQuery(
     `SELECT * FROM daily_activity WHERE user_id=$1 AND date LIKE $2 ORDER BY date ASC`,

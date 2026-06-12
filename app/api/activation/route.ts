@@ -121,20 +121,21 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
-    week_after_delivery, activation, construction_type } = body
+    week_after_delivery, activation, construction_type,
+    cancel_appt, callback_info, construction_time } = body
 
   const result = await dbRun(
     `INSERT INTO activation_records
      (user_id, year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
       week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
-      week_after_delivery, activation, construction_type)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+      week_after_delivery, activation, construction_type, cancel_appt, callback_info, construction_time)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
      RETURNING id`,
     [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '',
      neg_apply ?? '', neg_cancel ?? '', fm ?? '', week_after ?? '',
      day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
-     construction_type ?? '']
+     construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '']
   )
 
   if (result.id) await syncCalendar(session.userId as number, result.id)
@@ -148,7 +149,8 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { id, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
-    week_after_delivery, activation, construction_type } = body
+    week_after_delivery, activation, construction_type,
+    cancel_appt, callback_info, construction_time } = body
 
   const isManager = session.role === 'manager' || session.role === 'admin'
 
@@ -168,12 +170,12 @@ export async function PATCH(req: NextRequest) {
      name=$1, date=$2, line=$3, cancel=$4, cancel_reason=$5, neg_apply=$6, neg_cancel=$7, fm=$8,
      week_after=$9, day_before_construction=$10, construction_date=$11,
      day_before_delivery=$12, delivery_date=$13, week_after_delivery=$14, activation=$15,
-     construction_type=$16
-     WHERE id=$17`,
+     construction_type=$16, cancel_appt=$17, callback_info=$18, construction_time=$19
+     WHERE id=$20`,
     [name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
      week_after ?? '', day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
-     construction_type ?? '',
+     construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '',
      id]
   )
 

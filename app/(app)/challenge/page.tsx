@@ -11,19 +11,32 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+// 業務月：25日以降は当月、24日以前は前月
+function getBusinessMonth(d: Date): { year: number; month: number } {
+  if (d.getDate() >= 25) return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  if (d.getMonth() === 0) return { year: d.getFullYear() - 1, month: 12 }
+  return { year: d.getFullYear(), month: d.getMonth() }
+}
+
+// 業務期間ラベル: month=5 → "5/25〜6/24"
+function periodLabel(m: number): string {
+  return `${m}/25〜${m === 12 ? 1 : m + 1}/24`
+}
+
 export default async function ChallengePage({ searchParams }: { searchParams: Promise<{ year?: string; month?: string }> }) {
   const session = await getSession()
   if (!session.userId) redirect('/login')
 
   const params = await searchParams
   const now = new Date()
-  const year = params.year ? parseInt(params.year) : now.getFullYear()
-  const month = params.month ? parseInt(params.month) : now.getMonth() + 1
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
+  const bm = getBusinessMonth(now)
+  const year = params.year ? parseInt(params.year) : bm.year
+  const month = params.month ? parseInt(params.month) : bm.month
+  const isCurrentMonth = year === bm.year && month === bm.month
 
   const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 }
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 }
-  const isNextFuture = nextMonth.year > now.getFullYear() || (nextMonth.year === now.getFullYear() && nextMonth.month > now.getMonth() + 1)
+  const isNextFuture = nextMonth.year > bm.year || (nextMonth.year === bm.year && nextMonth.month > bm.month)
 
   const day = now.getDate()
 
@@ -35,17 +48,18 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   ]
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
-  let followAlerts: { name: string; staffName: string; typeLabel: string; fieldLabel: string }[] = []
+  type FollowItem = { name: string; staffName: string; typeLabel: string; fieldLabel: string }
+  let followAlerts: FollowItem[] = []
   if (isCurrentMonth) try {
     const [sonetRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph})`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph})`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
     ])
     followAlerts = [
-      ...sonetRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-      ...directRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-      ...postRows.map(r => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
+      ...sonetRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+      ...directRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
+      ...postRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
     ]
   } catch {}
 
@@ -112,9 +126,9 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
           <Link href={`/challenge?year=${prevMonth.year}&month=${prevMonth.month}`} className="p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
             <ChevronLeft size={18} />
           </Link>
-          <span className="text-sm font-bold min-w-[6rem] text-center">
-            {year}年{month}月
-            {isCurrentMonth && <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">今月</span>}
+          <span className="text-sm font-bold min-w-[8rem] text-center">
+            {year}年 {periodLabel(month)}
+            {isCurrentMonth && <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">今期</span>}
           </span>
           {!isNextFuture ? (
             <Link href={`/challenge?year=${nextMonth.year}&month=${nextMonth.month}`} className="p-1 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
@@ -257,7 +271,7 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {/* 本日のフォロー対応アラート */}
+      {/* 本日のフォロー対応アラート（日程ベース） */}
       {followAlerts.length > 0 && (
         <div className="mt-4 bg-amber-50 rounded-2xl border border-amber-200 p-4">
           <h2 className="text-sm font-bold text-amber-700 flex items-center gap-2 mb-3">
@@ -282,6 +296,7 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
+
       {isCurrentMonth && <RecentActivationFeed />}
       {isCurrentMonth && <WeeklyRankingCard />}
 
@@ -289,7 +304,7 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
       {memberRows.length > 0 && (
         <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
           <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-            🏅 今月の個人別開通数
+            🏅 {year}年 {periodLabel(month)} 個人別開通数
           </h2>
           <div className="space-y-3">
             {memberRows.map((m, i) => {

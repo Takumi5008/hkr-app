@@ -87,9 +87,32 @@ export async function POST(req: NextRequest) {
     const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
     const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
+    // M/D 形式 → 2026-MM-DD に正規化（全て2026年として扱う）
+    const mdMatch = (activationDate ?? '').match(/^(\d{1,2})[\/月](\d{1,2})$/)
+    if (mdMatch) {
+      const m = String(parseInt(mdMatch[1])).padStart(2, '0')
+      const d = String(parseInt(mdMatch[2])).padStart(2, '0')
+      activationDate = `2026-${m}-${d}`
+    }
+
+    // 業務月: 開通日の日が25以上なら当月、24以下なら前月
     const dateMatch = (activationDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
-    const calYear = dateMatch ? parseInt(dateMatch[1]) : rec.year
-    const calMonth = dateMatch ? parseInt(dateMatch[2]) : rec.month
+    let calYear: number
+    let calMonth: number
+    if (dateMatch) {
+      const day = parseInt(dateMatch[3])
+      if (day >= 25) {
+        calYear = parseInt(dateMatch[1])
+        calMonth = parseInt(dateMatch[2])
+      } else {
+        const rawMonth = parseInt(dateMatch[2])
+        if (rawMonth === 1) { calYear = parseInt(dateMatch[1]) - 1; calMonth = 12 }
+        else { calYear = parseInt(dateMatch[1]); calMonth = rawMonth - 1 }
+      }
+    } else {
+      calYear = rec.year
+      calMonth = rec.month
+    }
 
     // 正しいオーナーのエントリを探す
     const correct = await dbQueryOne<{ id: number }>(

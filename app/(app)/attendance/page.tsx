@@ -394,17 +394,38 @@ export default function AttendancePage() {
             {/* 管理者: 未提出者一覧 */}
             {(myRole === 'manager' || myRole === 'admin') && shiftAll.length > 0 && (() => {
               const notSubmitted = shiftAll.filter(m => !m.submitted)
-              if (notSubmitted.length === 0) return (
-                <div className="mt-4 text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2 ring-1 ring-emerald-200">✅ 全員提出済み</div>
-              )
+              // 土日休み理由を持つメンバーを抽出
+              const withReasons = shiftAll.filter(m => Object.keys(m.weekendReasons ?? {}).length > 0)
               return (
-                <div className="mt-4 bg-red-50 rounded-xl px-3 py-2.5 ring-1 ring-red-100">
-                  <p className="text-xs font-bold text-red-600 mb-1.5">⚠️ 未提出（{notSubmitted.length}名）</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {notSubmitted.map(m => (
-                      <span key={m.id} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{m.name}</span>
-                    ))}
-                  </div>
+                <div className="mt-4 space-y-2">
+                  {notSubmitted.length === 0 ? (
+                    <div className="text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2 ring-1 ring-emerald-200">✅ 全員提出済み</div>
+                  ) : (
+                    <div className="bg-red-50 rounded-xl px-3 py-2.5 ring-1 ring-red-100">
+                      <p className="text-xs font-bold text-red-600 mb-1.5">⚠️ 未提出（{notSubmitted.length}名）</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {notSubmitted.map(m => (
+                          <span key={m.id} className="text-xs bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{m.name}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {withReasons.length > 0 && (
+                    <div className="bg-amber-50 rounded-xl px-3 py-2.5 ring-1 ring-amber-100 space-y-2">
+                      <p className="text-xs font-bold text-amber-700">📋 土日シフトなし — 理由</p>
+                      {withReasons.map(m => (
+                        <div key={m.id} className="text-xs space-y-0.5">
+                          <p className="font-semibold text-gray-700">{m.name}</p>
+                          {Object.entries(m.weekendReasons as Record<string, string>).map(([day, reason]) => (
+                            <div key={day} className="flex gap-2 pl-2 text-gray-600">
+                              <span className="shrink-0 text-amber-700 font-medium">{month}/{day}</span>
+                              <span>{reason}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })()}
@@ -537,35 +558,85 @@ export default function AttendancePage() {
               </div>
             )}
 
-            {/* 管理者: MTG未回答者一覧 */}
-            {(myRole === 'manager' || myRole === 'admin') && mtgAll && mtgAll.dates.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {mtgAll.dates.map(date => {
-                  const notAnswered = mtgAll.members.filter(m => !mtgAll.map[m.id]?.[date])
-                  const d = new Date(date + 'T00:00:00')
-                  const label = `${d.getMonth() + 1}/${d.getDate()}（金）`
-                  return (
-                    <div key={date} className={`rounded-xl px-3 py-2.5 ring-1 text-xs ${notAnswered.length === 0 ? 'bg-emerald-50 ring-emerald-200 text-emerald-600' : 'bg-red-50 ring-red-100'}`}>
-                      {notAnswered.length === 0 ? (
-                        <span>✅ {label} 全員回答済み</span>
-                      ) : (
-                        <>
-                          <p className="font-bold text-red-600 mb-1">⚠️ {label} 未回答（{notAnswered.length}名）</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {notAnswered.map(m => (
-                              <span key={m.id} className="bg-white border border-red-200 text-red-700 px-2 py-0.5 rounded-full">{m.name}</span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </>
         )}
       </div>
+
+      {/* 管理者: MTG出欠・理由一覧（独立カード） */}
+      {tab === 'mtg' && (myRole === 'manager' || myRole === 'admin') && mtgAll && mtgAll.dates.length > 0 && (
+        <div className="mt-4 bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3">
+            <h3 className="text-sm font-bold text-white">📋 出欠・理由一覧</h3>
+          </div>
+          <div className="p-4 space-y-4">
+            {mtgAll.dates.map(date => {
+              const d = new Date(date + 'T00:00:00')
+              const label = `${d.getMonth() + 1}/${d.getDate()}（金）`
+              const present  = mtgAll.members.filter(m => mtgAll.map[m.id]?.[date]?.status === 'present')
+              const late     = mtgAll.members.filter(m => mtgAll.map[m.id]?.[date]?.status === 'late')
+              const absent   = mtgAll.members.filter(m => mtgAll.map[m.id]?.[date]?.status === 'absent')
+              const noAnswer = mtgAll.members.filter(m => !mtgAll.map[m.id]?.[date]?.status)
+              return (
+                <div key={date} className="rounded-xl ring-1 ring-gray-200 overflow-hidden text-xs">
+                  <div className="bg-indigo-50 px-3 py-2 font-bold text-indigo-700">{label}</div>
+                  <div className="divide-y divide-gray-100">
+                    {present.length > 0 && (
+                      <div className="px-3 py-2.5 flex gap-2 items-start">
+                        <span className="text-emerald-600 font-bold shrink-0 w-14">✓ 出席</span>
+                        <div className="flex flex-wrap gap-1">
+                          {present.map(m => <span key={m.id} className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">{m.name}</span>)}
+                        </div>
+                      </div>
+                    )}
+                    {late.length > 0 && (
+                      <div className="px-3 py-2.5 space-y-1.5">
+                        <span className="text-amber-600 font-bold block">⏰ 遅れる</span>
+                        {late.map(m => {
+                          const rec = mtgAll.map[m.id][date]
+                          return (
+                            <div key={m.id} className="flex items-start gap-2 pl-2">
+                              <span className="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full shrink-0">{m.name}</span>
+                              <span className="text-gray-600 leading-relaxed">
+                                {rec.late_time && <span className="font-semibold text-amber-700">{rec.late_time}</span>}
+                                {rec.late_time && rec.reason && <span className="mx-1 text-gray-300">｜</span>}
+                                {rec.reason}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {absent.length > 0 && (
+                      <div className="px-3 py-2.5 space-y-1.5">
+                        <span className="text-rose-600 font-bold block">✗ 欠席</span>
+                        {absent.map(m => {
+                          const rec = mtgAll.map[m.id][date]
+                          return (
+                            <div key={m.id} className="flex items-start gap-2 pl-2">
+                              <span className="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full shrink-0">{m.name}</span>
+                              {rec.reason
+                                ? <span className="text-gray-600 leading-relaxed">{rec.reason}</span>
+                                : <span className="text-gray-300 italic">理由未記入</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {noAnswer.length > 0 && (
+                      <div className="px-3 py-2.5 flex gap-2 items-start">
+                        <span className="text-gray-400 font-bold shrink-0 w-14">？ 未回答</span>
+                        <div className="flex flex-wrap gap-1">
+                          {noAnswer.map(m => <span key={m.id} className="bg-gray-50 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full">{m.name}</span>)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -26,6 +26,9 @@ type ActivationRecord = {
   week_after_delivery: string
   activation: string
   construction_type: string
+  cancel_appt: string
+  callback_info: string
+  construction_time: string
   fm_done: number
   week_after_done: number
   day_before_construction_done: number
@@ -44,7 +47,7 @@ const emptyRecord = {
   name: '', date: '', line: '', cancel: '', cancel_reason: '', neg_apply: '', neg_cancel: '', fm: '',
   week_after: '', day_before_construction: '', construction_date: '',
   day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
-  construction_type: '',
+  construction_type: '', cancel_appt: '', callback_info: '', construction_time: '',
 }
 
 const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyRecord; label: string }[]> = {
@@ -53,12 +56,14 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'day_before_construction', label: '工事日前日' },
     { key: 'construction_date', label: '工事日' },
+    { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
@@ -68,6 +73,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
@@ -82,6 +88,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
@@ -104,12 +111,14 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[]
   { key: 'date',                    label: '日にち' },
   { key: 'line',                    label: '回線' },
   { key: 'cancel',                  label: '解除' },
+  { key: 'callback_info',           label: '解除アポ/折り返し' },
   { key: 'neg_apply',               label: '申込時ネガキャン' },
   { key: 'neg_cancel',              label: '解除時ネガキャン' },
   { key: 'fm',                      label: 'FM' },
   { key: 'week_after',              label: '獲得1週間後' },
   { key: 'day_before_construction', label: '工事日前日' },
   { key: 'construction_date',       label: '工事日' },
+  { key: 'construction_time',       label: '工事時間帯' },
   { key: 'day_before_delivery',     label: '受け取り日前日' },
   { key: 'delivery_date',           label: '受取日' },
   { key: 'week_after_delivery',     label: '受け取り1週間後' },
@@ -212,6 +221,8 @@ export default function ActivationPage() {
     construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
     delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
     activation: rec.activation, construction_type: rec.construction_type ?? '',
+    cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
+    construction_time: rec.construction_time ?? '',
     ...overrides,
   })
 
@@ -311,6 +322,8 @@ export default function ActivationPage() {
       construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
       delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
       activation: rec.activation, construction_type: rec.construction_type ?? '',
+      cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
+      construction_time: rec.construction_time ?? '',
     })
   }
 
