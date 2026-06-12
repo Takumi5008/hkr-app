@@ -678,8 +678,8 @@ export default function InputPage() {
                         ) : (
                           <>
                             <td className="px-3 py-2 text-gray-700 text-xs">
-                              {entry.construction_type === '🐜' && <span className="text-violet-500 font-semibold mr-1">獲得日</span>}
-                              {entry.construction_type === '🍐' && <span className="text-orange-500 font-semibold mr-1">受取日</span>}
+                              {entry.line_type === '🏠' && entry.construction_type === '🐜' && <span className="text-violet-500 font-semibold mr-1">獲得日</span>}
+                              {entry.line_type === '🏠' && entry.construction_type === '🍐' && <span className="text-orange-500 font-semibold mr-1">受取日</span>}
                               {entry.activation_date || '-'}
                             </td>
                             <td className="px-3 py-2 text-gray-800 text-xs font-medium">{entry.customer_name || '-'}</td>
