@@ -15,30 +15,60 @@ export async function GET(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
   const targetId  = isManager && userId ? parseInt(userId) : session.userId
 
-  // 業務月の期間: month/25 〜 (month+1)/24 の範囲
   const nm = month === 12 ? 1 : month + 1
   const ny = month === 12 ? year + 1 : year
-  const startDate = `${year}-${String(month).padStart(2, '0')}-25`
-  const endDate   = `${ny}-${String(nm).padStart(2, '0')}-24`
-  const rows = await dbQuery(
-    `WITH filtered AS (
-       SELECT * FROM opening_calendar
-       WHERE user_id = $1 AND (
-         (year = $2 AND month = $3) OR
-         (activation_date >= $4 AND activation_date <= $5)
-       )
-     )
-     SELECT DISTINCT ON (customer_name) *
-     FROM filtered
-     ORDER BY customer_name,
-              (activation_record_id IS NOT NULL) DESC,
-              created_at ASC`,
-    [targetId, year, month, startDate, endDate]
-  )
+
+  // activation_date の各形式をパースして業務期間内かを判定
+  function dateInPeriod(dateStr: string): boolean {
+    if (!dateStr) return false
+    let dy: number | null = null, dm: number | null = null, dd: number | null = null
+    const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) { dy = +iso[1]; dm = +iso[2]; dd = +iso[3] }
+    else {
+      const ymd = dateStr.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+      if (ymd) { dy = +ymd[1]; dm = +ymd[2]; dd = +ymd[3] }
+      else {
+        const md = dateStr.match(/^(\d{1,2})[\/月](\d{1,2})/)
+        if (md) { dm = +md[1]; dd = +md[2] }
+      }
+    }
+    if (dm === null || dd === null) return false
+    if (dy !== null) {
+      const val = dy * 10000 + dm * 100 + dd
+      const start = year * 10000 + month * 100 + 25
+      const end   = ny   * 10000 + nm    * 100 + 24
+      return val >= start && val <= end
+    }
+    // 年なしの場合: 月/日だけで判定
+    if (dm === month && dd >= 25) return true
+    if (dm === nm    && dd <= 24) return true
+    if (month < nm && dm > month && dm < nm) return true
+    if (month > nm && (dm > month || dm < nm)) return true
+    return false
+  }
+
+  type CalRow = { year: number; month: number; activation_date: string; customer_name: string; id: number; activation_record_id: number | null; created_at: string; [key: string]: unknown }
+
+  const allRows = await dbQuery(`SELECT * FROM opening_calendar WHERE user_id = $1`, [targetId]) as CalRow[]
+
+  // 期間フィルタ → activation_record_id優先でソート → customer_name重複排除
+  const filtered = allRows
+    .filter(r => (r.year === year && r.month === month) || dateInPeriod(r.activation_date))
+    .sort((a, b) => {
+      if (!!b.activation_record_id !== !!a.activation_record_id) return b.activation_record_id ? 1 : -1
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    })
+
+  const seen = new Set<string>()
+  const distinct = filtered.filter(r => {
+    if (seen.has(r.customer_name)) return false
+    seen.add(r.customer_name)
+    return true
+  })
 
   // 苗字だけのエントリを除外（同じ結果内にフルネームが存在する場合）
-  const deduped = rows.filter((row: { customer_name: string; id: number }) =>
-    !rows.some((other: { customer_name: string; id: number }) =>
+  const deduped = distinct.filter(row =>
+    !distinct.some(other =>
       other.id !== row.id &&
       other.customer_name.startsWith(row.customer_name) &&
       other.customer_name.length > row.customer_name.length
