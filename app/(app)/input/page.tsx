@@ -23,14 +23,16 @@ const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
 const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
 const cycleConstruction = (s: string) => s === '' ? '🐜' : s === '🐜' ? '🍐' : ''
 
-// activation_date (free-form text) から日付の「日」部分を抽出してソート用数値に変換
-const extractDay = (dateStr: string): number => {
-  if (!dateStr) return 999
-  const m = dateStr.match(/(\d+)日$/) ||   // "5月31日"
-            dateStr.match(/\/(\d+)$/)  ||   // "5/31", "2026/5/31"
-            dateStr.match(/-(\d+)$/)   ||   // "2026-05-31"
-            dateStr.match(/^(\d+)$/)        // "31"
-  return m ? parseInt(m[1]) : 999
+// activation_date を月*100+日のソートキーに変換（5/25→525, 6/1→601）
+const calSortKey = (dateStr: string): number => {
+  if (!dateStr) return 99999
+  const iso = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return parseInt(iso[2]) * 100 + parseInt(iso[3])
+  const md = dateStr.match(/^(\d{1,2})[\/月](\d{1,2})/)
+  if (md) return parseInt(md[1]) * 100 + parseInt(md[2])
+  const d = dateStr.match(/^(\d+)$/)
+  if (d) return parseInt(d[1])
+  return 99999
 }
 
 // 業務期間ラベル: month=5 → "5/25〜6/24"
@@ -614,7 +616,7 @@ export default function InputPage() {
                       <td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">データがありません</td>
                     </tr>
                   )}
-                  {[...calEntries].sort((a, b) => extractDay(a.activation_date) - extractDay(b.activation_date)).map((entry) => {
+                  {[...calEntries].sort((a, b) => calSortKey(a.activation_date) - calSortKey(b.activation_date)).map((entry) => {
                     const isEditing = calEditingId === entry.id
                     const bg = entry.status === '○' ? 'bg-green-50/40' : entry.status === '×' ? 'bg-red-50/40' : ''
                     return (
