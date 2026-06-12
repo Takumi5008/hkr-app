@@ -50,9 +50,8 @@ function periodLabel(m: number): string {
 
 export default function InputPage() {
   const now = new Date()
-  const bm = getBusinessMonth(now)
-  const [year, setYear] = useState(bm.year)
-  const [month, setMonth] = useState(bm.month)
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
   const [products, setProducts] = useState<string[]>([])
   const [form, setForm] = useState<FormData>({})
   const [loading, setLoading] = useState(false)
@@ -589,7 +588,7 @@ export default function InputPage() {
 
             {/* 月選択 */}
             <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1">対象期間</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">対象月</label>
               <select
                 value={`${year}-${month}`}
                 onChange={(e) => {
@@ -599,7 +598,7 @@ export default function InputPage() {
                 className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {monthOptions.map(({ year: y, month: m }) => (
-                  <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年 {periodLabel(m)}</option>
+                  <option key={`${y}-${m}`} value={`${y}-${m}`}>{formatMonth(y, m)}</option>
                 ))}
               </select>
             </div>
@@ -788,7 +787,7 @@ export default function InputPage() {
 
             {/* サマリー */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="text-xs font-semibold text-gray-500 mb-3">{year}年 {periodLabel(month)} まとめ</p>
+              <p className="text-xs font-semibold text-gray-500 mb-3">{formatMonth(year, month)} まとめ</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {[
                   { label: '開通数', value: calConfirmed, color: 'text-emerald-600' },
