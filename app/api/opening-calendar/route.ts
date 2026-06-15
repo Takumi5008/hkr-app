@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   const allRows = await dbQuery(`SELECT * FROM opening_calendar WHERE user_id = $1`, [targetId]) as CalRow[]
 
-  // 期間フィルタ → activation_record_id優先でソート → customer_name重複排除
+  // 期間フィルタ → activation_record_id優先でソート
   const filtered = allRows
     .filter(r => (r.year === year && r.month === month) || dateInPeriod(r.activation_date))
     .sort((a, b) => {
@@ -59,11 +59,23 @@ export async function GET(req: NextRequest) {
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     })
 
-  const seen = new Set<string>()
+  // 重複排除: 同じ customer_name でも activation_record_id が異なる場合は別顧客として両方残す
+  // 同一 activation_record_id (または両方null) で名前が同じ場合のみ先を優先して除外
+  const seenRecordIds = new Set<number>()
+  const seenManualNames = new Set<string>()
   const distinct = filtered.filter(r => {
-    if (seen.has(r.customer_name)) return false
-    seen.add(r.customer_name)
-    return true
+    if (r.activation_record_id !== null) {
+      if (seenRecordIds.has(r.activation_record_id)) return false
+      seenRecordIds.add(r.activation_record_id)
+      return true
+    } else {
+      // 手動入力: 同名エントリが既にある場合は除外
+      if (seenManualNames.has(r.customer_name)) return false
+      // 同名のauto entry (activation_record_id あり) が既にある場合も除外
+      if (filtered.some(o => o.activation_record_id !== null && o.customer_name === r.customer_name)) return false
+      seenManualNames.add(r.customer_name)
+      return true
+    }
   })
 
   // 苗字だけのエントリを除外（同じ結果内にフルネームが存在する場合）
