@@ -23,6 +23,13 @@ const cycleStatus = (s: string) => s === '' ? '○' : s === '○' ? '×' : ''
 const statusEmoji = (s: string) => s === '○' ? '⭕' : s === '×' ? '❌' : '🔘'
 const cycleConstruction = (s: string) => s === '' ? '🐜' : s === '🐜' ? '🍐' : ''
 
+// 業務月：25日以降は当月、24日以前は前月
+function getBusinessMonth(d: Date): { year: number; month: number } {
+  if (d.getDate() >= 25) return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  if (d.getMonth() === 0) return { year: d.getFullYear() - 1, month: 12 }
+  return { year: d.getFullYear(), month: d.getMonth() }
+}
+
 // activation_date を月*100+日のソートキーに変換（5/25→525, 6/1→601）
 const calSortKey = (dateStr: string): number => {
   if (!dateStr) return 99999
