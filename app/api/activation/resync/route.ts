@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     } else {
       // wimax_post
       shouldSync = rec.delivery_date_done >= 1
-      activationDate = wimaxActivationDate(rec.delivery_date, rec.year, rec.month)
+      activationDate = rec.delivery_date  // 後送りは配送日そのまま
     }
 
     if (!shouldSync || !activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === '') {
