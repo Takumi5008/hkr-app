@@ -43,8 +43,9 @@ const periodLabel = (m: number): string => {
 
 export default function InputPage() {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
+  const bm = getBusinessMonth(now)
+  const [year, setYear] = useState(bm.year)
+  const [month, setMonth] = useState(bm.month)
   const [products, setProducts] = useState<string[]>([])
   const [form, setForm] = useState<FormData>({})
   const [loading, setLoading] = useState(false)
