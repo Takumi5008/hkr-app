@@ -60,9 +60,30 @@ async function syncCalendar(userId: number, recordId: number) {
   const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
   const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
-  const dateMatch = activationDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  const calYear = dateMatch ? parseInt(dateMatch[1]) : rec.year
-  const calMonth = dateMatch ? parseInt(dateMatch[2]) : rec.month
+  // M/D 形式 → YYYY-MM-DD に正規化
+  let normalizedDate = activationDate
+  const mdMatch = activationDate.match(/^(\d{1,2})[\/月](\d{1,2})$/)
+  if (mdMatch) {
+    const m = String(parseInt(mdMatch[1])).padStart(2, '0')
+    const d = String(parseInt(mdMatch[2])).padStart(2, '0')
+    normalizedDate = `${rec.year}-${m}-${d}`
+  }
+
+  // 業務月: 25日以降は当月、24日以前は前月
+  const dateMatch = normalizedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  let calYear: number, calMonth: number
+  if (dateMatch) {
+    const day = parseInt(dateMatch[3])
+    if (day >= 25) {
+      calYear = parseInt(dateMatch[1]); calMonth = parseInt(dateMatch[2])
+    } else {
+      const rawMonth = parseInt(dateMatch[2])
+      if (rawMonth === 1) { calYear = parseInt(dateMatch[1]) - 1; calMonth = 12 }
+      else { calYear = parseInt(dateMatch[1]); calMonth = rawMonth - 1 }
+    }
+  } else {
+    calYear = rec.year; calMonth = rec.month
+  }
 
   if (existing) {
     await dbRun(
@@ -70,14 +91,14 @@ async function syncCalendar(userId: number, recordId: number) {
        SET activation_date=$1, customer_name=$2, line_type=$3, construction_type=$4,
            year=$5, month=$6, status=$7
        WHERE id=$8`,
-      [activationDate, rec.name, lineType, rec.construction_type, calYear, calMonth, status, existing.id]
+      [normalizedDate, rec.name, lineType, rec.construction_type, calYear, calMonth, status, existing.id]
     )
   } else {
     await dbRun(
       `INSERT INTO opening_calendar
        (user_id, year, month, activation_date, customer_name, line_type, construction_type, activation_record_id, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [ownerUserId, calYear, calMonth, activationDate, rec.name, lineType, rec.construction_type, recordId, status]
+      [ownerUserId, calYear, calMonth, normalizedDate, rec.name, lineType, rec.construction_type, recordId, status]
     )
   }
 }

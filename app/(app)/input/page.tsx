@@ -118,7 +118,9 @@ export default function InputPage() {
   useEffect(() => {
     if (tab !== 'calendar') return
     if (role === 'manager' || role === 'admin') {
-      fetch('/api/activation/resync', { method: 'POST' }).catch(() => {})
+      fetch('/api/activation/resync', { method: 'POST' })
+        .then(() => fetchCalendar(calSelectedUserId))
+        .catch(() => {})
     }
   }, [tab, role])
 
