@@ -43,13 +43,13 @@ async function syncCalendar(userId: number, recordId: number) {
     shouldSync = rec.cancel === '○'
     activationDate = rec.construction_date
   } else if (rec.type === 'wimax_direct') {
-    // WiMAX直せち: 置いたら（date設定時）カレンダーへ
+    // WiMAX直せち: 獲得日＝開通日
     shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
-    activationDate = wimaxActivationDate(rec.date, rec.year, rec.month)
+    activationDate = rec.date
   } else {
-    // WiMAX後送り: 受取日に⭕️ついたらカレンダーへ
+    // WiMAX後送り: 配送日＝開通日
     shouldSync = rec.delivery_date_done >= 1
-    activationDate = wimaxActivationDate(rec.delivery_date, rec.year, rec.month)
+    activationDate = rec.delivery_date
   }
 
   if (!shouldSync || !activationDate || activationDate === '未定' || activationDate === '-' || activationDate.trim() === '') {
