@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
 import ActivationBadge from '@/components/ActivationBadge'
 
@@ -42,10 +42,51 @@ interface SidebarProps {
   role: string
 }
 
+const NAV_ORDER_KEY = 'nav_order'
+
 export default function Sidebar({ name, role }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [navOrder, setNavOrder] = useState<string[]>(() => navItems.map((i) => i.href))
+  const dragRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(NAV_ORDER_KEY)
+      if (saved) {
+        const parsed: string[] = JSON.parse(saved)
+        const allHrefs = navItems.map((i) => i.href)
+        const merged = [
+          ...parsed.filter((h) => allHrefs.includes(h)),
+          ...allHrefs.filter((h) => !parsed.includes(h)),
+        ]
+        setNavOrder(merged)
+      }
+    } catch {}
+  }, [])
+
+  const saveOrder = (order: string[]) => {
+    setNavOrder(order)
+    try { localStorage.setItem(NAV_ORDER_KEY, JSON.stringify(order)) } catch {}
+  }
+
+  const moveItem = (href: string, dir: -1 | 1) => {
+    setNavOrder((prev) => {
+      const idx = prev.indexOf(href)
+      const next = [...prev]
+      const target = idx + dir
+      if (target < 0 || target >= next.length) return prev
+      ;[next[idx], next[target]] = [next[target], next[idx]]
+      try { localStorage.setItem(NAV_ORDER_KEY, JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
+  const orderedNavItems = navOrder
+    .map((h) => navItems.find((i) => i.href === h))
+    .filter(Boolean) as typeof navItems
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -136,20 +177,60 @@ export default function Sidebar({ name, role }: SidebarProps) {
   const NavContent = () => (
     <>
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto min-h-0">
-        {navItems.map(({ href, label, icon: Icon }) => (
-          <Link
+        {orderedNavItems.map(({ href, label, icon: Icon }, idx) => (
+          <div
             key={href}
-            href={href}
-            onClick={() => setMobileOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              pathname === href
-                ? 'bg-white/15 text-white shadow-sm'
-                : 'text-indigo-300 hover:bg-white/10 hover:text-white'
-            }`}
+            draggable={editMode}
+            onDragStart={() => { dragRef.current = href }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => {
+              if (!dragRef.current || dragRef.current === href) return
+              const from = navOrder.indexOf(dragRef.current)
+              const to = navOrder.indexOf(href)
+              const next = [...navOrder]
+              next.splice(from, 1)
+              next.splice(to, 0, dragRef.current)
+              saveOrder(next)
+              dragRef.current = null
+            }}
+            className={`flex items-center gap-1 rounded-lg ${editMode ? 'cursor-grab bg-white/5' : ''}`}
           >
-            <Icon size={17} className={pathname === href ? 'text-blue-300' : ''} />
-            {label}
-          </Link>
+            {editMode && (
+              <div className="flex flex-col pl-1">
+                <button
+                  type="button"
+                  onClick={() => moveItem(href, -1)}
+                  disabled={idx === 0}
+                  className="text-indigo-400 hover:text-white disabled:opacity-20 leading-none py-0.5"
+                >▲</button>
+                <button
+                  type="button"
+                  onClick={() => moveItem(href, 1)}
+                  disabled={idx === orderedNavItems.length - 1}
+                  className="text-indigo-400 hover:text-white disabled:opacity-20 leading-none py-0.5"
+                >▼</button>
+              </div>
+            )}
+            {editMode ? (
+              <span className="flex items-center gap-3 flex-1 px-2 py-2.5 text-sm font-medium text-indigo-300">
+                <Icon size={17} />
+                {label}
+              </span>
+            ) : (
+              <Link
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  pathname === href
+                    ? 'bg-white/15 text-white shadow-sm'
+                    : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon size={17} className={pathname === href ? 'text-blue-300' : ''} />
+                {label}
+              </Link>
+            )}
+          </div>
         ))}
 
         {isManager && (
@@ -260,9 +341,16 @@ export default function Sidebar({ name, role }: SidebarProps) {
         <div className="sidebar-pc-top relative z-10 px-6 py-5 border-b border-indigo-800/60">
           <div className="flex items-center gap-3">
             <WifiAppIcon size={32} />
-            <div>
+            <div className="flex-1">
               <h1 className="text-base font-bold text-white">インフラ管理</h1>
             </div>
+            <button
+              onClick={() => setEditMode((v) => !v)}
+              title={editMode ? '完了' : 'メニューを並び替え'}
+              className={`text-xs px-2 py-1 rounded-md transition-colors ${editMode ? 'bg-blue-500 text-white' : 'text-indigo-400 hover:text-white hover:bg-white/10'}`}
+            >
+              {editMode ? '完了' : '⇅'}
+            </button>
           </div>
         </div>
         <div className="relative z-10 flex flex-col flex-1 min-h-0">
@@ -300,9 +388,17 @@ export default function Sidebar({ name, role }: SidebarProps) {
                   <h1 className="text-base font-bold text-white">インフラ管理</h1>
                 </div>
               </div>
-              <button onClick={() => setMobileOpen(false)} className="text-indigo-400 hover:text-white">
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditMode((v) => !v)}
+                  className={`text-xs px-2 py-1 rounded-md transition-colors ${editMode ? 'bg-blue-500 text-white' : 'text-indigo-400 hover:text-white'}`}
+                >
+                  {editMode ? '完了' : '⇅'}
+                </button>
+                <button onClick={() => setMobileOpen(false)} className="text-indigo-400 hover:text-white">
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             <NavContent />
           </div>
