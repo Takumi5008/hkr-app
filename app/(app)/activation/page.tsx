@@ -359,8 +359,39 @@ export default function ActivationPage() {
     setRecords((prev) => prev.filter((r) => r.id !== id))
   }
 
-  const f = (key: keyof typeof emptyRecord) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((p) => ({ ...p, [key]: e.target.value }))
+  const addDays = (dateStr: string, days: number): string => {
+    const d = new Date(dateStr + 'T00:00:00Z')
+    if (isNaN(d.getTime())) return ''
+    d.setUTCDate(d.getUTCDate() + days)
+    return d.toISOString().slice(0, 10)
+  }
+
+  const f = (key: keyof typeof emptyRecord) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setForm((p) => {
+      const next = { ...p, [key]: val }
+      if (!val || val === '未定') return next
+      if (key === 'date') {
+        const w = addDays(val, 7)
+        if (w && p.week_after !== '未定') next.week_after = w
+      } else if (key === 'construction_date') {
+        const d = addDays(val, -1)
+        if (d && p.day_before_construction !== '未定') next.day_before_construction = d
+      } else if (key === 'day_before_construction') {
+        const d = addDays(val, 1)
+        if (d && p.construction_date !== '未定') next.construction_date = d
+      } else if (key === 'delivery_date') {
+        const before = addDays(val, -1)
+        const after = addDays(val, 7)
+        if (before && p.day_before_delivery !== '未定') next.day_before_delivery = before
+        if (after && p.week_after_delivery !== '未定') next.week_after_delivery = after
+      } else if (key === 'day_before_delivery') {
+        const d = addDays(val, 1)
+        if (d && p.delivery_date !== '未定') next.delivery_date = d
+      }
+      return next
+    })
+  }
 
   const cols = type !== 'all' ? COLS[type as Exclude<ActivationType, 'all'>] : COLS['sonet']
 
