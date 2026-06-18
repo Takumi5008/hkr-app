@@ -6,6 +6,18 @@ function score(value: number, max: number): number {
   return Math.min(100, Math.max(0, Math.round((value / max) * 100)))
 }
 
+function pearson(xs: number[], ys: number[]): number {
+  const n = xs.length
+  if (n < 3) return 0
+  const mx = xs.reduce((s, v) => s + v, 0) / n
+  const my = ys.reduce((s, v) => s + v, 0) / n
+  const num = xs.reduce((s, v, i) => s + (v - mx) * (ys[i] - my), 0)
+  const dx = Math.sqrt(xs.reduce((s, v) => s + (v - mx) ** 2, 0))
+  const dy = Math.sqrt(ys.reduce((s, v) => s + (v - my) ** 2, 0))
+  if (dx === 0 || dy === 0) return 0
+  return Math.round((num / (dx * dy)) * 100) / 100
+}
+
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
@@ -16,9 +28,10 @@ export async function GET(req: NextRequest) {
     ? parseInt(searchParams.get('userId')!)
     : session.userId as number
 
-  const now = new Date()
-  const curYear = now.getFullYear()
-  const curMonth = now.getMonth() + 1
+  const nowJST = new Date(Date.now() + 9 * 3600_000)
+  const curYear = nowJST.getUTCFullYear()
+  const curMonth = nowJST.getUTCMonth() + 1
+  const todayDay = nowJST.getUTCDate()
 
   // 過去6ヶ月分の月リスト
   const months: { year: number; month: number; label: string }[] = []
@@ -26,6 +39,9 @@ export async function GET(req: NextRequest) {
     const d = new Date(curYear, curMonth - 1 - i, 1)
     months.push({ year: d.getFullYear(), month: d.getMonth() + 1, label: `${d.getMonth() + 1}月` })
   }
+
+  const startKey = months[0].year * 100 + months[0].month
+  const endKey = curYear * 100 + curMonth
 
   // 月次開通/解除実績
   const recordsRows = await dbQuery<{
@@ -37,7 +53,7 @@ export async function GET(req: NextRequest) {
      FROM records
      WHERE user_id = $1 AND (year * 100 + month) >= $2 AND (year * 100 + month) <= $3
      GROUP BY year, month`,
-    [targetUserId, months[0].year * 100 + months[0].month, curYear * 100 + curMonth]
+    [targetUserId, startKey, endKey]
   )
   const recordsMap = new Map(recordsRows.map(r => [`${r.year}-${r.month}`, r]))
 
@@ -57,37 +73,30 @@ export async function GET(req: NextRequest) {
   const avgHKR = hkrValues.length > 0 ? hkrValues.reduce((s, v) => s + v, 0) / hkrValues.length : 0
 
   // 行動量（直近30日の日次行動合計平均）
-  const thirtyDaysAgo = new Date(now)
-  thirtyDaysAgo.setDate(now.getDate() - 30)
-  const activityRows = await dbQuery<{ total: number; cnt: number }>(
-    `SELECT COALESCE(AVG(pin_count + pingpong_count + intercom_count + face_other + wimax + sonet), 0)::float AS total,
-            COUNT(*)::int AS cnt
-     FROM daily_activity
-     WHERE user_id = $1 AND date >= $2`,
-    [targetUserId, thirtyDaysAgo.toISOString().slice(0, 10)]
-  )
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+  const [activityRows, followRows, meRow] = await Promise.all([
+    dbQuery<{ total: number }>(
+      `SELECT COALESCE(AVG(pin_count + pingpong_count + intercom_count + face_other + wimax + sonet), 0)::float AS total
+       FROM daily_activity WHERE user_id = $1 AND date >= $2`,
+      [targetUserId, thirtyDaysAgo]
+    ),
+    dbQuery<{ total: number; filled: number }>(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(CASE WHEN week_after IS NOT NULL AND week_after != '' AND week_after != '未定' THEN 1 END)::int AS filled
+       FROM activation_records WHERE user_id = $1 AND year * 100 + month >= $2`,
+      [targetUserId, startKey]
+    ),
+    dbQueryOne<{ login_streak: number }>(
+      'SELECT COALESCE(login_streak, 0) AS login_streak FROM users WHERE id = $1',
+      [targetUserId]
+    ),
+  ])
+
   const avgDailyActions = activityRows[0]?.total ?? 0
-
-  // フォロー力（week_after入力率）
-  const followRows = await dbQuery<{ total: number; filled: number }>(
-    `SELECT COUNT(*)::int AS total,
-            COUNT(CASE WHEN week_after IS NOT NULL AND week_after != '' AND week_after != '未定' THEN 1 END)::int AS filled
-     FROM activation_records
-     WHERE user_id = $1 AND year * 100 + month >= $2`,
-    [targetUserId, months[0].year * 100 + months[0].month]
-  )
   const followupRate = followRows[0]?.total > 0
-    ? (followRows[0].filled / followRows[0].total) * 100
-    : 0
-
-  // 継続力（ログインストリーク）
-  const meRow = await dbQueryOne<{ login_streak: number }>(
-    'SELECT COALESCE(login_streak, 0) AS login_streak FROM users WHERE id = $1',
-    [targetUserId]
-  )
+    ? (followRows[0].filled / followRows[0].total) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
 
-  // 成長速度（今月 vs 先月）
   const thisM = monthlyHistory[monthlyHistory.length - 1].activation
   const lastM = monthlyHistory[monthlyHistory.length - 2].activation
   const growthRate = lastM > 0 ? ((thisM - lastM) / lastM) * 100 : (thisM > 0 ? 100 : 0)
@@ -110,7 +119,6 @@ export async function GET(req: NextRequest) {
     growthRate: Math.round(growthRate),
   }
 
-  // 課題推薦（スコアが低い順に上位3つ）
   const paramLabels: Record<string, { label: string; action: string }> = {
     acquisition: { label: '獲得力', action: '月の獲得ペースを上げよう。1日の訪問・提案数を意識的に増やすことから始めて。' },
     retention:   { label: '定着力', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
@@ -123,9 +131,69 @@ export async function GET(req: NextRequest) {
   const challenges = Object.entries(params)
     .sort((a, b) => a[1] - b[1])
     .slice(0, 3)
-    .map(([key, score]) => ({ key, score, ...paramLabels[key] }))
+    .map(([key, s]) => ({ key, score: s, ...paramLabels[key] }))
 
-  // チーム全員の月次履歴（育成比較用）
+  // ① ペース管理
+  const daysInMonth = new Date(curYear, curMonth, 0).getDate()
+  const daysElapsed = Math.max(1, todayDay)
+  const daysRemaining = Math.max(0, daysInMonth - todayDay)
+  const dailyPace = Math.round((thisM / daysElapsed) * 10) / 10
+  const projectedActivation = Math.round(dailyPace * daysInMonth)
+  const pace = { thisMonthActivation: thisM, projectedActivation, daysElapsed, daysRemaining, totalDays: daysInMonth, dailyPace }
+
+  // ④ 行動→開通の相関スコア（月次集計）
+  const activityMonthlyRows = await dbQuery<{
+    yr: number; mo: number; pin: number; pingpong: number; intercom: number; face: number; wimax: number; sonet: number
+  }>(
+    `SELECT EXTRACT(YEAR FROM date::date)::int AS yr,
+            EXTRACT(MONTH FROM date::date)::int AS mo,
+            COALESCE(SUM(pin_count),0)::int AS pin,
+            COALESCE(SUM(pingpong_count),0)::int AS pingpong,
+            COALESCE(SUM(intercom_count),0)::int AS intercom,
+            COALESCE(SUM(face_other),0)::int AS face,
+            COALESCE(SUM(wimax),0)::int AS wimax,
+            COALESCE(SUM(sonet),0)::int AS sonet
+     FROM daily_activity
+     WHERE user_id = $1 AND date >= $2
+     GROUP BY yr, mo`,
+    [targetUserId, `${months[0].year}-${String(months[0].month).padStart(2, '0')}-01`]
+  )
+  const actMap = new Map(activityMonthlyRows.map(r => [`${r.yr}-${r.mo}`, r]))
+  const activationSeries = months.map(m => recordsMap.get(`${m.year}-${m.month}`)?.activation_count ?? 0)
+  const actKeys: { key: string; label: string; field: keyof typeof activityMonthlyRows[0] }[] = [
+    { key: 'pin',      label: 'ピン数',        field: 'pin' },
+    { key: 'pingpong', label: 'ピンポン数',     field: 'pingpong' },
+    { key: 'intercom', label: 'インターホン数', field: 'intercom' },
+    { key: 'face',     label: '対面数',         field: 'face' },
+    { key: 'wimax',    label: 'WiMAX獲得',     field: 'wimax' },
+    { key: 'sonet',    label: 'So-net獲得',    field: 'sonet' },
+  ]
+  const correlation = actKeys
+    .map(({ key, label, field }) => {
+      const series = months.map(m => (actMap.get(`${m.year}-${m.month}`)?.[field] as number) ?? 0)
+      return { key, label, corr: pearson(series, activationSeries) }
+    })
+    .sort((a, b) => b.corr - a.corr)
+
+  // ⑤ 振り返りと成長連動
+  const reviewRows = await dbQuery<{
+    year: number; month: number; challenges: string; next_goals: string
+  }>(
+    `SELECT year, month, challenges, next_goals FROM monthly_reviews
+     WHERE user_id = $1 AND (year * 100 + month) >= $2 AND (year * 100 + month) < $3
+     ORDER BY year ASC, month ASC`,
+    [targetUserId, startKey, endKey]
+  )
+  const reviewGrowth = months.slice(0, 5).map((m, i) => {
+    const rev = reviewRows.find(r => r.year === m.year && r.month === m.month)
+    if (!rev || !rev.challenges) return null
+    const thisActivation = monthlyHistory[i]?.activation ?? 0
+    const nextActivation = monthlyHistory[i + 1]?.activation ?? null
+    const improvement = nextActivation !== null ? nextActivation - thisActivation : null
+    return { label: m.label, challenge: rev.challenges.slice(0, 120), nextGoal: rev.next_goals?.slice(0, 80) ?? '', activation: thisActivation, nextActivation, improvement }
+  }).filter(Boolean)
+
+  // 育成比較（チーム全員の月次履歴）
   const allMembersRows = await dbQuery<{
     user_id: number; name: string; year: number; month: number;
     cancel_count: number; activation_count: number
@@ -138,10 +206,9 @@ export async function GET(req: NextRequest) {
      WHERE u.is_active = true AND u.role NOT IN ('viewer','shift_viewer')
        AND (r.year * 100 + r.month) >= $1 AND (r.year * 100 + r.month) <= $2
      GROUP BY r.user_id, u.name, r.year, r.month`,
-    [months[0].year * 100 + months[0].month, curYear * 100 + curMonth]
+    [startKey, endKey]
   )
 
-  // メンバー別の月次履歴を整理
   const memberMap = new Map<number, { name: string; data: Record<string, number> }>()
   for (const row of allMembersRows) {
     if (!memberMap.has(row.user_id)) memberMap.set(row.user_id, { name: row.name, data: {} })
@@ -156,7 +223,6 @@ export async function GET(req: NextRequest) {
     return { ...m, mine, teamAvg }
   })
 
-  // メンバー一覧（比較用）
   const members = [...memberMap.entries()].map(([uid, { name, data }]) => ({
     userId: uid,
     name,
@@ -164,5 +230,5 @@ export async function GET(req: NextRequest) {
     history: months.map(m => data[`${m.year}-${m.month}`] ?? 0),
   }))
 
-  return NextResponse.json({ params, rawData, challenges, monthlyHistory, teamGrowth, members })
+  return NextResponse.json({ params, rawData, challenges, monthlyHistory, teamGrowth, members, pace, correlation, reviewGrowth })
 }

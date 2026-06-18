@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network, Activity } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network, Activity, BarChart } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -31,6 +31,7 @@ const navItems = [
 const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
   { href: '/performance', label: '実績', icon: Award },
+  { href: '/report', label: 'チームレポート', icon: BarChart },
   { href: '/admin', label: '管理', icon: Settings },
 ]
 
