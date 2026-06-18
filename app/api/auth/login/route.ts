@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import { dbQueryOne, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
 import { awardBadges } from '@/lib/badges'
-import { getTodayJST } from '@/lib/quests'
+import { updateLoginStreak } from '@/lib/streak'
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json()
@@ -46,30 +46,7 @@ export async function POST(req: NextRequest) {
   session.role = user.role
   await session.save()
 
-  const now = new Date()
-  const todayJST = getTodayJST()
-  const yesterdayJST = new Date(Date.now() + 9 * 3600_000 - 86_400_000).toISOString().slice(0, 10)
-
-  // 今日初ログインかチェック（login_days に挿入）
-  const insertDay = await dbRun(
-    'INSERT INTO login_days (user_id, date) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-    [user.id, todayJST]
-  )
-  const isNewDay = insertDay.rowCount > 0
-
-  if (isNewDay) {
-    const yesterday = await dbQueryOne(
-      'SELECT id FROM login_days WHERE user_id = $1 AND date = $2',
-      [user.id, yesterdayJST]
-    )
-    const newStreak = yesterday ? (user.login_streak ?? 0) + 1 : 1
-    await dbRun(
-      'UPDATE users SET login_count = login_count + 1, login_streak = $1, last_login_at = $2 WHERE id = $3',
-      [newStreak, now.toISOString(), user.id]
-    )
-  } else {
-    await dbRun('UPDATE users SET last_login_at = $1 WHERE id = $2', [now.toISOString(), user.id])
-  }
+  await updateLoginStreak(user.id)
 
   await awardBadges(user.id)
 

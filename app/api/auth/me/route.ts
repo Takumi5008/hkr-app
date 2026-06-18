@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQueryOne } from '@/lib/db'
+import { updateLoginStreak } from '@/lib/streak'
 
 export async function GET() {
   const session = await getSession()
@@ -17,6 +18,9 @@ export async function GET() {
     session.destroy()
     return NextResponse.json({ error: 'このアカウントは無効化されています。' }, { status: 403 })
   }
+
+  // アプリを開くたびにストリーク更新（セッション継続中もカウント）
+  updateLoginStreak(session.userId as number).catch(() => {})
 
   // Sync role from DB in case it was changed by an admin
   const dbRole = (user as any)?.role
