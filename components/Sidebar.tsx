@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network, Activity } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/sugoroku', label: '開通双六', icon: Gamepad2 },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
+  { href: '/status', label: '個人ステータス', icon: Activity },
   { href: '/activity', label: '行動表', icon: Table2 },
   { href: '/activation', label: '開通表', icon: Zap },
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
