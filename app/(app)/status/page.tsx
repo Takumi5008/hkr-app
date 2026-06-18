@@ -335,7 +335,7 @@ export default function StatusPage() {
               <h2 className="text-base font-semibold text-gray-800">🌱 新人育成ダッシュボード</h2>
               <p className="text-xs text-gray-400 mt-0.5">入社90日以内のメンバー vs チーム平均</p>
             </div>
-            <Link href="/report" className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg">
+            <Link href="/team-report" className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg">
               詳細 <ChevronRight size={12} />
             </Link>
           </div>

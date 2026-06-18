@@ -31,7 +31,7 @@ const navItems = [
 const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
   { href: '/performance', label: '実績', icon: Award },
-  { href: '/report', label: 'チームレポート', icon: BarChart },
+  { href: '/team-report', label: 'チームレポート', icon: BarChart },
   { href: '/admin', label: '管理', icon: Settings },
 ]
 
