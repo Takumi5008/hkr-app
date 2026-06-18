@@ -3,6 +3,7 @@ import { dbQuery } from '@/lib/db'
 import { calcHKR, formatMonth, getTwoMonthsAgo, isMonthlyCheckPeriod } from '@/lib/hkr'
 import HKRCard from '@/components/HKRCard'
 import TodayTasksList, { type TodayTask, type FollowAlert } from '@/components/TodayTasksList'
+import StatusRadarWidget from '@/components/StatusRadarWidget'
 import { Bell, AlertCircle, PenLine } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -193,6 +194,8 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
+
+      <StatusRadarWidget />
     </div>
   )
 }
