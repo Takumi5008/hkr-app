@@ -38,6 +38,44 @@ const PARAM_LABELS: Record<string, string> = {
   acquisition: '獲得数', activity: 'PP変換率', cancel: '解除量',
   cancelRatio: '解除率', followup: '早期非キャンセル率', activation: '開通力', hkr: '定着率(HKR)',
 }
+
+const PARAM_ADVICE: Record<string, { issue: string; action: string; effect: string }> = {
+  acquisition: {
+    issue: 'ピンポン数が少なく獲得機会が限られている',
+    action: '1日20件を目標にピンポン数を増やす',
+    effect: '獲得数が安定し月平均20件に近づく',
+  },
+  activity: {
+    issue: 'ピンポンが獲得につながる確率が低い',
+    action: 'ヒアリングシートでニーズを深掘りしてからクロージング',
+    effect: '少ないピンポンでも安定して獲得できるようになる',
+  },
+  cancel: {
+    issue: '解除件数が少なく獲得につながる会話が不足している',
+    action: '既存顧客への定期連絡で解除ニーズを掘り起こす',
+    effect: '解除→開通の流れができHKRも安定する',
+  },
+  cancelRatio: {
+    issue: '獲得時に旧回線の解除がセットで進んでいない',
+    action: '獲得と同時に解除の手続きも一緒に案内する',
+    effect: '解除率100%に近づき定着率も向上する',
+  },
+  followup: {
+    issue: '開通後に早期キャンセルされるケースが多い',
+    action: '開通後1週間以内に必ずフォロー連絡を入れる',
+    effect: '早期解約が減り開通数を安定して維持できる',
+  },
+  activation: {
+    issue: '開通件数が目標に届いていない',
+    action: '開通カレンダーで工事日・受取日を早めに押さえる',
+    effect: '月末に慌てず開通件数を達成できるようになる',
+  },
+  hkr: {
+    issue: '解除数に対して開通数が追いついていない',
+    action: '解除後の開通フォローを強化し工事日を早く確定させる',
+    effect: 'HKRが80%を超えチーム評価指標が改善する',
+  },
+}
 const PARAM_DESC: Record<string, string> = {
   acquisition: '月平均獲得数(行動表)', activity: 'PP→獲得変換率(%)', cancel: '月平均解除数',
   cancelRatio: '獲得数当の解除率', followup: '開通表❌率', activation: '月平均開通数', hkr: 'HKR率平均',
@@ -129,6 +167,37 @@ export default function StatusPage() {
           ))}
         </div>
       </div>
+
+      {/* ワンアドバイス */}
+      {(() => {
+        const weakestKey = Object.entries(params).sort((a, b) => a[1] - b[1])[0][0]
+        const adv = PARAM_ADVICE[weakestKey]
+        return (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl shrink-0">💡</span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-amber-600 mb-2">今週のワンアドバイス</p>
+                <div className="space-y-1.5 text-sm">
+                  <p className="text-gray-700">
+                    <span className="inline-block bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full mr-2">課題</span>
+                    {adv.issue}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full mr-2">改善</span>
+                    {adv.action}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full mr-2">効果</span>
+                    {adv.effect}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-amber-500">最も伸びしろがある「{PARAM_LABELS[weakestKey]}」({params[weakestKey]}点) を元に生成</p>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* レーダーチャート + パラメーター */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
