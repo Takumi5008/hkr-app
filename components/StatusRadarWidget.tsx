@@ -8,13 +8,13 @@ import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 
 const PARAM_LABELS: Record<string, string> = {
-  activation:  '開通力',
-  cancel:      '解除量',
-  hkr:         '定着率',
-  activity:    'PP変換率',
-  followup:    '早期非キャンセル率',
   acquisition: '獲得数',
+  activity:    'PP変換率',
+  cancel:      '解除量',
   cancelRatio: '解除率',
+  followup:    '早期非キャンセル率',
+  activation:  '開通力',
+  hkr:         '定着率',
 }
 
 type Params = Record<string, number>

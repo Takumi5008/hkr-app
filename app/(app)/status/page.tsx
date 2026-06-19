@@ -37,12 +37,12 @@ type TrainingData = {
 }
 
 const PARAM_LABELS: Record<string, string> = {
-  activation:  '開通力', cancel: '解除量', hkr: '定着率(HKR)',
-  activity: 'PP変換率', followup: '早期非キャンセル率', acquisition: '獲得数', cancelRatio: '解除率',
+  acquisition: '獲得数', activity: 'PP変換率', cancel: '解除量',
+  cancelRatio: '解除率', followup: '早期非キャンセル率', activation: '開通力', hkr: '定着率(HKR)',
 }
 const PARAM_DESC: Record<string, string> = {
-  activation:  '月平均開通数', cancel: '月平均解除数', hkr: 'HKR率平均',
-  activity: 'PP→獲得変換率(%)', followup: '開通表❌率', acquisition: '月平均獲得数(行動表)', cancelRatio: '獲得数当の解除率',
+  acquisition: '月平均獲得数(行動表)', activity: 'PP→獲得変換率(%)', cancel: '月平均解除数',
+  cancelRatio: '獲得数当の解除率', followup: '開通表❌率', activation: '月平均開通数', hkr: 'HKR率平均',
 }
 
 function sc(s: number) { return s >= 80 ? 'text-green-600' : s >= 55 ? 'text-yellow-600' : 'text-red-500' }

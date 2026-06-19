@@ -112,13 +112,13 @@ export async function GET(req: NextRequest) {
   const thisMCancel = monthlyHistory[monthlyHistory.length - 1].cancel
 
   const params = {
-    activation:   score(avgActivation, 10),
-    cancel:       score(avgCancel, 15),
-    hkr:          score(avgHKR, 80),
-    activity:     score(ppConversionRate, 1),
-    followup:     Math.max(0, Math.round(100 - avgEarlyCancelRate)),
     acquisition:  score(avgMonthlyAcquisition, 20),
+    activity:     score(ppConversionRate, 1),
+    cancel:       score(avgCancel, 15),
     cancelRatio:  score(activityCancelRate, 100),
+    followup:     Math.max(0, Math.round(100 - avgEarlyCancelRate)),
+    activation:   score(avgActivation, 10),
+    hkr:          score(avgHKR, 80),
   }
 
   const rawData = {
