@@ -13,8 +13,8 @@ const PARAM_LABELS: Record<string, string> = {
   hkr:         '定着率',
   activity:    'PP変換率',
   followup:    '早期非キャンセル率',
-  consistency: '継続力',
-  growth:      '成長速度',
+  acquisition: '獲得数',
+  cancelRatio: '解除率',
 }
 
 type Params = Record<string, number>

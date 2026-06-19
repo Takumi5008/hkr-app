@@ -74,10 +74,11 @@ export async function GET(req: NextRequest) {
 
   // ピンポン変換率（直近3ヶ月の合計ベース: 獲得数 ÷ PP数）
   const threeMonthsAgo = `${months[2].year}-${String(months[2].month).padStart(2, '0')}-01`
-  const [activityRows, cancelStatusRows, meRow] = await Promise.all([
-    dbQuery<{ pingpong: number; acquired: number }>(
+  const [activityRows, cancelStatusRows] = await Promise.all([
+    dbQuery<{ pingpong: number; acquired: number; cancel_count: number }>(
       `SELECT COALESCE(SUM(pingpong_count), 0)::int AS pingpong,
-              COALESCE(SUM(wimax + sonet), 0)::int AS acquired
+              COALESCE(SUM(wimax + sonet), 0)::int AS acquired,
+              COALESCE(SUM(cancel), 0)::int AS cancel_count
        FROM daily_activity WHERE user_id = $1 AND date >= $2`,
       [targetUserId, threeMonthsAgo]
     ),
@@ -88,38 +89,36 @@ export async function GET(req: NextRequest) {
        WHERE user_id = $1 AND (year * 100 + month) >= $2 AND (year * 100 + month) <= $3`,
       [targetUserId, startKey, endKey]
     ),
-    dbQueryOne<{ login_streak: number }>(
-      'SELECT COALESCE(login_streak, 0) AS login_streak FROM users WHERE id = $1',
-      [targetUserId]
-    ),
   ])
 
   const totalPingpong = activityRows[0]?.pingpong ?? 0
   const totalAcquired = activityRows[0]?.acquired ?? 0
+  const totalActivityCancel = activityRows[0]?.cancel_count ?? 0
   const ppConversionRate = totalPingpong > 0 ? (totalAcquired / totalPingpong) * 100 : 0
-  const loginStreak = meRow?.login_streak ?? 0
 
   // 早期非キャンセル率 = 開通表で❌（activation='×'）の件数 ÷ 全件数
   const cancelTotal = cancelStatusRows[0]?.total ?? 0
   const cancelCancelled = cancelStatusRows[0]?.cancelled ?? 0
   const avgEarlyCancelRate = cancelTotal > 0 ? (cancelCancelled / cancelTotal) * 100 : 0
 
+  // 獲得数（月平均）= 行動表 wimax+sonet の3ヶ月平均
+  const avgMonthlyAcquisition = totalAcquired / 3
+
+  // 解除率 = 行動表の解除数 ÷ 獲得数 × 100
+  const activityCancelRate = totalAcquired > 0 ? (totalActivityCancel / totalAcquired) * 100 : 0
+
   const avgCancel = recent3.reduce((s, m) => s + m.cancel, 0) / 3
   const thisM = monthlyHistory[monthlyHistory.length - 1].activation
-  const lastM = monthlyHistory[monthlyHistory.length - 2].activation
   const thisMCancel = monthlyHistory[monthlyHistory.length - 1].cancel
-  const lastMCancel = monthlyHistory[monthlyHistory.length - 2].cancel
-  const growthRate = lastM > 0 ? ((thisM - lastM) / lastM) * 100 : (thisM > 0 ? 100 : 0)
-  const cancelGrowth = lastMCancel > 0 ? ((thisMCancel - lastMCancel) / lastMCancel) * 100 : (thisMCancel > 0 ? 100 : 0)
 
   const params = {
-    activation:  score(avgActivation, 8),
-    cancel:      score(avgCancel, 15),
-    hkr:         score(avgHKR, 80),
-    activity:    score(ppConversionRate, 1),
-    followup:    Math.max(0, Math.round(100 - avgEarlyCancelRate)),
-    consistency: score(loginStreak, 30),
-    growth:      Math.min(100, Math.max(0, 50 + Math.round(growthRate / 2))),
+    activation:   score(avgActivation, 8),
+    cancel:       score(avgCancel, 15),
+    hkr:          score(avgHKR, 80),
+    activity:     score(ppConversionRate, 1),
+    followup:     Math.max(0, Math.round(100 - avgEarlyCancelRate)),
+    acquisition:  score(avgMonthlyAcquisition, 3),
+    cancelRatio:  Math.max(0, Math.round(100 - activityCancelRate)),
   }
 
   const rawData = {
@@ -132,9 +131,9 @@ export async function GET(req: NextRequest) {
     earlyCancelRate: Math.round(avgEarlyCancelRate * 10) / 10,
     earlyCancelTotal: cancelTotal,
     earlyCancelCancelled: cancelCancelled,
-    loginStreak,
-    growthRate: Math.round(growthRate),
-    cancelGrowth: Math.round(cancelGrowth),
+    avgMonthlyAcquisition: Math.round(avgMonthlyAcquisition * 10) / 10,
+    activityCancelRate: Math.round(activityCancelRate * 10) / 10,
+    totalActivityCancel,
     thisMonthCancel: thisMCancel,
     thisMonthActivation: thisM,
     thisMonthHKR: thisMCancel > 0 ? Math.round((thisM / thisMCancel) * 1000) / 10 : null,
@@ -146,8 +145,8 @@ export async function GET(req: NextRequest) {
     hkr:         { label: '定着率(HKR)', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
     activity:    { label: 'PP変換率', action: 'ピンポンから獲得につなげる提案力を磨こう。ピンポン後のトークを見直して変換率1%以上（100PPで1件）を目指して。' },
     followup:    { label: '早期非キャンセル率', action: '獲得翌月に解除されている件数が多い。契約後のフォローを強化して早期解除を防ごう。' },
-    consistency: { label: '継続力', action: '毎日の入力・ログイン習慣をつけよう。データが積み上がると改善点が見えてくる。' },
-    growth:      { label: '成長速度', action: '先月より1件でも多く開通させることを意識しよう。小さな積み上げが大きな差になる。' },
+    acquisition: { label: '獲得数', action: '行動表の獲得数（WiMAX+So-net）が少ない。PP変換率を上げて月3件以上の獲得を目指そう。' },
+    cancelRatio: { label: '解除率', action: '獲得数に対して解除が多い。獲得後のフォローを強化して解除を減らそう。' },
   }
 
   const challenges = Object.entries(params)
