@@ -27,6 +27,7 @@ export async function GET() {
     dbQuery<{ id: number; name: string }>(
       `SELECT id, name FROM users
        WHERE is_active = true AND role NOT IN ('viewer','shift_viewer')
+         AND name NOT IN ('理科大', '山﨑', '柴崎', '中島')
        ORDER BY name ASC`,
       []
     ),
