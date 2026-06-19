@@ -30,7 +30,7 @@ type StatusData = {
 }
 
 type TrainingData = {
-  members: { id: number; name: string; isNew: boolean; joinedAt: string; avgActivation: number; hkrAvg: number; followupRate: number; avgDailyActions: number; loginStreak: number; scores: Record<string, number>; totalScore: number; needsSupport: boolean; monthlyActivations: number[]; monthLabels: string[] }[]
+  members: { id: number; name: string; isNew: boolean; joinedAt: string; avgActivation: number; hkrAvg: number; avgMonthlyAcquisition: number; activityCancelRate: number; scores: Record<string, number>; totalScore: number; needsSupport: boolean; monthlyActivations: number[]; monthLabels: string[] }[]
   newMembers: TrainingData['members']
   veterans: TrainingData['members']
   teamAvgActivation: number
@@ -99,7 +99,7 @@ export default function StatusPage() {
 
   const { params, rawData, challenges, teamGrowth, members: allMembers, pace, correlation, reviewGrowth } = data
   const radarData = Object.entries(params).map(([key, val]) => ({ param: PARAM_LABELS[key], score: val, fullMark: 100 }))
-  const totalScore = Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 6)
+  const totalScore = Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 7)
   const pacePercent = Math.min(100, Math.round((pace.daysElapsed / pace.totalDays) * 100))
   const activationPercent = Math.min(100, pace.totalDays > 0 ? Math.round((pace.thisMonthActivation / Math.max(1, pace.projectedActivation)) * 100) : 0)
 
@@ -183,12 +183,12 @@ export default function StatusPage() {
           </div>
           <p className="text-xs font-semibold text-gray-500 mb-3">3ヶ月平均</p>
           <div className="grid grid-cols-3 gap-3 text-center">
+            <div><p className="text-xs text-gray-400">月平均獲得数</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyAcquisition}件</p></div>
+            <div><p className="text-xs text-gray-400">PP変換率</p><p className="text-lg font-bold text-gray-800">{rawData.ppConversionRate}%</p></div>
             <div><p className="text-xs text-gray-400">月平均解除</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyCancel}件</p></div>
+            <div><p className="text-xs text-gray-400">解除率</p><p className="text-lg font-bold text-gray-800">{rawData.activityCancelRate}%</p></div>
             <div><p className="text-xs text-gray-400">月平均開通</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyActivation}件</p></div>
             <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
-            <div><p className="text-xs text-gray-400">PP変換率</p><p className="text-lg font-bold text-gray-800">{rawData.ppConversionRate}%</p></div>
-            <div><p className="text-xs text-gray-400">解除率</p><p className="text-lg font-bold text-gray-800">{rawData.activityCancelRate}%</p></div>
-            <div><p className="text-xs text-gray-400">月平均獲得数</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyAcquisition}件</p></div>
           </div>
         </div>
       </div>
