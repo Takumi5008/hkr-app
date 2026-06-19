@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  BarChart, Bar, Cell,
+  BarChart, Bar, Cell, ComposedChart,
 } from 'recharts'
 import { ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import Link from 'next/link'
@@ -13,7 +13,12 @@ type Params = Record<string, number>
 
 type StatusData = {
   params: Params
-  rawData: { avgMonthlyActivation: number; hkrAvg: number; avgDailyActions: number; followupRate: number; loginStreak: number; growthRate: number }
+  rawData: {
+    avgMonthlyActivation: number; avgMonthlyCancel: number; hkrAvg: number
+    avgDailyActions: number; followupRate: number; loginStreak: number
+    growthRate: number; cancelGrowth: number
+    thisMonthCancel: number; thisMonthActivation: number; thisMonthHKR: number | null
+  }
   challenges: { key: string; label: string; score: number; action: string }[]
   monthlyHistory: { year: number; month: number; label: string; activation: number; cancel: number; hkr: number | null }[]
   teamGrowth: { year: number; month: number; label: string; mine: number; teamAvg: number }[]
@@ -31,12 +36,12 @@ type TrainingData = {
 }
 
 const PARAM_LABELS: Record<string, string> = {
-  acquisition: '獲得力', retention: '定着力', activity: '行動量',
-  followup: 'フォロー力', consistency: '継続力', growth: '成長速度',
+  activation:  '開通力', cancel: '解除量', hkr: '定着率(HKR)',
+  activity: '行動量', followup: 'フォロー力', consistency: '継続力', growth: '成長速度',
 }
 const PARAM_DESC: Record<string, string> = {
-  acquisition: '月平均獲得数', retention: 'HKR平均', activity: '1日の平均行動数',
-  followup: 'week_after実施率', consistency: 'ログイン継続日数', growth: '先月比成長率',
+  activation:  '月平均開通数', cancel: '月平均解除数', hkr: 'HKR率平均',
+  activity: '1日の平均行動数', followup: 'week_after実施率', consistency: 'ログイン継続日数', growth: '先月比成長率',
 }
 
 function sc(s: number) { return s >= 80 ? 'text-green-600' : s >= 55 ? 'text-yellow-600' : 'text-red-500' }
@@ -153,13 +158,83 @@ export default function StatusPage() {
             ))}
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-3 text-center border-t border-gray-100 pt-4">
-          <div><p className="text-xs text-gray-400">月平均獲得</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyActivation}件</p></div>
-          <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
-          <div><p className="text-xs text-gray-400">フォロー実施率</p><p className="text-lg font-bold text-gray-800">{rawData.followupRate}%</p></div>
-          <div><p className="text-xs text-gray-400">日均行動数</p><p className="text-lg font-bold text-gray-800">{rawData.avgDailyActions}件</p></div>
-          <div><p className="text-xs text-gray-400">継続ストリーク</p><p className="text-lg font-bold text-gray-800">🔥{rawData.loginStreak}日</p></div>
-          <div><p className="text-xs text-gray-400">先月比</p><p className={`text-lg font-bold ${rawData.growthRate >= 0 ? 'text-green-600' : 'text-red-500'}`}>{rawData.growthRate >= 0 ? '+' : ''}{rawData.growthRate}%</p></div>
+        {/* 今月の解除・開通・HKR */}
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold text-gray-500 mb-3">今月の実績</p>
+          <div className="grid grid-cols-3 gap-2 text-center mb-4">
+            <div className="bg-rose-50 rounded-xl p-3">
+              <p className="text-xs text-rose-400 mb-1">解除数</p>
+              <p className="text-2xl font-bold text-rose-600">{rawData.thisMonthCancel}</p>
+              <p className={`text-xs mt-0.5 font-medium ${rawData.cancelGrowth >= 0 ? 'text-green-600' : 'text-red-400'}`}>{rawData.cancelGrowth >= 0 ? '▲' : '▼'}{Math.abs(rawData.cancelGrowth)}%</p>
+            </div>
+            <div className="bg-indigo-50 rounded-xl p-3">
+              <p className="text-xs text-indigo-400 mb-1">開通数</p>
+              <p className="text-2xl font-bold text-indigo-600">{rawData.thisMonthActivation}</p>
+              <p className={`text-xs mt-0.5 font-medium ${rawData.growthRate >= 0 ? 'text-green-600' : 'text-red-400'}`}>{rawData.growthRate >= 0 ? '▲' : '▼'}{Math.abs(rawData.growthRate)}%</p>
+            </div>
+            <div className={`rounded-xl p-3 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'bg-green-50' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'bg-yellow-50' : 'bg-red-50'}`}>
+              <p className={`text-xs mb-1 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'text-green-400' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'text-yellow-500' : 'text-red-400'}`}>HKR率</p>
+              <p className={`text-2xl font-bold ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'text-green-600' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'text-yellow-600' : 'text-red-500'}`}>
+                {rawData.thisMonthHKR !== null ? `${rawData.thisMonthHKR}%` : '—'}
+              </p>
+              <p className="text-xs mt-0.5 text-gray-400">目標80%</p>
+            </div>
+          </div>
+          <p className="text-xs font-semibold text-gray-500 mb-3">3ヶ月平均</p>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div><p className="text-xs text-gray-400">月平均解除</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyCancel}件</p></div>
+            <div><p className="text-xs text-gray-400">月平均開通</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyActivation}件</p></div>
+            <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
+            <div><p className="text-xs text-gray-400">日均行動数</p><p className="text-lg font-bold text-gray-800">{rawData.avgDailyActions}件</p></div>
+            <div><p className="text-xs text-gray-400">継続ストリーク</p><p className="text-lg font-bold text-gray-800">🔥{rawData.loginStreak}日</p></div>
+            <div><p className="text-xs text-gray-400">フォロー率</p><p className="text-lg font-bold text-gray-800">{rawData.followupRate}%</p></div>
+          </div>
+        </div>
+      </div>
+
+      {/* 月次 解除・開通・HKR推移チャート */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="text-base font-semibold text-gray-800 mb-1">📉 月次 解除・開通・HKR率推移</h2>
+        <p className="text-xs text-gray-400 mb-4">過去6ヶ月の解除数・開通数・HKR率の変化</p>
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data.monthlyHistory} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="count" tick={{ fontSize: 11 }} allowDecimals={false} />
+              <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 11 }} domain={[0, 100]} unit="%" />
+              <Tooltip formatter={(v, name) => name === 'HKR率' ? [`${v}%`, name] : [`${v}件`, name]} />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar yAxisId="count" dataKey="cancel" name="解除数" fill="#f87171" opacity={0.7} radius={[3, 3, 0, 0]} />
+              <Bar yAxisId="count" dataKey="activation" name="開通数" fill="#818cf8" opacity={0.9} radius={[3, 3, 0, 0]} />
+              <Line yAxisId="rate" type="monotone" dataKey="hkr" name="HKR率" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+        {/* 月次テーブル */}
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-xs text-center">
+            <thead>
+              <tr className="text-gray-400 border-b border-gray-100">
+                <th className="pb-1.5 text-left font-medium">月</th>
+                <th className="pb-1.5 font-medium text-rose-400">解除数</th>
+                <th className="pb-1.5 font-medium text-indigo-400">開通数</th>
+                <th className="pb-1.5 font-medium text-emerald-500">HKR率</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.monthlyHistory.map(m => (
+                <tr key={`${m.year}-${m.month}`} className="border-b border-gray-50">
+                  <td className="py-1.5 text-left text-gray-500">{m.label}</td>
+                  <td className="py-1.5 font-bold text-rose-600">{m.cancel}</td>
+                  <td className="py-1.5 font-bold text-indigo-600">{m.activation}</td>
+                  <td className={`py-1.5 font-bold ${m.hkr === null ? 'text-gray-300' : m.hkr >= 80 ? 'text-emerald-600' : m.hkr >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
+                    {m.hkr !== null ? `${m.hkr}%` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

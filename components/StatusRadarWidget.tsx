@@ -8,8 +8,9 @@ import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 
 const PARAM_LABELS: Record<string, string> = {
-  acquisition: '獲得力',
-  retention:   '定着力',
+  activation:  '開通力',
+  cancel:      '解除量',
+  hkr:         '定着率',
   activity:    '行動量',
   followup:    'フォロー力',
   consistency: '継続力',

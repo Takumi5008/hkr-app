@@ -97,13 +97,18 @@ export async function GET(req: NextRequest) {
     ? (followRows[0].filled / followRows[0].total) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
 
+  const avgCancel = recent3.reduce((s, m) => s + m.cancel, 0) / 3
   const thisM = monthlyHistory[monthlyHistory.length - 1].activation
   const lastM = monthlyHistory[monthlyHistory.length - 2].activation
+  const thisMCancel = monthlyHistory[monthlyHistory.length - 1].cancel
+  const lastMCancel = monthlyHistory[monthlyHistory.length - 2].cancel
   const growthRate = lastM > 0 ? ((thisM - lastM) / lastM) * 100 : (thisM > 0 ? 100 : 0)
+  const cancelGrowth = lastMCancel > 0 ? ((thisMCancel - lastMCancel) / lastMCancel) * 100 : (thisMCancel > 0 ? 100 : 0)
 
   const params = {
-    acquisition: score(avgActivation, 8),
-    retention:   score(avgHKR, 80),
+    activation:  score(avgActivation, 8),
+    cancel:      score(avgCancel, 15),
+    hkr:         score(avgHKR, 80),
     activity:    score(avgDailyActions, 25),
     followup:    score(followupRate, 100),
     consistency: score(loginStreak, 30),
@@ -112,20 +117,26 @@ export async function GET(req: NextRequest) {
 
   const rawData = {
     avgMonthlyActivation: Math.round(avgActivation * 10) / 10,
+    avgMonthlyCancel: Math.round(avgCancel * 10) / 10,
     hkrAvg: Math.round(avgHKR * 10) / 10,
     avgDailyActions: Math.round(avgDailyActions * 10) / 10,
     followupRate: Math.round(followupRate),
     loginStreak,
     growthRate: Math.round(growthRate),
+    cancelGrowth: Math.round(cancelGrowth),
+    thisMonthCancel: thisMCancel,
+    thisMonthActivation: thisM,
+    thisMonthHKR: thisMCancel > 0 ? Math.round((thisM / thisMCancel) * 1000) / 10 : null,
   }
 
   const paramLabels: Record<string, { label: string; action: string }> = {
-    acquisition: { label: '獲得力', action: '月の獲得ペースを上げよう。1日の訪問・提案数を意識的に増やすことから始めて。' },
-    retention:   { label: '定着力', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
+    activation:  { label: '開通力', action: '月の開通ペースを上げよう。1日の訪問・提案数を意識的に増やすことから始めて。' },
+    cancel:      { label: '解除量', action: '担当解除数が少ない。新規顧客の獲得を増やして解除件数を増やすことが成長の土台になる。' },
+    hkr:         { label: '定着率(HKR)', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
     activity:    { label: '行動量', action: '1日のピン・インターホン数を5件増やすことを目標にしよう。量が質を生む。' },
     followup:    { label: 'フォロー力', action: '獲得した顧客への1週間後フォローを必ず実施しよう。開通率アップに直結する。' },
     consistency: { label: '継続力', action: '毎日の入力・ログイン習慣をつけよう。データが積み上がると改善点が見えてくる。' },
-    growth:      { label: '成長速度', action: '先月より1件でも多く獲得することを意識しよう。小さな積み上げが大きな差になる。' },
+    growth:      { label: '成長速度', action: '先月より1件でも多く開通させることを意識しよう。小さな積み上げが大きな差になる。' },
   }
 
   const challenges = Object.entries(params)
