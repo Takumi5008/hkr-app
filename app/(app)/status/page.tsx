@@ -33,12 +33,6 @@ type StatusData = {
   reviewGrowth: { label: string; challenge: string; nextGoal: string; activation: number; nextActivation: number | null; improvement: number | null }[]
 }
 
-type TrainingData = {
-  members: { id: number; name: string; isNew: boolean; joinedAt: string; avgActivation: number; hkrAvg: number; avgMonthlyAcquisition: number; activityCancelRate: number; scores: Record<string, number>; totalScore: number; needsSupport: boolean; monthlyActivations: number[]; monthLabels: string[] }[]
-  newMembers: TrainingData['members']
-  veterans: TrainingData['members']
-  teamAvgActivation: number
-}
 
 const PARAM_LABELS: Record<string, string> = {
   acquisition: '獲得数', activity: 'PP変換率', cancel: '解除量',
@@ -69,7 +63,6 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'
 
 export default function StatusPage() {
   const [data, setData] = useState<StatusData | null>(null)
-  const [training, setTraining] = useState<TrainingData | null>(null)
   const [ranking, setRanking] = useState<{ ranking: RankingEntry[]; myUserId: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<{ id: number; name: string }[]>([])
@@ -83,7 +76,6 @@ export default function StatusPage() {
         fetch('/api/team').then(r => r.json()).then(list => {
           if (Array.isArray(list)) setMembers(list.map((item: any) => ({ id: item.user.id, name: item.user.name })))
         }).catch(() => {})
-        fetch('/api/my/training').then(r => r.json()).then(setTraining).catch(() => {})
       }
     }).catch(() => {})
     fetch('/api/score-ranking').then(r => r.json()).then(setRanking).catch(() => {})
@@ -459,88 +451,67 @@ export default function StatusPage() {
         )}
       </div>
 
-      {/* ② 新人育成ダッシュボード（管理者のみ） */}
-      {isManager && training && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-base font-semibold text-gray-800">🌱 新人育成ダッシュボード</h2>
-              <p className="text-xs text-gray-400 mt-0.5">入社90日以内のメンバー vs チーム平均</p>
+      {/* パラメーター別ランキング */}
+      {ranking && ranking.ranking.length > 0 && (() => {
+        const myUserId = selectedUserId ?? ranking.myUserId
+        const paramKeys = Object.keys(PARAM_LABELS)
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="mb-4">
+              <h2 className="text-base font-semibold text-gray-800">📚 パラメーター別ランキング</h2>
+              <p className="text-xs text-gray-400 mt-0.5">各項目の1位が得意な人 → 下位の人に教える仕組み</p>
             </div>
-            <Link href="/team-report" className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg">
-              詳細 <ChevronRight size={12} />
-            </Link>
-          </div>
-
-          {training.newMembers.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">現在入社90日以内のメンバーはいません</p>
-          ) : (
-            <div className="space-y-4">
-              {training.newMembers.map(m => (
-                <div key={m.id} className="border border-indigo-100 rounded-xl p-4 bg-indigo-50/40">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <span className="text-sm font-bold text-gray-800">{m.name}</span>
-                      <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">新人</span>
-                      <span className="ml-1 text-xs text-gray-400">入社: {m.joinedAt}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {paramKeys.map(key => {
+                const sorted = [...ranking.ranking].sort((a, b) => (b.params[key] ?? 0) - (a.params[key] ?? 0))
+                const myRank = sorted.findIndex(r => r.userId === myUserId) + 1
+                const top3 = sorted.slice(0, 3)
+                const expert = sorted[0]
+                return (
+                  <div key={key} className="border border-gray-100 rounded-xl p-4 bg-gray-50/60">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold text-gray-700">{PARAM_LABELS[key]}</span>
+                      {myRank > 0 && (
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${myRank === 1 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
+                          自分 {myRank}位
+                        </span>
+                      )}
                     </div>
-                    <span className={`text-lg font-bold ${sc(m.totalScore)}`}>{m.totalScore}点</span>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 mb-3">
-                    {Object.entries(m.scores).map(([key, val]) => (
-                      <div key={key} className="text-center">
-                        <p className="text-xs text-gray-400 mb-1">{PARAM_LABELS[key]}</p>
-                        <p className={`text-sm font-bold ${sc(val)}`}>{val}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {/* 月次開通推移 */}
-                  <div className="flex items-end gap-2">
-                    {m.monthlyActivations.map((v, i) => (
-                      <div key={i} className="flex-1 text-center">
-                        <div className="flex justify-center items-end h-10">
-                          <div className="w-full bg-indigo-200 rounded-t" style={{ height: `${Math.min(100, v * 15)}%`, minHeight: v > 0 ? '4px' : '2px' }} />
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">{m.monthLabels[i]}</p>
-                        <p className="text-xs font-bold text-gray-700">{v}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {m.needsSupport && (
-                    <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                      <p className="text-xs font-semibold text-red-600">⚠️ サポート推奨: チーム平均({training.teamAvgActivation}件)の50%未満</p>
+                    <div className="space-y-2">
+                      {top3.map((r, i) => {
+                        const isMe = r.userId === myUserId
+                        const medals = ['🥇', '🥈', '🥉']
+                        const val = r.params[key] ?? 0
+                        return (
+                          <div key={r.userId} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${isMe ? 'bg-indigo-50' : 'bg-white'}`}>
+                            <span className="text-sm w-5 shrink-0">{medals[i]}</span>
+                            <span className={`flex-1 text-xs font-medium truncate ${isMe ? 'text-indigo-700' : 'text-gray-700'}`}>
+                              {r.name}{i === 0 && <span className="ml-1 text-xs text-amber-500 font-bold">師匠</span>}
+                            </span>
+                            <span className={`text-xs font-bold ${sc(val)}`}>{val}</span>
+                          </div>
+                        )
+                      })}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* チーム全体のスコア分布 */}
-          <div className="mt-5 border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 mb-3">全メンバー スコア一覧</p>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[...training.members].sort((a, b) => b.totalScore - a.totalScore)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
-                  <Tooltip formatter={(v) => [`${v}点`, '総合スコア']} />
-                  <Bar dataKey="totalScore" radius={[4, 4, 0, 0]}>
-                    {training.members.map((m, i) => (
-                      <Cell key={i} fill={m.isNew ? '#6366f1' : '#d1d5db'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-indigo-500 inline-block" />新人（90日以内）</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-300 inline-block" />ベテラン</span>
+                    {myRank > 3 && (
+                      <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 px-2">
+                        <span className="text-xs text-gray-400 w-5 shrink-0">{myRank}位</span>
+                        <span className="flex-1 text-xs text-gray-500 truncate">あなた</span>
+                        <span className={`text-xs font-bold ${sc(sorted[myRank - 1]?.params[key] ?? 0)}`}>{sorted[myRank - 1]?.params[key] ?? 0}</span>
+                      </div>
+                    )}
+                    {expert && myRank > 1 && (
+                      <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                        💬 <span className="font-medium text-gray-600">{expert.name}</span> に {PARAM_LABELS[key]} を聞いてみよう
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
