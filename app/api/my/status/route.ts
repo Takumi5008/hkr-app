@@ -74,12 +74,19 @@ export async function GET(req: NextRequest) {
 
   // ピンポン変換率（直近3ヶ月の合計ベース: 獲得数 ÷ PP数）
   const threeMonthsAgo = `${months[2].year}-${String(months[2].month).padStart(2, '0')}-01`
-  const [activityRows, meRow] = await Promise.all([
+  const [activityRows, cancelStatusRows, meRow] = await Promise.all([
     dbQuery<{ pingpong: number; acquired: number }>(
       `SELECT COALESCE(SUM(pingpong_count), 0)::int AS pingpong,
               COALESCE(SUM(wimax + sonet), 0)::int AS acquired
        FROM daily_activity WHERE user_id = $1 AND date >= $2`,
       [targetUserId, threeMonthsAgo]
+    ),
+    dbQuery<{ total: number; cancelled: number }>(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(CASE WHEN activation = '×' THEN 1 END)::int AS cancelled
+       FROM activation_records
+       WHERE user_id = $1 AND (year * 100 + month) >= $2 AND (year * 100 + month) <= $3`,
+      [targetUserId, startKey, endKey]
     ),
     dbQueryOne<{ login_streak: number }>(
       'SELECT COALESCE(login_streak, 0) AS login_streak FROM users WHERE id = $1',
@@ -92,13 +99,10 @@ export async function GET(req: NextRequest) {
   const ppConversionRate = totalPingpong > 0 ? (totalAcquired / totalPingpong) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
 
-  // 早期解除率（月Nの解除 ÷ 月N-1の開通）を過去5ヶ月分平均
-  const earlyCancelRates = monthlyHistory.slice(1).map((m, i) => {
-    const prevActivation = monthlyHistory[i]?.activation ?? 0
-    return prevActivation > 0 ? (m.cancel / prevActivation) * 100 : 0
-  })
-  const avgEarlyCancelRate = earlyCancelRates.length > 0
-    ? earlyCancelRates.reduce((s, v) => s + v, 0) / earlyCancelRates.length : 0
+  // 早期解除率 = 開通表で❌（activation='×'）の件数 ÷ 全件数
+  const cancelTotal = cancelStatusRows[0]?.total ?? 0
+  const cancelCancelled = cancelStatusRows[0]?.cancelled ?? 0
+  const avgEarlyCancelRate = cancelTotal > 0 ? (cancelCancelled / cancelTotal) * 100 : 0
 
   const avgCancel = recent3.reduce((s, m) => s + m.cancel, 0) / 3
   const thisM = monthlyHistory[monthlyHistory.length - 1].activation
@@ -126,6 +130,8 @@ export async function GET(req: NextRequest) {
     totalPingpong,
     totalAcquired,
     earlyCancelRate: Math.round(avgEarlyCancelRate * 10) / 10,
+    earlyCancelTotal: cancelTotal,
+    earlyCancelCancelled: cancelCancelled,
     loginStreak,
     growthRate: Math.round(growthRate),
     cancelGrowth: Math.round(cancelGrowth),
