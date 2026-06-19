@@ -372,9 +372,19 @@ export default function InputPage() {
 
   const isManager = role === 'manager' || role === 'admin'
 
+  const isWimax = (e: CalendarEntry) => e.line_type?.includes('🏠')
+  const isSonet = (e: CalendarEntry) => e.line_type?.includes('🍑')
+
   const calConfirmed = calEntries.filter((e) => e.status === '○').length
   const calRemaining = calEntries.filter((e) => e.status === '').length
   const calForecast  = calConfirmed + calRemaining
+
+  const calConfirmedWimax = calEntries.filter((e) => e.status === '○' && isWimax(e)).length
+  const calConfirmedSonet = calEntries.filter((e) => e.status === '○' && isSonet(e)).length
+  const calRemainingWimax = calEntries.filter((e) => e.status === '' && isWimax(e)).length
+  const calRemainingSonet = calEntries.filter((e) => e.status === '' && isSonet(e)).length
+  const calForecastWimax  = calConfirmedWimax + calRemainingWimax
+  const calForecastSonet  = calConfirmedSonet + calRemainingSonet
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -787,22 +797,28 @@ export default function InputPage() {
             {/* サマリー */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <p className="text-xs font-semibold text-gray-500 mb-3">{year}年 {periodLabel(month)} まとめ</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 mb-3">
                 {[
-                  { label: '開通数', value: calConfirmed, color: 'text-emerald-600' },
-                  { label: '残り', value: calRemaining, color: 'text-indigo-600' },
-                  { label: '見込み', value: calForecast, color: 'text-blue-600' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-gray-50 rounded-lg px-4 py-3 text-center">
+                  { label: '開通数', value: calConfirmed, color: 'text-emerald-600', wimax: calConfirmedWimax, sonet: calConfirmedSonet },
+                  { label: '残り', value: calRemaining, color: 'text-indigo-600', wimax: calRemainingWimax, sonet: calRemainingSonet },
+                  { label: '見込み', value: calForecast, color: 'text-blue-600', wimax: calForecastWimax, sonet: calForecastSonet },
+                ].map(({ label, value, color, wimax, sonet }) => (
+                  <div key={label} className="bg-gray-50 rounded-lg px-3 py-3 text-center">
                     <p className={`text-2xl font-bold ${color}`}>{value}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                    <div className="mt-2 flex flex-col gap-0.5 text-xs text-gray-400">
+                      <span>🏠 {wimax}</span>
+                      <span>🍑 {sonet}</span>
+                    </div>
                   </div>
                 ))}
-                <div className="bg-indigo-50 rounded-lg px-4 py-3 text-center sm:col-span-1">
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-indigo-50 rounded-lg px-4 py-3 text-center">
                   <p className="text-lg font-bold text-indigo-600">{fmt(calForecast * COMMISSION)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">見込み委託費</p>
                 </div>
-                <div className="bg-emerald-50 rounded-lg px-4 py-3 text-center sm:col-span-2">
+                <div className="bg-emerald-50 rounded-lg px-4 py-3 text-center">
                   <p className="text-lg font-bold text-emerald-600">{fmt(calConfirmed * COMMISSION)}</p>
                   <p className="text-xs text-gray-500 mt-0.5">確定委託費</p>
                 </div>
