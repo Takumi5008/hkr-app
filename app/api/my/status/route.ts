@@ -112,13 +112,13 @@ export async function GET(req: NextRequest) {
   const thisMCancel = monthlyHistory[monthlyHistory.length - 1].cancel
 
   const params = {
-    activation:   score(avgActivation, 8),
+    activation:   score(avgActivation, 10),
     cancel:       score(avgCancel, 15),
     hkr:          score(avgHKR, 80),
     activity:     score(ppConversionRate, 1),
     followup:     Math.max(0, Math.round(100 - avgEarlyCancelRate)),
-    acquisition:  score(avgMonthlyAcquisition, 3),
-    cancelRatio:  Math.max(0, Math.round(100 - activityCancelRate)),
+    acquisition:  score(avgMonthlyAcquisition, 20),
+    cancelRatio:  score(activityCancelRate, 100),
   }
 
   const rawData = {
@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
     activity:    { label: 'PP変換率', action: 'ピンポンから獲得につなげる提案力を磨こう。ピンポン後のトークを見直して変換率1%以上（100PPで1件）を目指して。' },
     followup:    { label: '早期非キャンセル率', action: '獲得翌月に解除されている件数が多い。契約後のフォローを強化して早期解除を防ごう。' },
     acquisition: { label: '獲得数', action: '行動表の獲得数（WiMAX+So-net）が少ない。PP変換率を上げて月3件以上の獲得を目指そう。' },
-    cancelRatio: { label: '解除率', action: '獲得数に対して解除が多い。獲得後のフォローを強化して解除を減らそう。' },
+    cancelRatio: { label: '解除率', action: '獲得時に旧回線の解除も取れているか。獲得した件数と同数の解除（100%）を目標に、セット提案を意識しよう。' },
   }
 
   const challenges = Object.entries(params)
