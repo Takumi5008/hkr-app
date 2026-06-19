@@ -16,7 +16,7 @@ type StatusData = {
   rawData: {
     avgMonthlyActivation: number; avgMonthlyCancel: number; hkrAvg: number
     ppConversionRate: number; totalPingpong: number; totalAcquired: number
-    followupRate: number; loginStreak: number
+    earlyCancelRate: number; loginStreak: number
     growthRate: number; cancelGrowth: number
     thisMonthCancel: number; thisMonthActivation: number; thisMonthHKR: number | null
   }
@@ -38,11 +38,11 @@ type TrainingData = {
 
 const PARAM_LABELS: Record<string, string> = {
   activation:  '開通力', cancel: '解除量', hkr: '定着率(HKR)',
-  activity: 'PP変換率', followup: 'フォロー力', consistency: '継続力', growth: '成長速度',
+  activity: 'PP変換率', followup: '早期解除率', consistency: '継続力', growth: '成長速度',
 }
 const PARAM_DESC: Record<string, string> = {
   activation:  '月平均開通数', cancel: '月平均解除数', hkr: 'HKR率平均',
-  activity: 'PP→獲得変換率(%)', followup: 'week_after実施率', consistency: 'ログイン継続日数', growth: '先月比成長率',
+  activity: 'PP→獲得変換率(%)', followup: '獲得翌月キャンセル率', consistency: 'ログイン継続日数', growth: '先月比成長率',
 }
 
 function sc(s: number) { return s >= 80 ? 'text-green-600' : s >= 55 ? 'text-yellow-600' : 'text-red-500' }
@@ -188,7 +188,7 @@ export default function StatusPage() {
             <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
             <div><p className="text-xs text-gray-400">PP変換率</p><p className="text-lg font-bold text-gray-800">{rawData.ppConversionRate}%</p></div>
             <div><p className="text-xs text-gray-400">継続ストリーク</p><p className="text-lg font-bold text-gray-800">🔥{rawData.loginStreak}日</p></div>
-            <div><p className="text-xs text-gray-400">フォロー率</p><p className="text-lg font-bold text-gray-800">{rawData.followupRate}%</p></div>
+            <div><p className="text-xs text-gray-400">早期解除率</p><p className="text-lg font-bold text-gray-800">{rawData.earlyCancelRate}%</p></div>
           </div>
         </div>
       </div>

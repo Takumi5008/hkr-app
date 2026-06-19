@@ -74,18 +74,12 @@ export async function GET(req: NextRequest) {
 
   // ピンポン変換率（直近3ヶ月の合計ベース: 獲得数 ÷ PP数）
   const threeMonthsAgo = `${months[2].year}-${String(months[2].month).padStart(2, '0')}-01`
-  const [activityRows, followRows, meRow] = await Promise.all([
+  const [activityRows, meRow] = await Promise.all([
     dbQuery<{ pingpong: number; acquired: number }>(
       `SELECT COALESCE(SUM(pingpong_count), 0)::int AS pingpong,
               COALESCE(SUM(wimax + sonet), 0)::int AS acquired
        FROM daily_activity WHERE user_id = $1 AND date >= $2`,
       [targetUserId, threeMonthsAgo]
-    ),
-    dbQuery<{ total: number; filled: number }>(
-      `SELECT COUNT(*)::int AS total,
-              COUNT(CASE WHEN week_after IS NOT NULL AND week_after != '' AND week_after != '未定' THEN 1 END)::int AS filled
-       FROM activation_records WHERE user_id = $1 AND year * 100 + month >= $2`,
-      [targetUserId, startKey]
     ),
     dbQueryOne<{ login_streak: number }>(
       'SELECT COALESCE(login_streak, 0) AS login_streak FROM users WHERE id = $1',
@@ -96,9 +90,15 @@ export async function GET(req: NextRequest) {
   const totalPingpong = activityRows[0]?.pingpong ?? 0
   const totalAcquired = activityRows[0]?.acquired ?? 0
   const ppConversionRate = totalPingpong > 0 ? (totalAcquired / totalPingpong) * 100 : 0
-  const followupRate = followRows[0]?.total > 0
-    ? (followRows[0].filled / followRows[0].total) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
+
+  // 早期解除率（月Nの解除 ÷ 月N-1の開通）を過去5ヶ月分平均
+  const earlyCancelRates = monthlyHistory.slice(1).map((m, i) => {
+    const prevActivation = monthlyHistory[i]?.activation ?? 0
+    return prevActivation > 0 ? (m.cancel / prevActivation) * 100 : 0
+  })
+  const avgEarlyCancelRate = earlyCancelRates.length > 0
+    ? earlyCancelRates.reduce((s, v) => s + v, 0) / earlyCancelRates.length : 0
 
   const avgCancel = recent3.reduce((s, m) => s + m.cancel, 0) / 3
   const thisM = monthlyHistory[monthlyHistory.length - 1].activation
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
     cancel:      score(avgCancel, 15),
     hkr:         score(avgHKR, 80),
     activity:    score(ppConversionRate, 1),
-    followup:    score(followupRate, 100),
+    followup:    Math.max(0, Math.round(100 - avgEarlyCancelRate)),
     consistency: score(loginStreak, 30),
     growth:      Math.min(100, Math.max(0, 50 + Math.round(growthRate / 2))),
   }
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
     ppConversionRate: Math.round(ppConversionRate * 10) / 10,
     totalPingpong,
     totalAcquired,
-    followupRate: Math.round(followupRate),
+    earlyCancelRate: Math.round(avgEarlyCancelRate * 10) / 10,
     loginStreak,
     growthRate: Math.round(growthRate),
     cancelGrowth: Math.round(cancelGrowth),
@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
     cancel:      { label: '解除量', action: '担当解除数が少ない。新規顧客の獲得を増やして解除件数を増やすことが成長の土台になる。' },
     hkr:         { label: '定着率(HKR)', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
     activity:    { label: 'PP変換率', action: 'ピンポンから獲得につなげる提案力を磨こう。ピンポン後のトークを見直して変換率1%以上（100PPで1件）を目指して。' },
-    followup:    { label: 'フォロー力', action: '獲得した顧客への1週間後フォローを必ず実施しよう。開通率アップに直結する。' },
+    followup:    { label: '早期解除率', action: '獲得翌月に解除されている件数が多い。契約後のフォローを強化して早期解除を防ごう。' },
     consistency: { label: '継続力', action: '毎日の入力・ログイン習慣をつけよう。データが積み上がると改善点が見えてくる。' },
     growth:      { label: '成長速度', action: '先月より1件でも多く開通させることを意識しよう。小さな積み上げが大きな差になる。' },
   }
