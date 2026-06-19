@@ -38,7 +38,7 @@ type TrainingData = {
 
 const PARAM_LABELS: Record<string, string> = {
   activation:  '開通力', cancel: '解除量', hkr: '定着率(HKR)',
-  activity: 'PP変換率', followup: '早期解除率', consistency: '継続力', growth: '成長速度',
+  activity: 'PP変換率', followup: '早期非キャンセル率', consistency: '継続力', growth: '成長速度',
 }
 const PARAM_DESC: Record<string, string> = {
   activation:  '月平均開通数', cancel: '月平均解除数', hkr: 'HKR率平均',
@@ -188,7 +188,7 @@ export default function StatusPage() {
             <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
             <div><p className="text-xs text-gray-400">PP変換率</p><p className="text-lg font-bold text-gray-800">{rawData.ppConversionRate}%</p></div>
             <div><p className="text-xs text-gray-400">継続ストリーク</p><p className="text-lg font-bold text-gray-800">🔥{rawData.loginStreak}日</p></div>
-            <div><p className="text-xs text-gray-400">早期解除率</p><p className="text-lg font-bold text-gray-800">{rawData.earlyCancelRate}%</p></div>
+            <div><p className="text-xs text-gray-400">早期非キャンセル率</p><p className="text-lg font-bold text-gray-800">{rawData.earlyCancelRate}%</p></div>
           </div>
         </div>
       </div>

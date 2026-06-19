@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
   const ppConversionRate = totalPingpong > 0 ? (totalAcquired / totalPingpong) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
 
-  // 早期解除率 = 開通表で❌（activation='×'）の件数 ÷ 全件数
+  // 早期非キャンセル率 = 開通表で❌（activation='×'）の件数 ÷ 全件数
   const cancelTotal = cancelStatusRows[0]?.total ?? 0
   const cancelCancelled = cancelStatusRows[0]?.cancelled ?? 0
   const avgEarlyCancelRate = cancelTotal > 0 ? (cancelCancelled / cancelTotal) * 100 : 0
@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
     cancel:      { label: '解除量', action: '担当解除数が少ない。新規顧客の獲得を増やして解除件数を増やすことが成長の土台になる。' },
     hkr:         { label: '定着率(HKR)', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
     activity:    { label: 'PP変換率', action: 'ピンポンから獲得につなげる提案力を磨こう。ピンポン後のトークを見直して変換率1%以上（100PPで1件）を目指して。' },
-    followup:    { label: '早期解除率', action: '獲得翌月に解除されている件数が多い。契約後のフォローを強化して早期解除を防ごう。' },
+    followup:    { label: '早期非キャンセル率', action: '獲得翌月に解除されている件数が多い。契約後のフォローを強化して早期解除を防ごう。' },
     consistency: { label: '継続力', action: '毎日の入力・ログイン習慣をつけよう。データが積み上がると改善点が見えてくる。' },
     growth:      { label: '成長速度', action: '先月より1件でも多く開通させることを意識しよう。小さな積み上げが大きな差になる。' },
   }

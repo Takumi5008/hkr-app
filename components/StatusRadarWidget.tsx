@@ -12,7 +12,7 @@ const PARAM_LABELS: Record<string, string> = {
   cancel:      '解除量',
   hkr:         '定着率',
   activity:    'PP変換率',
-  followup:    '早期解除率',
+  followup:    '早期非キャンセル率',
   consistency: '継続力',
   growth:      '成長速度',
 }
