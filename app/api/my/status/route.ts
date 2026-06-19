@@ -72,13 +72,14 @@ export async function GET(req: NextRequest) {
   const hkrValues = recent3.filter(m => m.hkr !== null).map(m => m.hkr as number)
   const avgHKR = hkrValues.length > 0 ? hkrValues.reduce((s, v) => s + v, 0) / hkrValues.length : 0
 
-  // 行動量（直近30日の日次行動合計平均）
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+  // ピンポン変換率（直近3ヶ月の合計ベース: 獲得数 ÷ PP数）
+  const threeMonthsAgo = `${months[2].year}-${String(months[2].month).padStart(2, '0')}-01`
   const [activityRows, followRows, meRow] = await Promise.all([
-    dbQuery<{ total: number }>(
-      `SELECT COALESCE(AVG(pin_count + pingpong_count + intercom_count + face_other + wimax + sonet), 0)::float AS total
+    dbQuery<{ pingpong: number; acquired: number }>(
+      `SELECT COALESCE(SUM(pingpong_count), 0)::int AS pingpong,
+              COALESCE(SUM(wimax + sonet), 0)::int AS acquired
        FROM daily_activity WHERE user_id = $1 AND date >= $2`,
-      [targetUserId, thirtyDaysAgo]
+      [targetUserId, threeMonthsAgo]
     ),
     dbQuery<{ total: number; filled: number }>(
       `SELECT COUNT(*)::int AS total,
@@ -92,7 +93,9 @@ export async function GET(req: NextRequest) {
     ),
   ])
 
-  const avgDailyActions = activityRows[0]?.total ?? 0
+  const totalPingpong = activityRows[0]?.pingpong ?? 0
+  const totalAcquired = activityRows[0]?.acquired ?? 0
+  const ppConversionRate = totalPingpong > 0 ? (totalAcquired / totalPingpong) * 100 : 0
   const followupRate = followRows[0]?.total > 0
     ? (followRows[0].filled / followRows[0].total) * 100 : 0
   const loginStreak = meRow?.login_streak ?? 0
@@ -109,7 +112,7 @@ export async function GET(req: NextRequest) {
     activation:  score(avgActivation, 8),
     cancel:      score(avgCancel, 15),
     hkr:         score(avgHKR, 80),
-    activity:    score(avgDailyActions, 25),
+    activity:    score(ppConversionRate, 10),
     followup:    score(followupRate, 100),
     consistency: score(loginStreak, 30),
     growth:      Math.min(100, Math.max(0, 50 + Math.round(growthRate / 2))),
@@ -119,7 +122,9 @@ export async function GET(req: NextRequest) {
     avgMonthlyActivation: Math.round(avgActivation * 10) / 10,
     avgMonthlyCancel: Math.round(avgCancel * 10) / 10,
     hkrAvg: Math.round(avgHKR * 10) / 10,
-    avgDailyActions: Math.round(avgDailyActions * 10) / 10,
+    ppConversionRate: Math.round(ppConversionRate * 10) / 10,
+    totalPingpong,
+    totalAcquired,
     followupRate: Math.round(followupRate),
     loginStreak,
     growthRate: Math.round(growthRate),
@@ -133,7 +138,7 @@ export async function GET(req: NextRequest) {
     activation:  { label: '開通力', action: '月の開通ペースを上げよう。1日の訪問・提案数を意識的に増やすことから始めて。' },
     cancel:      { label: '解除量', action: '担当解除数が少ない。新規顧客の獲得を増やして解除件数を増やすことが成長の土台になる。' },
     hkr:         { label: '定着率(HKR)', action: '解除防止トークを見直そう。week_afterフォローをしっかり実施することが効果的。' },
-    activity:    { label: '行動量', action: '1日のピン・インターホン数を5件増やすことを目標にしよう。量が質を生む。' },
+    activity:    { label: 'PP変換率', action: 'ピンポンから獲得につなげる提案力を磨こう。ピンポン後のトークを見直して変換率10%以上を目指して。' },
     followup:    { label: 'フォロー力', action: '獲得した顧客への1週間後フォローを必ず実施しよう。開通率アップに直結する。' },
     consistency: { label: '継続力', action: '毎日の入力・ログイン習慣をつけよう。データが積み上がると改善点が見えてくる。' },
     growth:      { label: '成長速度', action: '先月より1件でも多く開通させることを意識しよう。小さな積み上げが大きな差になる。' },

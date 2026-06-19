@@ -11,7 +11,7 @@ const PARAM_LABELS: Record<string, string> = {
   activation:  '開通力',
   cancel:      '解除量',
   hkr:         '定着率',
-  activity:    '行動量',
+  activity:    'PP変換率',
   followup:    'フォロー力',
   consistency: '継続力',
   growth:      '成長速度',
