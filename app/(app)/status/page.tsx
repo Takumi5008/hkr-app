@@ -166,12 +166,12 @@ export default function StatusPage() {
             <div className="bg-rose-50 rounded-xl p-3">
               <p className="text-xs text-rose-400 mb-1">解除数</p>
               <p className="text-2xl font-bold text-rose-600">{rawData.thisMonthCancel}</p>
-              <p className={`text-xs mt-0.5 font-medium ${rawData.cancelGrowth >= 0 ? 'text-green-600' : 'text-red-400'}`}>{rawData.cancelGrowth >= 0 ? '▲' : '▼'}{Math.abs(rawData.cancelGrowth)}%</p>
+              <p className="text-xs mt-0.5 text-gray-400">今月</p>
             </div>
             <div className="bg-indigo-50 rounded-xl p-3">
               <p className="text-xs text-indigo-400 mb-1">開通数</p>
               <p className="text-2xl font-bold text-indigo-600">{rawData.thisMonthActivation}</p>
-              <p className={`text-xs mt-0.5 font-medium ${rawData.growthRate >= 0 ? 'text-green-600' : 'text-red-400'}`}>{rawData.growthRate >= 0 ? '▲' : '▼'}{Math.abs(rawData.growthRate)}%</p>
+              <p className="text-xs mt-0.5 text-gray-400">今月</p>
             </div>
             <div className={`rounded-xl p-3 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'bg-green-50' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'bg-yellow-50' : 'bg-red-50'}`}>
               <p className={`text-xs mb-1 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'text-green-400' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'text-yellow-500' : 'text-red-400'}`}>HKR率</p>
@@ -187,7 +187,7 @@ export default function StatusPage() {
             <div><p className="text-xs text-gray-400">月平均開通</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyActivation}件</p></div>
             <div><p className="text-xs text-gray-400">HKR平均</p><p className="text-lg font-bold text-gray-800">{rawData.hkrAvg}%</p></div>
             <div><p className="text-xs text-gray-400">PP変換率</p><p className="text-lg font-bold text-gray-800">{rawData.ppConversionRate}%</p></div>
-            <div><p className="text-xs text-gray-400">継続ストリーク</p><p className="text-lg font-bold text-gray-800">🔥{rawData.loginStreak}日</p></div>
+            <div><p className="text-xs text-gray-400">解除率</p><p className="text-lg font-bold text-gray-800">{rawData.activityCancelRate}%</p></div>
             <div><p className="text-xs text-gray-400">月平均獲得数</p><p className="text-lg font-bold text-gray-800">{rawData.avgMonthlyAcquisition}件</p></div>
           </div>
         </div>
