@@ -6,7 +6,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   BarChart, Bar, Cell, ComposedChart,
 } from 'recharts'
-import { ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { ChevronRight, ChevronLeft, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import Link from 'next/link'
 
 type Params = Record<string, number>
@@ -68,6 +68,7 @@ export default function StatusPage() {
   const [members, setMembers] = useState<{ id: number; name: string }[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const [role, setRole] = useState<string>('member')
+  const [rankTab, setRankTab] = useState(0)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -358,52 +359,83 @@ export default function StatusPage() {
         </div>
       )}
 
-      {/* スコアランキング */}
+      {/* スコアランキング（カルーセル） */}
       {ranking && ranking.ranking.length > 0 && (() => {
-        const myEntry = ranking.ranking.find(r => r.userId === ranking.myUserId)
         const viewingId = selectedUserId ?? ranking.myUserId
-        const viewingEntry = ranking.ranking.find(r => r.userId === viewingId)
+        const paramKeys = Object.keys(PARAM_LABELS)
+        const tabs = ['総合スコア', ...paramKeys.map(k => PARAM_LABELS[k])]
+        const total = tabs.length
+
+        const getSorted = (tab: number) => {
+          if (tab === 0) return [...ranking.ranking].sort((a, b) => b.totalScore - a.totalScore)
+          const key = paramKeys[tab - 1]
+          return [...ranking.ranking].sort((a, b) => (b.params[key] ?? 0) - (a.params[key] ?? 0))
+        }
+        const sorted = getSorted(rankTab)
+        const myRank = sorted.findIndex(r => r.userId === viewingId) + 1
+
         return (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-semibold text-gray-800">🏆 スコアランキング</h2>
-                <p className="text-xs text-gray-400 mt-0.5">チーム全員の総合スコア順位</p>
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-800">🏆 ランキング</h2>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setRankTab(t => (t - 1 + total) % total)} className="p-1 rounded-full hover:bg-gray-100 text-gray-400">
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-xs font-semibold text-indigo-600 min-w-[6rem] text-center">{tabs[rankTab]}</span>
+                <button onClick={() => setRankTab(t => (t + 1) % total)} className="p-1 rounded-full hover:bg-gray-100 text-gray-400">
+                  <ChevronRight size={18} />
+                </button>
               </div>
-              {viewingEntry && (
-                <div className="text-right">
-                  <p className="text-xs text-gray-400">表示中</p>
-                  <p className="text-lg font-bold text-indigo-600">{viewingEntry.rank}位 / {ranking.ranking.length}人</p>
-                </div>
-              )}
             </div>
-            <div className="space-y-2">
-              {ranking.ranking.map(r => {
+
+            {/* ドットインジケーター */}
+            <div className="flex justify-center gap-1 mb-4">
+              {tabs.map((_, i) => (
+                <button key={i} onClick={() => setRankTab(i)}
+                  className={`rounded-full transition-all ${i === rankTab ? 'w-4 h-1.5 bg-indigo-500' : 'w-1.5 h-1.5 bg-gray-200'}`} />
+              ))}
+            </div>
+
+            {/* ランキングリスト */}
+            <div className="space-y-1.5">
+              {sorted.map((r, i) => {
+                const rank = i + 1
                 const isMe = r.userId === ranking.myUserId
                 const isViewing = r.userId === viewingId
+                const val = rankTab === 0 ? r.totalScore : (r.params[paramKeys[rankTab - 1]] ?? 0)
                 return (
-                  <div key={r.userId} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isViewing ? 'bg-indigo-50 border border-indigo-200' : isMe ? 'bg-indigo-50/40' : 'bg-gray-50'}`}>
-                    <span className={`text-sm font-bold w-7 text-center shrink-0 ${r.rank === 1 ? 'text-yellow-500' : r.rank === 2 ? 'text-gray-400' : r.rank === 3 ? 'text-amber-600' : 'text-gray-400'}`}>
-                      {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `${r.rank}`}
+                  <div key={r.userId} className={`flex items-center gap-2 rounded-xl px-3 py-2 ${isViewing ? 'bg-indigo-50 border border-indigo-200' : isMe ? 'bg-indigo-50/40' : 'bg-gray-50'}`}>
+                    <span className="text-sm w-6 text-center shrink-0 font-bold text-gray-400">
+                      {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
                     </span>
-                    <span className={`flex-1 text-sm font-medium ${isViewing ? 'text-indigo-700' : 'text-gray-700'}`}>
-                      {r.name}{isMe && !isViewing && <span className="ml-1 text-xs text-indigo-400">（自分）</span>}
-                      {isViewing && isMe && <span className="ml-1 text-xs text-indigo-400">（自分）</span>}
-                      {isViewing && !isMe && <span className="ml-1 text-xs text-indigo-400">（表示中）</span>}
+                    <span className={`flex-1 text-sm font-medium truncate ${isViewing ? 'text-indigo-700' : 'text-gray-700'}`}>
+                      {r.name}
+                      {isMe && <span className="ml-1 text-xs text-indigo-400">（自分）</span>}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${r.totalScore >= 70 ? 'bg-green-500' : r.totalScore >= 45 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${r.totalScore}%` }} />
+                    {/* 総合タブはパラメーター全スコアをミニ表示 */}
+                    {rankTab === 0 && (
+                      <div className="hidden sm:flex gap-1 mr-2">
+                        {paramKeys.map(k => (
+                          <span key={k} className={`text-xs font-bold w-6 text-center ${sc(r.params[k] ?? 0)}`}>{r.params[k] ?? 0}</span>
+                        ))}
                       </div>
-                      <span className={`text-sm font-bold w-8 text-right ${r.totalScore >= 70 ? 'text-green-600' : r.totalScore >= 45 ? 'text-yellow-500' : 'text-red-500'}`}>{r.totalScore}</span>
+                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${val >= 70 ? 'bg-green-500' : val >= 45 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${val}%` }} />
+                      </div>
+                      <span className={`text-sm font-bold w-7 text-right ${sc(val)}`}>{val}</span>
                     </div>
                   </div>
                 )
               })}
             </div>
-            {myEntry && myEntry.rank > 3 && (
-              <p className="text-xs text-center text-gray-400 mt-3">あなたは {myEntry.rank}位 / {ranking.ranking.length}人中</p>
-            )}
+
+            <p className="text-xs text-center text-gray-400 mt-3">
+              {tabs[rankTab]}：{myRank > 0 ? `あなたは ${myRank}位 / ${sorted.length}人中` : '—'}
+            </p>
           </div>
         )
       })()}
@@ -451,67 +483,6 @@ export default function StatusPage() {
         )}
       </div>
 
-      {/* パラメーター別ランキング */}
-      {ranking && ranking.ranking.length > 0 && (() => {
-        const myUserId = selectedUserId ?? ranking.myUserId
-        const paramKeys = Object.keys(PARAM_LABELS)
-        return (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="mb-4">
-              <h2 className="text-base font-semibold text-gray-800">📚 パラメーター別ランキング</h2>
-              <p className="text-xs text-gray-400 mt-0.5">各項目の1位が得意な人 → 下位の人に教える仕組み</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {paramKeys.map(key => {
-                const sorted = [...ranking.ranking].sort((a, b) => (b.params[key] ?? 0) - (a.params[key] ?? 0))
-                const myRank = sorted.findIndex(r => r.userId === myUserId) + 1
-                const top3 = sorted.slice(0, 3)
-                const expert = sorted[0]
-                return (
-                  <div key={key} className="border border-gray-100 rounded-xl p-4 bg-gray-50/60">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-gray-700">{PARAM_LABELS[key]}</span>
-                      {myRank > 0 && (
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${myRank === 1 ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
-                          自分 {myRank}位
-                        </span>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      {top3.map((r, i) => {
-                        const isMe = r.userId === myUserId
-                        const medals = ['🥇', '🥈', '🥉']
-                        const val = r.params[key] ?? 0
-                        return (
-                          <div key={r.userId} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${isMe ? 'bg-indigo-50' : 'bg-white'}`}>
-                            <span className="text-sm w-5 shrink-0">{medals[i]}</span>
-                            <span className={`flex-1 text-xs font-medium truncate ${isMe ? 'text-indigo-700' : 'text-gray-700'}`}>
-                              {r.name}{i === 0 && <span className="ml-1 text-xs text-amber-500 font-bold">師匠</span>}
-                            </span>
-                            <span className={`text-xs font-bold ${sc(val)}`}>{val}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {myRank > 3 && (
-                      <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 px-2">
-                        <span className="text-xs text-gray-400 w-5 shrink-0">{myRank}位</span>
-                        <span className="flex-1 text-xs text-gray-500 truncate">あなた</span>
-                        <span className={`text-xs font-bold ${sc(sorted[myRank - 1]?.params[key] ?? 0)}`}>{sorted[myRank - 1]?.params[key] ?? 0}</span>
-                      </div>
-                    )}
-                    {expert && myRank > 1 && (
-                      <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                        💬 <span className="font-medium text-gray-600">{expert.name}</span> に {PARAM_LABELS[key]} を聞いてみよう
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
     </div>
   )
 }
