@@ -99,7 +99,7 @@ export default function StatusPage() {
 
   const { params, rawData, challenges, teamGrowth, members: allMembers, pace, correlation, reviewGrowth } = data
   const radarData = Object.entries(params).map(([key, val]) => ({ param: PARAM_LABELS[key], score: val, fullMark: 100 }))
-  const totalScore = Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 7)
+  const totalScore = Math.min(100, Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 7))
   const pacePercent = Math.min(100, Math.round((pace.daysElapsed / pace.totalDays) * 100))
   const activationPercent = Math.min(100, pace.totalDays > 0 ? Math.round((pace.thisMonthActivation / Math.max(1, pace.projectedActivation)) * 100) : 0)
 

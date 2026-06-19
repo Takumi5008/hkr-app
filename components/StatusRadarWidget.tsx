@@ -42,7 +42,7 @@ export default function StatusRadarWidget() {
     fullMark: 100,
   }))
 
-  const totalScore = Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 6)
+  const totalScore = Math.min(100, Math.round(Object.values(params).reduce((s, v) => s + v, 0) / 7))
 
   const scoreColor = totalScore >= 70 ? 'text-green-600' : totalScore >= 45 ? 'text-yellow-500' : 'text-red-500'
 
