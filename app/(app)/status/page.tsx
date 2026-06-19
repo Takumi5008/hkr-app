@@ -11,6 +11,10 @@ import Link from 'next/link'
 
 type Params = Record<string, number>
 
+type RankingEntry = {
+  userId: number; name: string; totalScore: number; params: Params; rank: number
+}
+
 type StatusData = {
   params: Params
   rawData: {
@@ -66,6 +70,7 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'
 export default function StatusPage() {
   const [data, setData] = useState<StatusData | null>(null)
   const [training, setTraining] = useState<TrainingData | null>(null)
+  const [ranking, setRanking] = useState<{ ranking: RankingEntry[]; myUserId: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [members, setMembers] = useState<{ id: number; name: string }[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
@@ -81,6 +86,7 @@ export default function StatusPage() {
         fetch('/api/my/training').then(r => r.json()).then(setTraining).catch(() => {})
       }
     }).catch(() => {})
+    fetch('/api/score-ranking').then(r => r.json()).then(setRanking).catch(() => {})
   }, [])
 
   const isManager = role === 'manager' || role === 'admin' || role === 'viewer'
@@ -359,6 +365,56 @@ export default function StatusPage() {
           </div>
         </div>
       )}
+
+      {/* スコアランキング */}
+      {ranking && ranking.ranking.length > 0 && (() => {
+        const myEntry = ranking.ranking.find(r => r.userId === ranking.myUserId)
+        const viewingId = selectedUserId ?? ranking.myUserId
+        const viewingEntry = ranking.ranking.find(r => r.userId === viewingId)
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-gray-800">🏆 スコアランキング</h2>
+                <p className="text-xs text-gray-400 mt-0.5">チーム全員の総合スコア順位</p>
+              </div>
+              {viewingEntry && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400">表示中</p>
+                  <p className="text-lg font-bold text-indigo-600">{viewingEntry.rank}位 / {ranking.ranking.length}人</p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              {ranking.ranking.map(r => {
+                const isMe = r.userId === ranking.myUserId
+                const isViewing = r.userId === viewingId
+                return (
+                  <div key={r.userId} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isViewing ? 'bg-indigo-50 border border-indigo-200' : isMe ? 'bg-indigo-50/40' : 'bg-gray-50'}`}>
+                    <span className={`text-sm font-bold w-7 text-center shrink-0 ${r.rank === 1 ? 'text-yellow-500' : r.rank === 2 ? 'text-gray-400' : r.rank === 3 ? 'text-amber-600' : 'text-gray-400'}`}>
+                      {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `${r.rank}`}
+                    </span>
+                    <span className={`flex-1 text-sm font-medium ${isViewing ? 'text-indigo-700' : 'text-gray-700'}`}>
+                      {r.name}{isMe && !isViewing && <span className="ml-1 text-xs text-indigo-400">（自分）</span>}
+                      {isViewing && isMe && <span className="ml-1 text-xs text-indigo-400">（自分）</span>}
+                      {isViewing && !isMe && <span className="ml-1 text-xs text-indigo-400">（表示中）</span>}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${r.totalScore >= 70 ? 'bg-green-500' : r.totalScore >= 45 ? 'bg-yellow-400' : 'bg-red-400'}`} style={{ width: `${r.totalScore}%` }} />
+                      </div>
+                      <span className={`text-sm font-bold w-8 text-right ${r.totalScore >= 70 ? 'text-green-600' : r.totalScore >= 45 ? 'text-yellow-500' : 'text-red-500'}`}>{r.totalScore}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {myEntry && myEntry.rank > 3 && (
+              <p className="text-xs text-center text-gray-400 mt-3">あなたは {myEntry.rank}位 / {ranking.ranking.length}人中</p>
+            )}
+          </div>
+        )
+      })()}
 
       {/* 育成比較：成長曲線 */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
