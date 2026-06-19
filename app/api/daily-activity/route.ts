@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       `SELECT
          u.id AS user_id, u.name,
          COUNT(CASE WHEN da.work_hours IS NOT NULL AND da.work_hours != '' THEN 1 END)::int AS work_days,
-         ROUND(COALESCE(SUM(NULLIF(TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.'), '')::numeric), 0), 1) AS work_hours,
+         ROUND(COALESCE(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 0), 1) AS work_hours,
          COALESCE(SUM(da.pin_count), 0)::int      AS pin_count,
          COALESCE(SUM(da.pingpong_count), 0)::int AS pingpong_count,
          COALESCE(SUM(da.intercom_count), 0)::int AS intercom_count,

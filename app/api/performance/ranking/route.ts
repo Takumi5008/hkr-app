@@ -14,15 +14,15 @@ export async function GET(req: NextRequest) {
     const monthlyCancel = await dbQuery<{ member_name: string; total_cancel: number; work_hours: number; productivity: number }>(
       `SELECT u.name AS member_name,
               SUM(da.cancel)::int AS total_cancel,
-              ROUND(SUM(NULLIF(TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.'), '')::numeric), 2) AS work_hours,
-              ROUND(SUM(da.cancel)::numeric / NULLIF(SUM(NULLIF(TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.'), '')::numeric), 0), 3) AS productivity
+              ROUND(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 2) AS work_hours,
+              ROUND(SUM(da.cancel)::numeric / NULLIF(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 0), 3) AS productivity
        FROM daily_activity da
        JOIN users u ON u.id = da.user_id
        WHERE EXTRACT(YEAR FROM da.date::date) = $1
          AND EXTRACT(MONTH FROM da.date::date) = $2
          AND u.role != 'viewer'
        GROUP BY u.name
-       HAVING SUM(NULLIF(TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.'), '')::numeric) > 0
+       HAVING SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END) > 0
        ORDER BY productivity DESC`,
       [year, month]
     )
