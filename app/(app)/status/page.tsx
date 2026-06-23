@@ -23,9 +23,10 @@ type StatusData = {
     earlyCancelRate: number; earlyCancelTotal: number; earlyCancelCancelled: number
     avgMonthlyAcquisition: number; activityCancelRate: number; totalActivityCancel: number
     thisMonthCancel: number; thisMonthActivation: number; thisMonthHKR: number | null
+    thisMonthWorkDays: number; thisMonthProductivity: number | null
   }
   challenges: { key: string; label: string; score: number; action: string }[]
-  monthlyHistory: { year: number; month: number; label: string; activation: number; cancel: number; hkr: number | null }[]
+  monthlyHistory: { year: number; month: number; label: string; activation: number; cancel: number; hkr: number | null; workDays: number; productivity: number | null }[]
   teamGrowth: { year: number; month: number; label: string; mine: number; teamAvg: number }[]
   members: { userId: number; name: string; isMe: boolean; history: number[] }[]
   pace: { thisMonthActivation: number; projectedActivation: number; daysElapsed: number; daysRemaining: number; totalDays: number; dailyPace: number }
@@ -230,7 +231,7 @@ export default function StatusPage() {
         {/* 今月の解除・開通・HKR */}
         <div className="mt-4 border-t border-gray-100 pt-4">
           <p className="text-xs font-semibold text-gray-500 mb-3">今月の実績</p>
-          <div className="grid grid-cols-3 gap-2 text-center mb-4">
+          <div className="grid grid-cols-2 gap-2 text-center mb-2">
             <div className="bg-rose-50 rounded-xl p-3">
               <p className="text-xs text-rose-400 mb-1">解除数</p>
               <p className="text-2xl font-bold text-rose-600">{rawData.thisMonthCancel}</p>
@@ -241,12 +242,23 @@ export default function StatusPage() {
               <p className="text-2xl font-bold text-indigo-600">{rawData.thisMonthActivation}</p>
               <p className="text-xs mt-0.5 text-gray-400">今月</p>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center mb-4">
             <div className={`rounded-xl p-3 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'bg-green-50' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'bg-yellow-50' : 'bg-red-50'}`}>
               <p className={`text-xs mb-1 ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'text-green-400' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'text-yellow-500' : 'text-red-400'}`}>HKR率</p>
               <p className={`text-2xl font-bold ${rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 80 ? 'text-green-600' : rawData.thisMonthHKR !== null && rawData.thisMonthHKR >= 60 ? 'text-yellow-600' : 'text-red-500'}`}>
                 {rawData.thisMonthHKR !== null ? `${rawData.thisMonthHKR}%` : '—'}
               </p>
               <p className="text-xs mt-0.5 text-gray-400">目標80%</p>
+            </div>
+            <div className="bg-violet-50 rounded-xl p-3">
+              <p className="text-xs text-violet-400 mb-1">開通生産性</p>
+              <p className="text-2xl font-bold text-violet-600">
+                {rawData.thisMonthProductivity !== null ? rawData.thisMonthProductivity.toFixed(2) : '—'}
+              </p>
+              <p className="text-xs mt-0.5 text-gray-400">
+                {rawData.thisMonthWorkDays > 0 ? `開通÷${rawData.thisMonthWorkDays}稼働日` : '稼働日未入力'}
+              </p>
             </div>
           </div>
           <p className="text-xs font-semibold text-gray-500 mb-3">3ヶ月平均</p>
@@ -289,6 +301,8 @@ export default function StatusPage() {
                 <th className="pb-1.5 font-medium text-rose-400">解除数</th>
                 <th className="pb-1.5 font-medium text-indigo-400">開通数</th>
                 <th className="pb-1.5 font-medium text-emerald-500">HKR率</th>
+                <th className="pb-1.5 font-medium text-gray-400">稼働日</th>
+                <th className="pb-1.5 font-medium text-violet-500">開通生産性</th>
               </tr>
             </thead>
             <tbody>
@@ -299,6 +313,10 @@ export default function StatusPage() {
                   <td className="py-1.5 font-bold text-indigo-600">{m.activation}</td>
                   <td className={`py-1.5 font-bold ${m.hkr === null ? 'text-gray-300' : m.hkr >= 80 ? 'text-emerald-600' : m.hkr >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
                     {m.hkr !== null ? `${m.hkr}%` : '—'}
+                  </td>
+                  <td className="py-1.5 text-gray-400">{m.workDays > 0 ? `${m.workDays}日` : '—'}</td>
+                  <td className={`py-1.5 font-bold ${m.productivity === null ? 'text-gray-300' : m.productivity >= 0.5 ? 'text-violet-600' : m.productivity >= 0.3 ? 'text-violet-400' : 'text-gray-400'}`}>
+                    {m.productivity !== null ? m.productivity.toFixed(2) : '—'}
                   </td>
                 </tr>
               ))}
