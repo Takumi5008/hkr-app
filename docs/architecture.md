@@ -12,6 +12,7 @@
 | 認証 | iron-session (cookie ベース) |
 | デプロイ | Vercel |
 | アイコン | lucide-react |
+| グラフ | recharts |
 
 ---
 
@@ -27,9 +28,11 @@ hkr-app/
 │   │   ├── activation/page.tsx   # 開通表（So-net / WiMAX）
 │   │   ├── activity/page.tsx     # 行動表
 │   │   ├── progress/page.tsx     # 個人進捗
+│   │   ├── status/page.tsx       # 個人ステータス（7パラメーター・ランキング）
 │   │   ├── challenge/page.tsx    # チャレンジ
 │   │   ├── sugoroku/page.tsx     # 開通双六
 │   │   ├── team/page.tsx         # チーム全体（管理者）
+│   │   ├── team-report/page.tsx  # チームレポート（管理者）
 │   │   ├── performance/page.tsx  # 実績（管理者）
 │   │   ├── admin/page.tsx        # 管理（管理者）
 │   │   ├── attendance/page.tsx   # 出欠管理
@@ -42,23 +45,31 @@ hkr-app/
 │   │   ├── settings/page.tsx     # 設定
 │   │   └── howto/page.tsx        # 使い方
 │   ├── api/                      # API Routes
-│   │   ├── auth/                 # 認証
+│   │   ├── auth/                 # 認証（login / logout / me）
 │   │   ├── records/              # HKRデータ
 │   │   ├── activation/           # 開通表
 │   │   │   └── resync/           # 再同期
 │   │   ├── opening-calendar/     # 開通カレンダー
 │   │   ├── daily-activity/       # 行動表
+│   │   ├── my/
+│   │   │   ├── status/           # 個人ステータス（7パラメーター）
+│   │   │   └── training/         # 育成ダッシュボード（管理者）
+│   │   ├── score-ranking/        # スコアランキング（全員閲覧可）
+│   │   ├── report/               # チームレポート（管理者）
+│   │   ├── performance/
+│   │   │   └── ranking/          # 行動表ランキング
 │   │   ├── products/             # 商材管理
 │   │   ├── team/                 # チームデータ
 │   │   ├── progress/             # 個人進捗
 │   │   ├── push/                 # プッシュ通知
 │   │   └── admin/                # 管理者用
-│   │       ├── debug-calendar/   # デバッグ用
+│   │       ├── debug-calendar/
 │   │       └── fix-calendar-months/
 │   ├── login/                    # ログインページ
 │   └── register/                 # 登録ページ
 ├── components/
-│   ├── Sidebar.tsx               # サイドバーナビ
+│   ├── Sidebar.tsx               # サイドバーナビ（並び替え機能付き）
+│   ├── StatusRadarWidget.tsx     # 個人ステータスのレーダーチャート（ダッシュボード用）
 │   ├── UserAvatar.tsx            # アバター
 │   ├── ActivationBadge.tsx       # 開通バッジ
 │   ├── HKRCard.tsx               # HKRカード
@@ -69,6 +80,7 @@ hkr-app/
 ├── lib/
 │   ├── db.ts                     # DB接続・スキーマ定義・マイグレーション
 │   ├── session.ts                # iron-session 設定
+│   ├── streak.ts                 # ログインストリーク更新ユーティリティ
 │   ├── hkr.ts                    # HKR計算ロジック
 │   ├── points.ts                 # ポイント付与ロジック
 │   ├── badges.ts                 # バッジ判定ロジック
@@ -107,11 +119,13 @@ hkr-app/
 POST /api/auth/login
   → パスワード検証 (bcrypt)
   → iron-session にユーザー情報を保存（HTTP-only cookie）
+  → updateLoginStreak() でストリーク更新
   → redirect /dashboard
 
-各 API Route / Server Component
+GET /api/auth/me（アプリ起動時に毎回呼ばれる）
   → getSession() でセッション取得
   → session.userId がなければ 401 / redirect /login
+  → updateLoginStreak() でストリーク更新（アプリ開き直しでも継続）
 ```
 
 ---

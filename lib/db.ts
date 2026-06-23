@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 24
+const DB_VERSION = 25
 let initialized = false
 
 async function initDb() {
@@ -460,6 +460,21 @@ async function initDb() {
       year         INTEGER NOT NULL,
       month        INTEGER NOT NULL,
       submitted_at TEXT    NOT NULL,
+      UNIQUE(user_id, year, month)
+    )
+  `)
+
+  // v25: 月次目標テーブル（管理者が月・メンバーごとに設定）
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS monthly_targets (
+      id                 SERIAL PRIMARY KEY,
+      user_id            INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      year               INTEGER NOT NULL,
+      month              INTEGER NOT NULL CHECK (month BETWEEN 1 AND 12),
+      work_days          INTEGER NOT NULL DEFAULT 0,
+      acquisition_target INTEGER NOT NULL DEFAULT 0,
+      cancel_target      INTEGER NOT NULL DEFAULT 0,
+      activation_target  INTEGER NOT NULL DEFAULT 0,
       UNIQUE(user_id, year, month)
     )
   `)
