@@ -142,14 +142,19 @@ export default function ActivationPage() {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
 
-  // 様々な日付フォーマット (YYYY-MM-DD / M/D / MM/DD / M月D日 / DD) を YYYY-MM-DD に正規化
+  // 様々な日付フォーマット (YYYY-MM-DD / YYYY-M-D / M/D / MM/DD / M月D日 / DD) を YYYY-MM-DD に正規化
   const normDate = (s: string, y: number, m: number): string => {
     if (!s || s === '未定' || s === '-') return ''
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
-    const md = s.match(/^(\d{1,2})[\/月](\d{1,2})日?$/)
-    if (md) return `${y}-${String(parseInt(md[1])).padStart(2,'0')}-${String(parseInt(md[2])).padStart(2,'0')}`
-    const d = s.match(/^(\d{1,2})$/)
-    if (d) return `${y}-${String(m).padStart(2,'0')}-${String(parseInt(d[1])).padStart(2,'0')}`
+    const s2 = s.trim()
+    // YYYY-MM-DD or YYYY-M-D
+    const iso = s2.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/)
+    if (iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`
+    // M/D or MM/DD or M月D日
+    const md = s2.match(/^(\d{1,2})[\/月](\d{1,2})日?$/)
+    if (md) return `${y}-${md[1].padStart(2,'0')}-${md[2].padStart(2,'0')}`
+    // just day number
+    const d = s2.match(/^(\d{1,2})$/)
+    if (d) return `${y}-${String(m).padStart(2,'0')}-${d[1].padStart(2,'0')}`
     return ''
   }
 
@@ -454,6 +459,7 @@ export default function ActivationPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Activation</p>
         <h1 className="text-2xl font-bold">開通表</h1>
         <p className="text-sm text-violet-100 mt-0.5">月別の開通管理</p>
+        <p className="text-xs text-violet-300 mt-1">DEBUG: today={todayStr} / rec0.date={records[0]?.date ?? 'none'}</p>
       </div>
 
       {/* 管理者：メンバー選択 */}
