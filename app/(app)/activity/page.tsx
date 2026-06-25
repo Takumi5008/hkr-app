@@ -549,6 +549,7 @@ export default function ActivityPage() {
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.consent_form)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.wimax)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.sonet)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.nifty)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.cancel)}</td>
                       {!isOtherMember && (
                         <td className="border border-gray-100 px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
