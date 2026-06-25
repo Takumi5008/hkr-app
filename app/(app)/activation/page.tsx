@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Save, X } from 'lucide
 import TableScrollContainer from '@/components/TableScrollContainer'
 import { useConfirm } from '@/components/useConfirm'
 
-type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'all'
+type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'nifty' | 'all'
 
 type ActivationRecord = {
   id: number
@@ -96,12 +96,30 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'activation', label: '開通' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
+  nifty: [
+    { key: 'name', label: '名前' },
+    { key: 'date', label: '日にち' },
+    { key: 'line', label: '回線' },
+    { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
+    { key: 'neg_apply', label: '申込時ネガキャン' },
+    { key: 'neg_cancel', label: '解除時ネガキャン' },
+    { key: 'fm', label: 'FM' },
+    { key: 'week_after', label: '獲得1週間後' },
+    { key: 'day_before_construction', label: '工事日前日' },
+    { key: 'construction_date', label: '工事日' },
+    { key: 'construction_time', label: '工事時間帯' },
+    { key: 'construction_type', label: '工事' },
+    { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
+  ],
 }
 
 const TYPE_LABELS: Record<ActivationType, string> = {
   sonet: 'So-net',
   wimax_post: 'WiMAX後送り',
   wimax_direct: 'WiMAX直せち',
+  nifty: '@nifty光',
   all: '一覧',
 }
 
@@ -131,6 +149,7 @@ const TYPE_NA_FIELDS: Record<Exclude<ActivationType, 'all'>, (keyof ActivationRe
   sonet:        ['day_before_delivery', 'delivery_date', 'week_after_delivery'],
   wimax_post:   ['week_after', 'day_before_construction', 'construction_date'],
   wimax_direct: ['day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'],
+  nifty:        ['day_before_delivery', 'delivery_date', 'week_after_delivery'],
 }
 
 type User = { id: number; name: string; role: string }
@@ -459,7 +478,6 @@ export default function ActivationPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-violet-200 mb-1">Activation</p>
         <h1 className="text-2xl font-bold">開通表</h1>
         <p className="text-sm text-violet-100 mt-0.5">月別の開通管理</p>
-        <p className="text-xs text-violet-300 mt-1">DEBUG: today={todayStr} / rec0.date={records[0]?.date ?? 'none'}</p>
       </div>
 
       {/* 管理者：メンバー選択 */}

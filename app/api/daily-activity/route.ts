@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
          COALESCE(SUM(da.consent_form), 0)::int   AS consent_form,
          COALESCE(SUM(da.wimax), 0)::int          AS wimax,
          COALESCE(SUM(da.sonet), 0)::int          AS sonet,
+         COALESCE(SUM(da.nifty), 0)::int          AS nifty,
          COALESCE(SUM(da.cancel), 0)::int         AS cancel
        FROM users u
        LEFT JOIN daily_activity da ON da.user_id = u.id AND da.date LIKE $1
@@ -57,21 +58,21 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const { date, workHours, pinCount, pingpongCount, intercomCount, faceOther, faceUnused, hearingSheet, consentForm, wimax, sonet, cancel } = await req.json()
+  const { date, workHours, pinCount, pingpongCount, intercomCount, faceOther, faceUnused, hearingSheet, consentForm, wimax, sonet, nifty, cancel } = await req.json()
 
   // 全角数字を半角に正規化してからDBへ
   const normWorkHours = String(workHours ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
 
   await dbRun(
     `INSERT INTO daily_activity
-     (user_id, date, work_hours, pin_count, pingpong_count, intercom_count, face_other, face_unused, hearing_sheet, consent_form, wimax, sonet, cancel)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+     (user_id, date, work_hours, pin_count, pingpong_count, intercom_count, face_other, face_unused, hearing_sheet, consent_form, wimax, sonet, nifty, cancel)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      ON CONFLICT (user_id, date) DO UPDATE SET
        work_hours=$3, pin_count=$4, pingpong_count=$5, intercom_count=$6,
        face_other=$7, face_unused=$8, hearing_sheet=$9, consent_form=$10,
-       wimax=$11, sonet=$12, cancel=$13`,
+       wimax=$11, sonet=$12, nifty=$13, cancel=$14`,
     [session.userId, date, normWorkHours, toInt(pinCount), toInt(pingpongCount), toInt(intercomCount),
-     toInt(faceOther), toInt(faceUnused), toInt(hearingSheet), toInt(consentForm), toInt(wimax), toInt(sonet), toInt(cancel)]
+     toInt(faceOther), toInt(faceUnused), toInt(hearingSheet), toInt(consentForm), toInt(wimax), toInt(sonet), toInt(nifty), toInt(cancel)]
   )
 
   const rows = await dbQuery(

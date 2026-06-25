@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 25
+const DB_VERSION = 26
 let initialized = false
 
 async function initDb() {
@@ -478,6 +478,9 @@ async function initDb() {
       UNIQUE(user_id, year, month)
     )
   `)
+
+  // v26: @nifty光 追加
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS nifty INTEGER NOT NULL DEFAULT 0`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }
