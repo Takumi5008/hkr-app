@@ -141,6 +141,22 @@ export default function ActivationPage() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
+
+  // 様々な日付フォーマット (YYYY-MM-DD / M/D / MM/DD / M月D日 / DD) を YYYY-MM-DD に正規化
+  const normDate = (s: string, y: number, m: number): string => {
+    if (!s || s === '未定' || s === '-') return ''
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+    const md = s.match(/^(\d{1,2})[\/月](\d{1,2})日?$/)
+    if (md) return `${y}-${String(parseInt(md[1])).padStart(2,'0')}-${String(parseInt(md[2])).padStart(2,'0')}`
+    const d = s.match(/^(\d{1,2})$/)
+    if (d) return `${y}-${String(m).padStart(2,'0')}-${String(parseInt(d[1])).padStart(2,'0')}`
+    return ''
+  }
+
+  const DATE_FIELDS: (keyof ActivationRecord)[] = [
+    'date','fm','week_after','day_before_construction','construction_date',
+    'day_before_delivery','delivery_date','week_after_delivery',
+  ]
   const [type, setType] = useState<ActivationType>('sonet')
   const [records, setRecords] = useState<ActivationRecord[]>([])
   const [editingId, setEditingId] = useState<number | 'new' | null>(null)
@@ -506,7 +522,7 @@ export default function ActivationPage() {
                   </tr>
                 )}
                 {records.map((rec, i) => {
-                  const isToday = rec.date === todayStr
+                  const isToday = DATE_FIELDS.some(f => normDate(rec[f] as string, year, month) === todayStr)
                   const naFields = TYPE_NA_FIELDS[rec.type as Exclude<ActivationType, 'all'>] ?? []
                   return (
                     <tr key={rec.id} className={isToday ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
@@ -620,7 +636,7 @@ export default function ActivationPage() {
                 </tr>
               )}
               {records.map((rec, i) => {
-                const isToday = rec.date === todayStr
+                const isToday = DATE_FIELDS.some(f => normDate(rec[f] as string, year, month) === todayStr)
                 return (
                 <tr key={rec.id} className={isToday ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
                   <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
@@ -633,12 +649,15 @@ export default function ActivationPage() {
                     const isNegApply = c.key === 'neg_apply'
                     const isNegCancel = c.key === 'neg_cancel'
                     const isCancelReason = c.key === 'cancel_reason'
+                    const isCellToday = (DATE_FIELDS as string[]).includes(c.key)
+                      && normDate(rec[c.key] as string, year, month) === todayStr
                     const cellBg = isActivation
                       ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
                       : (isCancel || isNegApply || isNegCancel)
                       ? (rec[c.key] === '○' ? 'bg-red-50' : rec[c.key] === '×' ? 'bg-amber-50' : '')
                       : isDoneField
-                      ? (doneVal === 1 ? 'bg-green-50' : doneVal === 2 ? 'bg-red-50' : '')
+                      ? (doneVal === 1 ? 'bg-green-50' : doneVal === 2 ? 'bg-red-50' : isCellToday ? 'bg-amber-100' : '')
+                      : isCellToday ? 'bg-amber-100'
                       : ''
                     return (
                       <td key={c.key} className={`border border-gray-100 px-2 py-2 text-center ${cellBg}`}>
@@ -675,7 +694,8 @@ export default function ActivationPage() {
                           </button>
                         ) : isDoneField && rec[c.key] ? (
                           <div className="flex items-center justify-center gap-1">
-                            <span className="text-gray-700">{rec[c.key]}</span>
+                            <span className={isCellToday && doneVal === 0 ? 'text-amber-700 font-semibold' : 'text-gray-700'}>{rec[c.key]}</span>
+                            {isCellToday && doneVal === 0 && <span className="bg-amber-400 text-white text-[9px] font-bold px-1 py-0.5 rounded leading-none">今日</span>}
                             <button
                               onClick={() => toggleDone(rec.id, c.key, doneVal)}
                               className="text-lg leading-none"
@@ -684,9 +704,9 @@ export default function ActivationPage() {
                             </button>
                           </div>
                         ) : rec[c.key] ? (
-                          c.key === 'date' && isToday ? (
+                          isCellToday ? (
                             <div className="flex items-center justify-center gap-1">
-                              <span className="text-amber-700 font-semibold">{rec.date}</span>
+                              <span className="text-amber-700 font-semibold">{rec[c.key]}</span>
                               <span className="bg-amber-400 text-white text-[9px] font-bold px-1 py-0.5 rounded leading-none">今日</span>
                             </div>
                           ) : (
