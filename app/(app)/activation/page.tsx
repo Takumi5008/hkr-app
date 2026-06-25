@@ -138,6 +138,7 @@ type User = { id: number; name: string; role: string }
 export default function ActivationPage() {
   const { confirm, ConfirmDialog } = useConfirm()
   const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
   const [type, setType] = useState<ActivationType>('sonet')
@@ -505,9 +506,10 @@ export default function ActivationPage() {
                   </tr>
                 )}
                 {records.map((rec, i) => {
+                  const isToday = rec.date === todayStr
                   const naFields = TYPE_NA_FIELDS[rec.type as Exclude<ActivationType, 'all'>] ?? []
                   return (
-                    <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
+                    <tr key={rec.id} className={isToday ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
                       <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
                       {LIST_COLS.map((c) => {
                         const isNA = c.key !== 'type_label' && c.key !== 'cancel_reason' && naFields.includes(c.key as keyof ActivationRecord)
@@ -562,7 +564,14 @@ export default function ActivationPage() {
                                 </button>
                               </div>
                             ) : val ? (
-                              <span className="text-gray-700">{val as string}</span>
+                              c.key === 'date' && isToday ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-amber-700 font-semibold">{val as string}</span>
+                                  <span className="bg-amber-400 text-white text-[9px] font-bold px-1 py-0.5 rounded leading-none">今日</span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-700">{val as string}</span>
+                              )
                             ) : (
                               <span className="text-gray-200">-</span>
                             )}
@@ -610,8 +619,10 @@ export default function ActivationPage() {
                   </td>
                 </tr>
               )}
-              {records.map((rec, i) => (
-                <tr key={rec.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
+              {records.map((rec, i) => {
+                const isToday = rec.date === todayStr
+                return (
+                <tr key={rec.id} className={isToday ? 'bg-amber-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'}>
                   <td className="border border-gray-100 px-2 py-2 text-center text-gray-400">{i + 1}</td>
                   {cols.map((c) => {
                     const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
@@ -673,7 +684,14 @@ export default function ActivationPage() {
                             </button>
                           </div>
                         ) : rec[c.key] ? (
-                          <span className="text-gray-700">{rec[c.key]}</span>
+                          c.key === 'date' && isToday ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <span className="text-amber-700 font-semibold">{rec.date}</span>
+                              <span className="bg-amber-400 text-white text-[9px] font-bold px-1 py-0.5 rounded leading-none">今日</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-700">{rec[c.key]}</span>
+                          )
                         ) : (
                           <span className="text-gray-200">-</span>
                         )}
@@ -691,7 +709,8 @@ export default function ActivationPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </TableScrollContainer>
