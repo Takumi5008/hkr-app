@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { GraduationCap, AlertTriangle } from 'lucide-react'
+import { GraduationCap, AlertTriangle, ClipboardList, BookOpen } from 'lucide-react'
 
 interface AdminEvent {
   id: number
@@ -11,8 +11,18 @@ interface AdminEvent {
   subject: string
   event_date: string
   memo: string
-  created_at: string
 }
+
+interface TimetableRow {
+  user_id: number
+  user_name: string
+  day_of_week: number
+  period: number
+  subject: string
+}
+
+const DAYS = ['月', '火', '水', '木', '金', '土']
+const PERIODS = [1, 2, 3, 4, 5, 6]
 
 const today = new Date()
 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -24,37 +34,80 @@ function daysUntil(dateStr: string): number {
 }
 
 export default function SchoolAdminPage() {
+  const [tab, setTab] = useState<'test' | 'assignment' | 'timetable'>('test')
   const [events, setEvents] = useState<AdminEvent[]>([])
+  const [timetable, setTimetable] = useState<TimetableRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterUser, setFilterUser] = useState('all')
 
-  const fetchEvents = useCallback(async () => {
-    const res = await fetch('/api/school/admin')
-    if (res.status === 403) { setError('権限がありません'); setLoading(false); return }
-    if (res.ok) setEvents(await res.json())
+  const fetchAll = useCallback(async () => {
+    const [evRes, ttRes] = await Promise.all([
+      fetch('/api/school/admin'),
+      fetch('/api/school/admin/timetable'),
+    ])
+    if (evRes.status === 403 || ttRes.status === 403) {
+      setError('権限がありません')
+      setLoading(false)
+      return
+    }
+    if (evRes.ok) setEvents(await evRes.json())
+    if (ttRes.ok) setTimetable(await ttRes.json())
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchEvents() }, [fetchEvents])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
-  const userNames = Array.from(new Set(events.map((e) => e.user_name))).sort()
-  const filtered = filterUser === 'all' ? events : events.filter((e) => e.user_name === filterUser)
+  // 全メンバー名（イベントまたは時間割に登録があるもの）
+  const userNames = Array.from(new Set([
+    ...events.map((e) => e.user_name),
+    ...timetable.map((t) => t.user_name),
+  ])).sort()
 
   if (loading) return <div className="flex items-center justify-center h-screen text-gray-400 text-sm">読み込み中...</div>
   if (error) return <div className="flex items-center justify-center h-screen text-red-400 text-sm">{error}</div>
 
-  const urgent = filtered.filter((e) => { const d = daysUntil(e.event_date); return d >= 0 && d <= 7 })
-  const other = filtered.filter((e) => { const d = daysUntil(e.event_date); return !(d >= 0 && d <= 7) })
+  const filteredEvents = (type: 'test' | 'assignment') => {
+    const base = events.filter((e) => e.type === type)
+    return filterUser === 'all' ? base : base.filter((e) => e.user_name === filterUser)
+  }
+
+  // 時間割：メンバーごとにグループ化
+  const ttUsers = filterUser === 'all'
+    ? userNames.filter((u) => timetable.some((r) => r.user_name === u))
+    : userNames.filter((u) => u === filterUser && timetable.some((r) => r.user_name === u))
+
+  const getSubject = (userName: string, day: number, period: number) =>
+    timetable.find((r) => r.user_name === userName && r.day_of_week === day && r.period === period)?.subject ?? ''
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
       <div className="flex items-center gap-3">
         <GraduationCap size={22} className="text-violet-500" />
         <h1 className="text-xl font-bold text-gray-800">学校管理（管理者）</h1>
       </div>
 
-      {/* フィルター */}
+      {/* タブ */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          ['test',       'テスト',   ClipboardList],
+          ['assignment', '課題',     ClipboardList],
+          ['timetable',  '時間割',   BookOpen],
+        ] as const).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              tab === key ? 'bg-violet-600 text-white shadow-sm' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* メンバーフィルター */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-gray-500">メンバー:</span>
         {['all', ...userNames].map((u) => (
@@ -70,28 +123,80 @@ export default function SchoolAdminPage() {
         ))}
       </div>
 
-      {filtered.length === 0 && (
-        <div className="text-center py-12 text-gray-400 text-sm">未完了のイベントはありません</div>
-      )}
+      {/* ===== テスト / 課題タブ ===== */}
+      {(tab === 'test' || tab === 'assignment') && (() => {
+        const evs = filteredEvents(tab)
+        const urgent = evs.filter((e) => { const d = daysUntil(e.event_date); return d >= 0 && d <= 7 })
+        const other  = evs.filter((e) => { const d = daysUntil(e.event_date); return !(d >= 0 && d <= 7) })
 
-      {/* 直近7日以内 */}
-      {urgent.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-amber-200 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50/60">
-            <AlertTriangle size={15} className="text-amber-500" />
-            <p className="text-sm font-semibold text-amber-700">直近7日以内 ({urgent.length}件)</p>
+        if (evs.length === 0) return (
+          <div className="text-center py-12 text-gray-400 text-sm">未完了の{tab === 'test' ? 'テスト' : '課題'}はありません</div>
+        )
+        return (
+          <div className="space-y-4">
+            {urgent.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-amber-200 overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50/60">
+                  <AlertTriangle size={15} className="text-amber-500" />
+                  <p className="text-sm font-semibold text-amber-700">直近7日以内 ({urgent.length}件)</p>
+                </div>
+                <EventList events={urgent} />
+              </div>
+            )}
+            {other.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-700">今後の予定 ({other.length}件)</p>
+                </div>
+                <EventList events={other} />
+              </div>
+            )}
           </div>
-          <EventList events={urgent} />
-        </div>
-      )}
+        )
+      })()}
 
-      {/* その他 */}
-      {other.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-700">今後の予定 ({other.length}件)</p>
-          </div>
-          <EventList events={other} />
+      {/* ===== 時間割タブ ===== */}
+      {tab === 'timetable' && (
+        <div className="space-y-6">
+          {ttUsers.length === 0 && (
+            <div className="text-center py-12 text-gray-400 text-sm">時間割が登録されていません</div>
+          )}
+          {ttUsers.map((userName) => (
+            <div key={userName} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-semibold text-violet-700">{userName}</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="text-xs border-collapse w-full">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-100 px-2 py-2 bg-gray-50 text-gray-400 font-medium w-8">限</th>
+                      {DAYS.map((d) => (
+                        <th key={d} className="border border-gray-100 px-2 py-2 bg-gray-50 text-gray-600 font-semibold text-center">{d}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PERIODS.map((p) => (
+                      <tr key={p}>
+                        <td className="border border-gray-100 px-2 py-2.5 text-center text-gray-400 bg-gray-50 font-medium">{p}</td>
+                        {DAYS.map((_, di) => {
+                          const subject = getSubject(userName, di + 1, p)
+                          return (
+                            <td key={di} className="border border-gray-100 px-2 py-2.5 text-center min-w-[68px]">
+                              <span className={subject ? 'text-gray-700 font-medium' : 'text-gray-200'}>
+                                {subject || '—'}
+                              </span>
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -105,13 +210,6 @@ function EventList({ events }: { events: AdminEvent[] }) {
         const days = daysUntil(ev.event_date)
         return (
           <li key={ev.id} className="flex items-start gap-3 px-4 py-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                ev.type === 'test' ? 'bg-rose-100 text-rose-600' : 'bg-blue-100 text-blue-600'
-              }`}>
-                {ev.type === 'test' ? 'テスト' : '課題'}
-              </span>
-            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold text-violet-700">{ev.user_name}</span>
