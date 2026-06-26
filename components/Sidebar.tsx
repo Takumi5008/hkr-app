@@ -33,8 +33,11 @@ const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
   { href: '/performance', label: '実績', icon: Award },
   { href: '/team-report', label: 'チームレポート', icon: BarChart },
-  { href: '/school/admin', label: '学校管理', icon: GraduationCap },
   { href: '/admin', label: '管理', icon: Settings },
+]
+
+const adminOnlyNavItems = [
+  { href: '/school/admin', label: '学校管理（全員）', icon: GraduationCap },
 ]
 
 const shiftViewerNavItems = [
@@ -243,6 +246,29 @@ export default function Sidebar({ name, role }: SidebarProps) {
               <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">管理者</p>
             </div>
             {managerNavItems.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  pathname === href
+                    ? 'bg-white/15 text-white shadow-sm'
+                    : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon size={17} className={pathname === href ? 'text-blue-300' : ''} />
+                {label}
+              </Link>
+            ))}
+          </>
+        )}
+
+        {role === 'admin' && (
+          <>
+            <div className="pt-4 pb-1 px-3">
+              <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">アプリ管理者</p>
+            </div>
+            {adminOnlyNavItems.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}

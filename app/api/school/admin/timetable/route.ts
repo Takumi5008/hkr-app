@@ -6,8 +6,7 @@ export async function GET() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const isManager = session.role === 'manager' || session.role === 'viewer' || session.role === 'admin'
-  if (!isManager) return NextResponse.json({ error: '権限なし' }, { status: 403 })
+  if (session.role !== 'admin') return NextResponse.json({ error: '権限なし' }, { status: 403 })
 
   const rows = await dbQuery(
     `SELECT st.user_id, u.name AS user_name, st.day_of_week, st.period, st.subject
