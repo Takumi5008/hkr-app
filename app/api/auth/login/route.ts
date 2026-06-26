@@ -46,9 +46,8 @@ export async function POST(req: NextRequest) {
   session.role = user.role
   await session.save()
 
-  await updateLoginStreak(user.id)
-
-  await awardBadges(user.id)
+  try { await updateLoginStreak(user.id) } catch {}
+  try { await awardBadges(user.id) } catch {}
 
   const requirePasswordChange = isTempValid && !isPasswordValid
   return NextResponse.json({ ok: true, name: user.name, role: user.role, requirePasswordChange })
