@@ -57,6 +57,19 @@ export async function GET(req: NextRequest) {
   )
   const recordsMap = new Map(recordsRows.map(r => [`${r.year}-${r.month}`, r]))
 
+  // 月別稼働日数（daily_activity の日付数）— monthlyHistory より先に取得
+  const sixMonthsAgo = `${months[0].year}-${String(months[0].month).padStart(2, '0')}-01`
+  const workDaysRows = await dbQuery<{ yr: number; mo: number; work_days: number }>(
+    `SELECT EXTRACT(YEAR FROM date::date)::int AS yr,
+            EXTRACT(MONTH FROM date::date)::int AS mo,
+            COUNT(DISTINCT date)::int AS work_days
+     FROM daily_activity
+     WHERE user_id = $1 AND date >= $2
+     GROUP BY yr, mo`,
+    [targetUserId, sixMonthsAgo]
+  )
+  const workDaysMap = new Map(workDaysRows.map(r => [`${r.yr}-${r.mo}`, r.work_days]))
+
   // 月次履歴組み立て
   const monthlyHistory = months.map(m => {
     const r = recordsMap.get(`${m.year}-${m.month}`)
@@ -73,19 +86,6 @@ export async function GET(req: NextRequest) {
   const avgActivation = recent3.reduce((s, m) => s + m.activation, 0) / 3
   const hkrValues = recent3.filter(m => m.hkr !== null).map(m => m.hkr as number)
   const avgHKR = hkrValues.length > 0 ? hkrValues.reduce((s, v) => s + v, 0) / hkrValues.length : 0
-
-  // 月別稼働日数（daily_activity の日付数）
-  const sixMonthsAgo = `${months[0].year}-${String(months[0].month).padStart(2, '0')}-01`
-  const workDaysRows = await dbQuery<{ yr: number; mo: number; work_days: number }>(
-    `SELECT EXTRACT(YEAR FROM date::date)::int AS yr,
-            EXTRACT(MONTH FROM date::date)::int AS mo,
-            COUNT(DISTINCT date)::int AS work_days
-     FROM daily_activity
-     WHERE user_id = $1 AND date >= $2
-     GROUP BY yr, mo`,
-    [targetUserId, sixMonthsAgo]
-  )
-  const workDaysMap = new Map(workDaysRows.map(r => [`${r.yr}-${r.mo}`, r.work_days]))
 
   // ピンポン変換率（直近3ヶ月の合計ベース: 獲得数 ÷ PP数）
   const threeMonthsAgo = `${months[2].year}-${String(months[2].month).padStart(2, '0')}-01`
