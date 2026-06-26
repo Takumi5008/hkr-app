@@ -108,19 +108,18 @@ export default function SchoolAdminPage() {
       </div>
 
       {/* メンバーフィルター */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-gray-500">メンバー:</span>
-        {['all', ...userNames].map((u) => (
-          <button
-            key={u}
-            onClick={() => setFilterUser(u)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-              filterUser === u ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {u === 'all' ? '全員' : u}
-          </button>
-        ))}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-500 shrink-0">メンバー:</span>
+        <select
+          value={filterUser}
+          onChange={(e) => setFilterUser(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+        >
+          <option value="all">全員</option>
+          {userNames.map((u) => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </select>
       </div>
 
       {/* ===== テスト / 課題タブ ===== */}
