@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const id = parseInt(params.id)
+  const { id: idStr } = await params
+  const id = parseInt(idStr)
   const body = await req.json()
 
   const fields: string[] = []
@@ -33,11 +34,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json(rows)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const id = parseInt(params.id)
+  const { id: idStr } = await params
+  const id = parseInt(idStr)
   await dbRun(`DELETE FROM school_events WHERE user_id=$1 AND id=$2`, [session.userId, id])
 
   const rows = await dbQuery(
