@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 26
+const DB_VERSION = 27
 let initialized = false
 
 async function initDb() {
@@ -481,6 +481,30 @@ async function initDb() {
 
   // v26: @nifty光 追加
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS nifty INTEGER NOT NULL DEFAULT 0`)
+
+  // v27: 学校管理
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS school_events (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type       TEXT NOT NULL CHECK (type IN ('test', 'assignment')),
+      subject    TEXT NOT NULL,
+      event_date TEXT NOT NULL,
+      done       INTEGER NOT NULL DEFAULT 0,
+      memo       TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS school_timetable (
+      id          SERIAL PRIMARY KEY,
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 6),
+      period      INTEGER NOT NULL CHECK (period BETWEEN 1 AND 6),
+      subject     TEXT NOT NULL DEFAULT '',
+      UNIQUE(user_id, day_of_week, period)
+    )
+  `)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

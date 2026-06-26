@@ -23,6 +23,7 @@ const navItems = [
   { href: '/schedule', label: 'スケジュール', icon: CalendarDays },
   { href: '/memo', label: 'メモ', icon: StickyNote },
   { href: '/knowledge', label: '知識向上', icon: GraduationCap },
+  { href: '/school', label: '学校管理', icon: ClipboardList },
   { href: '/review', label: '月次振り返り', icon: FileText },
   { href: '/org', label: '組織図', icon: Network },
   { href: '/howto', label: '使い方', icon: BookOpen },
@@ -32,6 +33,7 @@ const managerNavItems = [
   { href: '/team', label: 'チーム全体', icon: Users },
   { href: '/performance', label: '実績', icon: Award },
   { href: '/team-report', label: 'チームレポート', icon: BarChart },
+  { href: '/school/admin', label: '学校管理', icon: GraduationCap },
   { href: '/admin', label: '管理', icon: Settings },
 ]
 
