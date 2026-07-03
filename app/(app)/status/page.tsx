@@ -369,18 +369,43 @@ export default function StatusPage() {
 
       {/* 課題推薦 */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">🎯 今取り組むべき課題</h2>
-        <div className="space-y-3">
-          {challenges.map((c, i) => (
-            <div key={c.key} className={`rounded-xl border p-4 ${scoreBg(c.score)}`}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs font-bold text-gray-500 w-5">{i + 1}</span>
-                <span className="text-sm font-semibold text-gray-800">{c.label}</span>
-                <span className={`text-xs font-bold ml-auto ${sc(c.score)}`}>{c.score}点</span>
+        <h2 className="text-base font-semibold text-gray-800 mb-1">🎯 今取り組むべき課題</h2>
+        <p className="text-xs text-gray-400 mb-4">スコアが低い順に優先度の高い課題を表示します</p>
+        <div className="space-y-4">
+          {challenges.map((c, i) => {
+            const adv = PARAM_ADVICE[c.key]
+            return (
+              <div key={c.key} className={`rounded-xl border p-4 ${scoreBg(c.score)}`}>
+                {/* ヘッダー */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/70 text-xs font-bold text-gray-500 shrink-0">{i + 1}</span>
+                  <span className="text-sm font-semibold text-gray-800 flex-1">{c.label}</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full bg-white/60 ${sc(c.score)}`}>{c.score}点</span>
+                </div>
+                {adv ? (
+                  <div className="space-y-2 pl-1">
+                    {/* 問題 */}
+                    <div className="flex gap-2 items-start">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-600 shrink-0 mt-0.5">問題</span>
+                      <p className="text-xs text-gray-600 leading-relaxed">{adv.issue}</p>
+                    </div>
+                    {/* 改善アクション */}
+                    <div className="flex gap-2 items-start">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 shrink-0 mt-0.5">行動</span>
+                      <p className="text-xs text-gray-700 leading-relaxed font-medium">{adv.action}</p>
+                    </div>
+                    {/* ビジョン */}
+                    <div className="flex gap-2 items-start">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-600 shrink-0 mt-0.5">目標</span>
+                      <p className="text-xs text-green-700 leading-relaxed">{adv.effect}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 leading-relaxed pl-7">{c.action}</p>
+                )}
               </div>
-              <p className="text-xs text-gray-600 leading-relaxed pl-7">{c.action}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
