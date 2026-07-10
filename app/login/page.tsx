@@ -79,6 +79,9 @@ export default function LoginPage() {
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">インフラ管理</h1>
           <p className="text-sm text-white/40 mt-2 tracking-wide">チームの成果を、一画面で。</p>
+          <a href="/lp.html" className="inline-block mt-3 text-xs text-white/30 hover:text-white/60 transition-colors">
+            ← 紹介ムービーを見る
+          </a>
         </div>
 
         {/* グラスカード */}

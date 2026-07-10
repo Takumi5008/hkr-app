@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>インフラ管理 紹介ムービー</title>
+<style>
+  :root{
+    --ink:#0A1220; --ink2:#101B2E; --ink3:#16233A; --line:#1D2E47;
+    --cyan:#3ED4FF; --cyan-dim:#1E8FB8; --amber:#FFB547; --good:#4ADE80;
+    --text:#EAF2FB; --muted:#8FA3BD;
+    --jp:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ink); color:var(--text); font-family:var(--jp);
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ---------- cinema stage ---------- */
+  .theater{width:100%;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px}
+  .stage{
+    position:relative; width:min(100%,1180px); aspect-ratio:16/9;
+    max-height:calc(100vh - 90px);
+    background:radial-gradient(120% 140% at 50% 0%, #0E1930 0%, var(--ink) 62%);
+    border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+  }
+  canvas#bg{position:absolute;inset:0;width:100%;height:100%;display:block;opacity:.5}
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:4% 6%; visibility:hidden; text-align:center}
+  .scene.active{visibility:visible}
+
+  /* ---------- animation primitives ---------- */
+  .fx{opacity:0}
+  .scene.active .fx{animation-fill-mode:forwards;animation-timing-function:cubic-bezier(.22,.9,.3,1)}
+  .scene.active .up{animation-name:up;animation-duration:.8s}
+  .scene.active .pop{animation-name:pop;animation-duration:.6s}
+  .scene.active .fade{animation-name:fade;animation-duration:.9s}
+  .scene.active .wipe{animation-name:wipe;animation-duration:.9s}
+  @keyframes up{from{opacity:0;transform:translateY(34px)}to{opacity:1;transform:none}}
+  @keyframes pop{0%{opacity:0;transform:scale(.6)}70%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes wipe{from{opacity:0;clip-path:inset(0 100% 0 0)}to{opacity:1;clip-path:inset(0 0 0 0)}}
+  body.paused .scene.active .fx{animation-play-state:paused}
+
+  /* ---------- type ---------- */
+  .kicker{font-size:clamp(11px,1.4vw,14px);font-weight:700;letter-spacing:.34em;color:var(--cyan);text-transform:uppercase}
+  h1.mega{font-size:clamp(34px,6.2vw,74px);font-weight:900;line-height:1.14;letter-spacing:.02em;text-wrap:balance}
+  .mega .lit{color:var(--cyan)}
+  .mega .amb{color:var(--amber)}
+  .sub{font-size:clamp(14px,1.8vw,19px);color:var(--muted);font-weight:500;line-height:1.8}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- scene 1 : opening ---------- */
+  .pulse-track{position:relative;width:min(62%,560px);height:2px;background:var(--line);margin-bottom:5%;overflow:visible}
+  .scene.active .pulse{position:absolute;top:50%;left:0;width:90px;height:2px;transform:translateY(-50%);
+    background:linear-gradient(90deg,transparent,var(--cyan) 60%,#fff);border-radius:2px;
+    box-shadow:0 0 18px var(--cyan),0 0 48px rgba(62,212,255,.5);
+    animation:travel 1.6s cubic-bezier(.5,0,.4,1) forwards}
+  @keyframes travel{from{left:-12%}to{left:100%}}
+  .s1-q{animation-delay:.5s}
+  .s1-logo{animation-delay:1.5s}
+  .s1-tag{animation-delay:2.2s}
+  .logo-mark{display:inline-flex;align-items:center;gap:.35em}
+  .logo-dot{width:.5em;height:.5em;border-radius:50%;background:var(--cyan);box-shadow:0 0 22px var(--cyan)}
+
+  /* ---------- scene 2 : problem ---------- */
+  .chaos{display:flex;gap:clamp(10px,2vw,22px);flex-wrap:wrap;justify-content:center;margin:4% 0}
+  .chaos .chip{border:1px solid var(--line);background:var(--ink2);border-radius:10px;
+    padding:.7em 1.1em;font-size:clamp(13px,1.7vw,17px);color:var(--muted);font-weight:700}
+  .chaos .chip small{display:block;font-size:.72em;font-weight:500;letter-spacing:.08em;color:#5C7089;margin-bottom:.25em}
+  .s2-1{animation-delay:.15s}.s2-2{animation-delay:.5s}.s2-3{animation-delay:.85s}
+  .s2-punch{animation-delay:1.7s}
+  .scene.active .shake{animation:up .7s cubic-bezier(.22,.9,.3,1) forwards, jitter .5s 2.4s linear}
+  @keyframes jitter{0%,100%{transform:none}20%{transform:translateX(-5px) rotate(-.6deg)}45%{transform:translateX(4px)}70%{transform:translateX(-3px) rotate(.5deg)}}
+
+  /* ---------- shared card ---------- */
+  .card{background:linear-gradient(180deg,var(--ink3),var(--ink2));border:1px solid var(--line);
+    border-radius:14px;text-align:left;box-shadow:0 18px 44px rgba(0,0,0,.4)}
+  .card .hd{display:flex;align-items:center;gap:.5em;padding:12px 16px;border-bottom:1px solid var(--line);
+    font-size:clamp(11px,1.3vw,13px);font-weight:700;letter-spacing:.12em;color:var(--muted)}
+  .hd .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan)}
+
+  /* ---------- scene 3 : dashboard ---------- */
+  .dash{display:flex;gap:clamp(14px,2.4vw,30px);align-items:stretch;margin-top:3.4%}
+  .gauge-card{padding:18px clamp(16px,2.4vw,28px) 20px;display:flex;flex-direction:column;align-items:center}
+  .gauge-wrap{position:relative;width:clamp(120px,17vw,180px)}
+  .gauge-wrap svg{width:100%;height:auto;display:block;transform:rotate(-90deg)}
+  .gauge-bg{fill:none;stroke:var(--line);stroke-width:10}
+  .gauge-fg{fill:none;stroke:var(--cyan);stroke-width:10;stroke-linecap:round;
+    filter:drop-shadow(0 0 8px rgba(62,212,255,.65))}
+  .gauge-txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge-txt b{font-size:clamp(24px,3.6vw,38px);font-weight:900}
+  .gauge-txt b i{font-style:normal;font-size:.55em;color:var(--muted)}
+  .gauge-txt span{font-size:clamp(10px,1.2vw,12px);color:var(--muted);letter-spacing:.16em;margin-top:2px}
+  .gauge-goal{margin-top:10px;font-size:clamp(11px,1.3vw,13px);font-weight:700;color:var(--good)}
+  .stat-col{display:flex;flex-direction:column;gap:clamp(10px,1.6vw,16px);justify-content:center}
+  .stat{padding:clamp(10px,1.6vw,16px) clamp(14px,2vw,22px);min-width:clamp(150px,20vw,210px)}
+  .stat small{font-size:clamp(10px,1.2vw,12px);letter-spacing:.14em;color:var(--muted);font-weight:700}
+  .stat b{display:block;font-size:clamp(24px,3.4vw,36px);font-weight:900;line-height:1.2}
+  .stat b em{font-style:normal;font-size:.5em;color:var(--muted);font-weight:700}
+  .stat.alert b{font-size:clamp(15px,1.9vw,19px);color:var(--amber);line-height:1.45}
+  .s3-h{animation-delay:.1s}.s3-g{animation-delay:.5s}.s3-a{animation-delay:.8s}.s3-b{animation-delay:1.05s}.s3-c{animation-delay:1.3s}
+
+  /* ---------- scene 4 : features ---------- */
+  .feats{display:flex;gap:clamp(12px,2vw,24px);margin-top:3.4%;justify-content:center;flex-wrap:wrap}
+  .feat{width:clamp(190px,26vw,290px);padding:0 0 16px}
+  .feat .body{padding:14px 16px 0;text-align:left}
+  .feat h3{font-size:clamp(15px,1.9vw,19px);font-weight:900;margin-bottom:.4em}
+  .feat p{font-size:clamp(12px,1.4vw,14px);color:var(--muted);line-height:1.75}
+  .feat .demo{margin:12px 16px 0;border-radius:8px;background:var(--ink);border:1px solid var(--line);
+    padding:10px 12px;font-size:clamp(11px,1.3vw,13px);text-align:left;line-height:1.7}
+  .demo .arrow{color:var(--cyan);font-weight:900}
+  .demo .auto{color:var(--good);font-weight:700}
+  .s4-h{animation-delay:.1s}.s4-1{animation-delay:.45s}.s4-2{animation-delay:.75s}.s4-3{animation-delay:1.05s}
+
+  /* ---------- scene 5 : game ---------- */
+  .board{display:flex;gap:clamp(6px,1vw,12px);margin-top:3.6%;align-items:flex-end}
+  .cell{width:clamp(38px,5.6vw,64px);aspect-ratio:1;border-radius:10px;border:1px solid var(--line);
+    background:var(--ink2);display:flex;align-items:center;justify-content:center;
+    font-size:clamp(11px,1.4vw,14px);font-weight:900;color:var(--muted);position:relative}
+  .cell.goal{border-color:var(--amber);color:var(--amber)}
+  .token{position:absolute;top:-46%;left:50%;transform:translateX(-50%);width:58%;aspect-ratio:1;border-radius:50%;
+    background:radial-gradient(circle at 32% 30%,#8FE8FF,var(--cyan) 60%,#1178A0);
+    box-shadow:0 0 20px rgba(62,212,255,.75);opacity:0;transition:opacity .2s}
+  .cell.here .token{opacity:1}
+  .cell.passed{background:var(--ink3);border-color:var(--cyan-dim);color:var(--cyan)}
+  .rewards{display:flex;gap:clamp(12px,2vw,26px);margin-top:4%;justify-content:center}
+  .reward{display:flex;align-items:center;gap:.5em;border:1px solid var(--line);background:var(--ink2);
+    border-radius:999px;padding:.55em 1.2em;font-weight:900;font-size:clamp(13px,1.7vw,17px)}
+  .reward .ic{font-size:1.2em}
+  .s5-h{animation-delay:.1s}.s5-b{animation-delay:.5s}
+  .s5-r1{animation-delay:1.9s}.s5-r2{animation-delay:2.2s}.s5-r3{animation-delay:2.5s}
+
+  /* ---------- scene 6 : team ---------- */
+  .race{width:min(78%,640px);margin-top:3.6%;display:flex;flex-direction:column;gap:clamp(10px,1.6vw,16px);position:relative}
+  .lane{display:grid;grid-template-columns:clamp(56px,8vw,90px) 1fr clamp(52px,7vw,74px);align-items:center;gap:12px;text-align:left}
+  .lane small{font-weight:700;color:var(--muted);font-size:clamp(11px,1.4vw,14px)}
+  .bar-track{height:clamp(12px,1.8vw,18px);background:var(--ink2);border:1px solid var(--line);border-radius:999px;overflow:hidden;position:relative}
+  .bar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan))}
+  .lane.top .bar{background:linear-gradient(90deg,#C98A1F,var(--amber))}
+  .lane b{font-size:clamp(12px,1.6vw,15px);font-weight:900}
+  .goal-line{position:absolute;top:-6%;bottom:-6%;left:80%;width:2px;background:var(--good);opacity:.7}
+  .goal-line i{position:absolute;top:-1.4em;left:-1.6em;font-style:normal;font-size:clamp(10px,1.2vw,12px);color:var(--good);font-weight:700;white-space:nowrap}
+  .s6-h{animation-delay:.1s}.s6-r{animation-delay:.5s}
+
+  /* ---------- scene 7 : CTA ---------- */
+  .s7-k{animation-delay:.1s}.s7-h{animation-delay:.4s}.s7-b{animation-delay:1.2s}.s7-s{animation-delay:1.7s}
+  .cta-btn{display:inline-flex;align-items:center;gap:.6em;margin-top:4%;
+    background:linear-gradient(180deg,#5BDCFF,var(--cyan) 55%,#1FA9D6);color:#04202E;
+    font-weight:900;font-size:clamp(15px,2.1vw,21px);padding:.85em 1.9em;border-radius:999px;
+    box-shadow:0 0 34px rgba(62,212,255,.45),0 14px 30px rgba(0,0,0,.4);text-decoration:none}
+  .cta-btn:hover{filter:brightness(1.08)}
+  .cta-note{margin-top:14px;font-size:clamp(12px,1.4vw,14px);color:var(--muted)}
+  .devices{display:flex;gap:1.2em;margin-top:10px;justify-content:center;color:var(--muted);font-size:clamp(12px,1.4vw,14px);font-weight:700}
+
+  /* ---------- controls ---------- */
+  .rail{width:min(100%,1180px);display:flex;align-items:center;gap:14px}
+  .ctl{appearance:none;border:1px solid var(--line);background:var(--ink2);color:var(--text);
+    width:42px;height:42px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none}
+  .ctl:hover{border-color:var(--cyan-dim)}
+  .ctl:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .segs{display:flex;gap:6px;flex:1}
+  .seg{flex:1;height:6px;border-radius:99px;background:var(--ink3);border:1px solid var(--line);cursor:pointer;position:relative;overflow:hidden;padding:0}
+  .seg .fill{position:absolute;inset:0;width:0;background:var(--cyan);border-radius:99px}
+  .seg.done .fill{width:100%}
+  .seg:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .scene-name{flex:none;font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.1em;min-width:9em;text-align:right}
+  .skip{position:absolute;top:16px;right:16px;z-index:5;font-size:12px;font-weight:700;color:var(--muted);
+    text-decoration:none;border:1px solid var(--line);background:rgba(16,27,46,.7);padding:.5em 1em;border-radius:999px}
+  .skip:hover{color:var(--text);border-color:var(--cyan-dim)}
+
+  @media (max-width:640px){
+    .dash{flex-direction:column;align-items:center}
+    .stat-col{flex-direction:row;flex-wrap:wrap;justify-content:center}
+    .scene-name{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .scene.active .fx,.scene.active .pulse,.scene.active .shake{animation-duration:.01ms!important;animation-delay:0s!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="theater">
+  <div class="stage" id="stage">
+    <canvas id="bg"></canvas>
+    <a class="skip" href="/login">ログインへ進む →</a>
+
+    <!-- S1 opening -->
+    <section class="scene" id="s1" aria-label="オープニング">
+      <div class="pulse-track"><span class="pulse"></span></div>
+      <p class="kicker fx fade s1-q">その開通、追えてる?</p>
+      <h1 class="mega fx up s1-logo" style="margin-top:.4em">
+        <span class="logo-mark"><span class="logo-dot"></span>インフラ<span class="lit">管理</span></span>
+      </h1>
+      <p class="sub fx fade s1-tag" style="margin-top:1.2em">営業チームのための 開通管理・HKR追跡アプリ</p>
+    </section>
+
+    <!-- S2 problem -->
+    <section class="scene" id="s2" aria-label="課題">
+      <p class="kicker fx fade" style="animation-delay:.05s">BEFORE</p>
+      <div class="chaos">
+        <div class="chip fx up s2-1"><small>実績</small>Excelのどこか…</div>
+        <div class="chip fx up s2-2"><small>工事予定</small>ホワイトボード</div>
+        <div class="chip fx up s2-3"><small>共有</small>チャットで流れた</div>
+      </div>
+      <h1 class="mega fx shake s2-punch">数字が、<span class="amb">バラバラ。</span></h1>
+    </section>
+
+    <!-- S3 dashboard -->
+    <section class="scene" id="s3" aria-label="ダッシュボード">
+      <h1 class="mega fx up s3-h" style="font-size:clamp(26px,4.4vw,52px)">すべてを、<span class="lit">ひとつに。</span></h1>
+      <div class="dash">
+        <div class="card gauge-card fx pop s3-g">
+          <div class="hd"><span class="dot"></span>今月のHKR(開通率)</div>
+          <div class="gauge-wrap" style="margin-top:14px">
+            <svg viewBox="0 0 130 130" aria-hidden="true">
+              <circle class="gauge-bg" cx="65" cy="65" r="54"></circle>
+              <circle class="gauge-fg" id="gaugeArc" cx="65" cy="65" r="54"
+                stroke-dasharray="339.3" stroke-dashoffset="339.3"></circle>
+            </svg>
+            <div class="gauge-txt"><b><span id="gaugeNum" class="num">0.0</span><i>%</i></b><span>HKR</span></div>
+          </div>
+          <div class="gauge-goal">目標 80% 達成 ✓</div>
+        </div>
+        <div class="stat-col">
+          <div class="card stat fx up s3-a"><small>解除数</small><b><span class="num" id="cntKaijo">0</span> <em>件</em></b></div>
+          <div class="card stat fx up s3-b"><small>開通数</small><b><span class="num" id="cntKaitsu">0</span> <em>件</em></b></div>
+          <div class="card stat alert fx up s3-c"><small>今日のフォロー</small><b>⚡ 佐藤様 工事前日確認</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S4 features -->
+    <section class="scene" id="s4" aria-label="主要機能">
+      <h1 class="mega fx up s4-h" style="font-size:clamp(24px,4vw,48px)">入力は<span class="lit">10秒</span>、あとは自動。</h1>
+      <div class="feats">
+        <div class="card feat fx up s4-1">
+          <div class="hd"><span class="dot"></span>開通表</div>
+          <div class="body"><h3>日付は自動計算</h3><p>獲得日を入れるだけで、工事日・受取日まで先回り。</p></div>
+          <div class="demo num">獲得 4/1 <span class="arrow">→</span> 工事 4/8 <span class="auto">自動</span></div>
+        </div>
+        <div class="card feat fx up s4-2">
+          <div class="hd"><span class="dot"></span>開通カレンダー</div>
+          <div class="body"><h3>予定が勝手に並ぶ</h3><p>開通表から業務月カレンダーへ自動同期。転記ゼロ。</p></div>
+          <div class="demo">4/8 (火) ● 田中様 So-net <span class="auto">同期済</span></div>
+        </div>
+        <div class="card feat fx up s4-3">
+          <div class="hd"><span class="dot"></span>行動表</div>
+          <div class="body"><h3>日々の行動も一画面</h3><p>ピン数・顔合わせ・解除数。移動中にスマホでサッと。</p></div>
+          <div class="demo num">ピン 42 / 顔合わせ 6 / 解除 3</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- S5 gamification -->
+    <section class="scene" id="s5" aria-label="ゲーミフィケーション">
+      <h1 class="mega fx up s5-h" style="font-size:clamp(26px,4.4vw,52px)">数字が、<span class="amb">ゲームになる。</span></h1>
+      <div class="board fx fade s5-b" id="sugoroku">
+        <div class="cell">1<span class="token"></span></div>
+        <div class="cell">2<span class="token"></span></div>
+        <div class="cell">3<span class="token"></span></div>
+        <div class="cell">4<span class="token"></span></div>
+        <div class="cell">5<span class="token"></span></div>
+        <div class="cell">6<span class="token"></span></div>
+        <div class="cell goal">GOAL<span class="token"></span></div>
+      </div>
+      <div class="rewards">
+        <div class="reward fx pop s5-r1"><span class="ic">🏅</span>バッジ獲得</div>
+        <div class="reward fx pop s5-r2"><span class="ic">🔥</span>ストリーク <span class="num">12</span>日</div>
+        <div class="reward fx pop s5-r3"><span class="ic">✦</span><span class="num">+50</span> pt</div>
+      </div>
+      <p class="sub fx fade" style="animation-delay:2.9s;margin-top:3%">開通するたび、チームのスゴロクが進む。</p>
+    </section>
+
+    <!-- S6 team -->
+    <section class="scene" id="s6" aria-label="チームビュー">
+      <h1 class="mega fx up s6-h" style="font-size:clamp(26px,4.4vw,52px)">チームの今が、<span class="lit">ひと目で。</span></h1>
+      <div class="race fx fade s6-r">
+        <div class="goal-line"><i>目標 80%</i></div>
+        <div class="lane top"><small>田中</small><div class="bar-track"><div class="bar" data-w="92"></div></div><b class="num" data-n="92">0%</b></div>
+        <div class="lane"><small>鈴木</small><div class="bar-track"><div class="bar" data-w="85"></div></div><b class="num" data-n="85">0%</b></div>
+        <div class="lane"><small>高橋</small><div class="bar-track"><div class="bar" data-w="78"></div></div><b class="num" data-n="78">0%</b></div>
+        <div class="lane"><small>伊藤</small><div class="bar-track"><div class="bar" data-w="71"></div></div><b class="num" data-n="71">0%</b></div>
+      </div>
+      <p class="sub fx fade" style="animation-delay:1.8s;margin-top:3.4%">マネージャーは全員分を俯瞰。フォローが要る人がすぐ分かる。</p>
+    </section>
+
+    <!-- S7 CTA -->
+    <section class="scene" id="s7" aria-label="はじめる">
+      <p class="kicker fx fade s7-k">START TODAY</p>
+      <h1 class="mega fx up s7-h" style="margin-top:.3em">さあ、<span class="lit">開通率</span>を上げよう。</h1>
+      <a class="cta-btn fx pop s7-b" href="/login">
+        ログインして始める <span aria-hidden="true">→</span>
+      </a>
+      <p class="cta-note fx fade s7-s">ログインするだけ。今日の数字から、そのまま使えます。</p>
+      <div class="devices fx fade s7-s"><span>📱 スマホ対応</span><span>💻 PC対応</span><span>🔔 プッシュ通知</span></div>
+    </section>
+  </div>
+
+  <!-- controls -->
+  <div class="rail">
+    <button class="ctl" id="btnPlay" aria-label="一時停止">❚❚</button>
+    <button class="ctl" id="btnReplay" aria-label="最初から再生">↺</button>
+    <div class="segs" id="segs" role="tablist" aria-label="シーン選択"></div>
+    <div class="scene-name" id="sceneName"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var SCENES = [
+    {id:"s1", dur:4600, name:"OPENING"},
+    {id:"s2", dur:4600, name:"課題"},
+    {id:"s3", dur:6200, name:"ダッシュボード"},
+    {id:"s4", dur:6200, name:"主要機能"},
+    {id:"s5", dur:6400, name:"ゲーム"},
+    {id:"s6", dur:5600, name:"チーム"},
+    {id:"s7", dur:6400, name:"はじめる"}
+  ];
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var idx = 0, playing = !reduced, tPrev = null, elapsed = 0;
+  var stage = document.getElementById("stage");
+  var segsEl = document.getElementById("segs");
+  var nameEl = document.getElementById("sceneName");
+  var btnPlay = document.getElementById("btnPlay");
+  var btnReplay = document.getElementById("btnReplay");
+
+  // build segments
+  SCENES.forEach(function(s,i){
+    var b = document.createElement("button");
+    b.className = "seg"; b.setAttribute("role","tab");
+    b.setAttribute("aria-label", (i+1)+". "+s.name);
+    b.innerHTML = '<span class="fill"></span>';
+    b.addEventListener("click", function(){ goTo(i, true); });
+    segsEl.appendChild(b);
+  });
+  var segs = Array.prototype.slice.call(segsEl.children);
+
+  function easeOut(x){ return 1 - Math.pow(1-x, 3); }
+  function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+  // progress in [ms] window
+  function win(t, start, dur){ return clamp01((t - start) / dur); }
+
+  /* ---- per-scene JS updaters (driven by scene-elapsed ms) ---- */
+  var gaugeArc = document.getElementById("gaugeArc");
+  var gaugeNum = document.getElementById("gaugeNum");
+  var cntKaijo = document.getElementById("cntKaijo");
+  var cntKaitsu = document.getElementById("cntKaitsu");
+  var CIRC = 339.3, HKR = 84.2;
+
+  var sugoCells = Array.prototype.slice.call(document.querySelectorAll("#sugoroku .cell"));
+  var lanes = Array.prototype.slice.call(document.querySelectorAll("#s6 .lane"));
+
+  var updaters = {
+    s3: function(t){
+      var p = easeOut(win(t, 700, 2600));
+      var v = HKR * p;
+      gaugeArc.style.strokeDashoffset = (CIRC * (1 - v/100)).toFixed(1);
+      gaugeNum.textContent = v.toFixed(1);
+      cntKaijo.textContent  = Math.round(57 * easeOut(win(t, 1000, 1800)));
+      cntKaitsu.textContent = Math.round(48 * easeOut(win(t, 1250, 1800)));
+    },
+    s5: function(t){
+      var steps = sugoCells.length;
+      var pos = Math.floor(easeOut(win(t, 800, 3400)) * (steps - 1) + 0.0001);
+      sugoCells.forEach(function(c,i){
+        c.classList.toggle("here", i === pos);
+        c.classList.toggle("passed", i < pos);
+      });
+    },
+    s6: function(t){
+      lanes.forEach(function(l, i){
+        var bar = l.querySelector(".bar"), num = l.querySelector("b");
+        var target = parseFloat(bar.getAttribute("data-w"));
+        var p = easeOut(win(t, 600 + i*180, 1600));
+        bar.style.width = (target * p * 0.8) + "%"; /* 80% = goal-line position → scale so 100%HKR = full track */
+        num.textContent = Math.round(target * p) + "%";
+      });
+    }
+  };
+
+  function resetSceneFx(el){
+    // restart CSS animations
+    var fx = el.querySelectorAll(".fx, .pulse, .shake");
+    fx.forEach(function(n){ n.style.animation = "none"; });
+    void el.offsetWidth;
+    fx.forEach(function(n){ n.style.animation = ""; });
+  }
+
+  function goTo(i, user){
+    idx = (i + SCENES.length) % SCENES.length;
+    elapsed = 0; tPrev = null;
+    SCENES.forEach(function(s, j){
+      var el = document.getElementById(s.id);
+      var on = j === idx;
+      el.classList.toggle("active", on);
+      if (on) resetSceneFx(el);
+      segs[j].classList.toggle("done", j < idx);
+      segs[j].querySelector(".fill").style.width = j < idx ? "100%" : "0";
+      segs[j].setAttribute("aria-selected", on ? "true" : "false");
+    });
+    nameEl.textContent = (idx+1) + " / " + SCENES.length + " · " + SCENES[idx].name;
+    if (reduced){ // jump to completed state
+      elapsed = SCENES[idx].dur;
+      applyFrame(SCENES[idx].dur);
+      segs[idx].querySelector(".fill").style.width = "100%";
+    }
+    if (user && !reduced && !playing) setPlaying(true);
+  }
+
+  function applyFrame(t){
+    var u = updaters[SCENES[idx].id];
+    if (u) u(t);
+    segs[idx].querySelector(".fill").style.width = (clamp01(t / SCENES[idx].dur) * 100) + "%";
+  }
+
+  function setPlaying(v){
+    playing = v;
+    document.body.classList.toggle("paused", !v);
+    btnPlay.textContent = v ? "❚❚" : "▶";
+    btnPlay.setAttribute("aria-label", v ? "一時停止" : "再生");
+    tPrev = null;
+  }
+
+  btnPlay.addEventListener("click", function(){ setPlaying(!playing); });
+  btnReplay.addEventListener("click", function(){ goTo(0, true); });
+  document.addEventListener("keydown", function(e){
+    if (e.key === " "){ e.preventDefault(); setPlaying(!playing); }
+    else if (e.key === "ArrowRight"){ goTo(idx+1, true); }
+    else if (e.key === "ArrowLeft"){ goTo(idx-1, true); }
+  });
+
+  function loop(now){
+    if (playing && !reduced){
+      if (tPrev !== null){
+        elapsed += now - tPrev;
+        if (elapsed >= SCENES[idx].dur){
+          if (idx < SCENES.length - 1){ goTo(idx+1); }
+          else { setPlaying(false); applyFrame(SCENES[idx].dur); }
+        }
+      }
+      tPrev = now;
+      applyFrame(Math.min(elapsed, SCENES[idx].dur));
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---- ambient fiber-light canvas ---- */
+  var cv = document.getElementById("bg"), cx = cv.getContext("2d");
+  var W=0, H=0, DPR = Math.min(window.devicePixelRatio||1, 2);
+  function resize(){
+    W = stage.clientWidth; H = stage.clientHeight;
+    cv.width = W*DPR; cv.height = H*DPR; cx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener("resize", resize); resize();
+  var LINES = [];
+  for (var i=0;i<7;i++){
+    LINES.push({ y: 0.08 + i*0.14, speed: 40 + Math.random()*70, x: Math.random(), hue: Math.random()<.85 });
+  }
+  var bgPrev = null;
+  function bgLoop(now){
+    if (!reduced && playing){
+      if (bgPrev !== null){
+        var dt = (now - bgPrev)/1000;
+        cx.clearRect(0,0,W,H);
+        LINES.forEach(function(L){
+          var y = L.y*H;
+          cx.strokeStyle = "rgba(29,46,71,.5)";
+          cx.lineWidth = 1;
+          cx.beginPath(); cx.moveTo(0,y); cx.lineTo(W,y); cx.stroke();
+          L.x += (L.speed*dt)/W; if (L.x > 1.15) L.x = -0.15;
+          var px = L.x*W;
+          var g = cx.createLinearGradient(px-70,0,px+8,0);
+          var col = L.hue ? "62,212,255" : "255,181,71";
+          g.addColorStop(0,"rgba("+col+",0)");
+          g.addColorStop(1,"rgba("+col+",.9)");
+          cx.strokeStyle = g; cx.lineWidth = 2;
+          cx.beginPath(); cx.moveTo(px-70,y); cx.lineTo(px+8,y); cx.stroke();
+          cx.fillStyle = "rgba("+col+",1)";
+          cx.beginPath(); cx.arc(px+8,y,2.2,0,7); cx.fill();
+        });
+      }
+      bgPrev = now;
+    } else { bgPrev = null; }
+    requestAnimationFrame(bgLoop);
+  }
+
+  goTo(0);
+  if (reduced) setPlaying(false);
+  requestAnimationFrame(loop);
+  requestAnimationFrame(bgLoop);
+})();
+</script>
+
+</body>
+</html>
