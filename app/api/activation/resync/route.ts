@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     let shouldSync = false
     let activationDate = ''
 
-    if (rec.type === 'sonet') {
+    if (rec.type === 'sonet' || rec.type === 'nifty') {
       shouldSync = rec.cancel === '○'
       activationDate = rec.construction_date
     } else if (rec.type === 'wimax_direct') {
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
       continue
     }
 
-    const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
+    const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : '🏠'
     const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
     // M/D 形式 → 2026-MM-DD に正規化（全て2026年として扱う）

@@ -38,8 +38,8 @@ async function syncCalendar(userId: number, recordId: number) {
   let shouldSync = false
   let activationDate = ''
 
-  if (rec.type === 'sonet') {
-    // So-net: 解除⭕️のときのみ
+  if (rec.type === 'sonet' || rec.type === 'nifty') {
+    // So-net / @nifty光: 解除⭕️のときのみ
     shouldSync = rec.cancel === '○'
     activationDate = rec.construction_date
   } else if (rec.type === 'wimax_direct') {
@@ -57,7 +57,7 @@ async function syncCalendar(userId: number, recordId: number) {
     return
   }
 
-  const lineType = rec.type === 'sonet' ? '🍑' : '🏠'
+  const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : '🏠'
   const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
   // M/D 形式 → YYYY-MM-DD に正規化
