@@ -73,7 +73,8 @@ export async function GET(req: NextRequest) {
     )
     for (const row of rows) {
       const msgs = notifyMap.get(row.user_id) ?? []
-      msgs.push(`${row.name} (${row.type === 'sonet' ? 'So-net' : row.type === 'wimax_post' ? 'WiMAX後送り' : 'WiMAX直せち'}) の${label}`)
+      const typeLabel = row.type === 'sonet' ? 'So-net' : row.type === 'nifty' ? '@nifty光' : row.type === 'wimax_post' ? 'WiMAX後送り' : 'WiMAX直せち'
+      msgs.push(`${row.name} (${typeLabel}) の${label}`)
       notifyMap.set(row.user_id, msgs)
     }
   }

@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 27
+const DB_VERSION = 28
 let initialized = false
 
 async function initDb() {
@@ -407,6 +407,7 @@ async function initDb() {
   await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS activation_type TEXT`)
   await pool.query(`UPDATE products SET activation_type='sonet' WHERE name ILIKE '%so%' AND activation_type IS NULL`)
   await pool.query(`UPDATE products SET activation_type='wimax' WHERE name ILIKE '%wimax%' AND activation_type IS NULL`)
+  await pool.query(`UPDATE products SET activation_type='nifty' WHERE name ILIKE '%nifty%' AND activation_type IS NULL`)
 
   // 全角数字を半角に正規化（既存データ修正）
   await pool.query(`UPDATE daily_activity SET work_hours = TRANSLATE(work_hours, '０１２３４５６７８９。', '0123456789.') WHERE work_hours ~ '[０-９]'`)

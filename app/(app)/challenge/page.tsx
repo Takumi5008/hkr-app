@@ -51,13 +51,15 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   type FollowItem = { name: string; staffName: string; typeLabel: string; fieldLabel: string }
   let followAlerts: FollowItem[] = []
   if (isCurrentMonth) try {
-    const [sonetRows, directRows, postRows] = await Promise.all([
+    const [sonetRows, niftyRows, directRows, postRows] = await Promise.all([
       dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
       dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
       dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
     ])
     followAlerts = [
       ...sonetRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+      ...niftyRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })),
       ...directRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
       ...postRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
     ]

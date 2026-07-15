@@ -47,7 +47,7 @@ export default async function DashboardPage() {
   )
 
   // Run all today's task condition queries in parallel
-  const [shiftRows, progressRows, calendarRows, sonetRows, directRows, postRows] = await Promise.all([
+  const [shiftRows, progressRows, calendarRows, sonetRows, niftyRows, directRows, postRows] = await Promise.all([
     dbQuery(
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
@@ -62,6 +62,10 @@ export default async function DashboardPage() {
     ).catch(() => []),
     dbQuery(
       `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
+      [session.userId, ...todayFmts]
+    ).catch(() => []),
+    dbQuery(
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
@@ -91,6 +95,7 @@ export default async function DashboardPage() {
   // 開通表確認 / フォロー対応 (自分の分のみ)
   const followAlerts: FollowAlert[] = [
     ...(sonetRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
+    ...(niftyRows as any[]).map((r: any) => ({ name: r.name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })),
     ...(directRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
     ...(postRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
   ]

@@ -31,6 +31,8 @@ export async function POST(req: NextRequest) {
     for (const product of products) {
       const types = product.activation_type === 'sonet'
         ? ["'sonet'"]
+        : product.activation_type === 'nifty'
+        ? ["'nifty'"]
         : ["'wimax_direct'", "'wimax_post'"]
 
       const rows = await dbQuery<{ cancel_count: number; activation_count: number }>(

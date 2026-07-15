@@ -47,6 +47,14 @@ export async function GET(req: NextRequest) {
   )
   for (const r of sonetRows) items.push({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })
 
+  // @nifty光: 工事日当日（開通❌除外）
+  const niftyRows = await dbQuery<{ name: string }>(
+    `SELECT name FROM activation_records
+     WHERE user_id = $1 AND type = 'nifty' AND construction_date IN (${ph}) AND (activation IS NULL OR activation != '×')`,
+    [session.userId, ...formats]
+  )
+  for (const r of niftyRows) items.push({ name: r.name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })
+
   // WiMAX直せち: 獲得後1週間後（開通❌除外）
   const directRows = await dbQuery<{ name: string }>(
     `SELECT name FROM activation_records
@@ -66,7 +74,7 @@ export async function GET(req: NextRequest) {
   // 開通❌: 業務月内のキャンセル案件（25日ルールで業務月を算出）
   const bmMonth = d >= 25 ? m : (m === 1 ? 12 : m - 1)
   const bmYear  = d >= 25 ? y : (m === 1 ? y - 1 : y)
-  const TYPE_LABEL: Record<string, string> = { sonet: 'So-net', wimax_direct: 'WiMAX直せち', wimax_post: 'WiMAX後送り' }
+  const TYPE_LABEL: Record<string, string> = { sonet: 'So-net', nifty: '@nifty光', wimax_direct: 'WiMAX直せち', wimax_post: 'WiMAX後送り' }
   const cancelRows = await dbQuery<{ name: string; type: string; cancel_reason: string }>(
     `SELECT name, type, cancel_reason FROM activation_records
      WHERE user_id = $1 AND activation = '×' AND year = $2 AND month = $3
