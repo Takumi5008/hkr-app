@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     let activationDate = ''
 
     if (rec.type === 'sonet' || rec.type === 'nifty') {
-      shouldSync = rec.cancel === '○'
+      // 解除⭕️ or 開通⭕️のいずれかで反映
+      shouldSync = rec.cancel === '○' || rec.activation === '○'
       activationDate = rec.construction_date
     } else if (rec.type === 'wimax_direct') {
       shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')

@@ -39,8 +39,8 @@ async function syncCalendar(userId: number, recordId: number) {
   let activationDate = ''
 
   if (rec.type === 'sonet' || rec.type === 'nifty') {
-    // So-net / @nifty光: 解除⭕️のときのみ
-    shouldSync = rec.cancel === '○'
+    // So-net / @nifty光: 解除⭕️ or 開通⭕️のいずれかで反映
+    shouldSync = rec.cancel === '○' || rec.activation === '○'
     activationDate = rec.construction_date
   } else if (rec.type === 'wimax_direct') {
     // WiMAX直せち: 獲得日＝開通日
