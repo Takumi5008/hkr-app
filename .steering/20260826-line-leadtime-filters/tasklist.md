@@ -8,4 +8,4 @@
 - [x] `docs/functional-design.md` のAPI一覧を更新
 - [x] 型チェック
 - [x] 動作確認（`next build`）
-- [ ] コミット・プッシュ・Vercelデプロイ
+- [x] コミット・プッシュ・Vercelデプロイ
