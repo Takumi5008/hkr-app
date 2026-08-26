@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react'
+import { getPastMonths } from '@/lib/hkr'
 
 type MemberStat = {
   id: number; name: string
@@ -20,9 +21,9 @@ type ReportData = {
   activationRanking: MemberStat[]
   activityRanking: MemberStat[]
   needsSupport: MemberStat[]
-  leadTimeByType: LeadTimeStat[]
-  leadTimeOverall: { avgDays: number; count: number } | null
 }
+
+type LeadTimeData = { leadTimeByType: LeadTimeStat[]; leadTimeOverall: { avgDays: number; count: number } | null }
 
 function GrowthTag({ v }: { v: number }) {
   if (v > 0) return <span className="inline-flex items-center gap-0.5 text-xs font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full"><TrendingUp size={10} />+{v}%</span>
@@ -30,20 +31,45 @@ function GrowthTag({ v }: { v: number }) {
   return <span className="inline-flex items-center gap-0.5 text-xs font-bold text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-full"><Minus size={10} />±0%</span>
 }
 
+const leadTimeMonthOptions = getPastMonths(12).map(({ year, month, label }) => ({
+  value: `${year}-${String(month).padStart(2, '0')}`,
+  label: `${year}年${label}`,
+}))
+
 export default function ReportPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState('')
+
+  const [ltMonth, setLtMonth] = useState('all')
+  const [ltUserId, setLtUserId] = useState('all')
+  const [ltData, setLtData] = useState<LeadTimeData | null>(null)
+  const [ltLoading, setLtLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setRole(d.role ?? ''))
     fetch('/api/report').then(r => r.json()).then(d => { setData(d); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    setLtLoading(true)
+    const params = new URLSearchParams()
+    if (ltMonth !== 'all') {
+      const [y, m] = ltMonth.split('-')
+      params.set('year', y)
+      params.set('month', String(parseInt(m, 10)))
+    }
+    if (ltUserId !== 'all') params.set('userId', ltUserId)
+    fetch(`/api/report/lead-time?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => { setLtData(d); setLtLoading(false) })
+      .catch(() => setLtLoading(false))
+  }, [ltMonth, ltUserId])
+
   if (loading) return <div className="p-6 flex items-center justify-center min-h-screen"><p className="text-gray-400">読み込み中...</p></div>
   if (!data || role === 'member') return <div className="p-6 text-center text-gray-400">閲覧権限がありません</div>
 
-  const { period, team, activationRanking, activityRanking, needsSupport, members, leadTimeByType, leadTimeOverall } = data
+  const { period, team, activationRanking, activityRanking, needsSupport, members } = data
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
@@ -76,16 +102,40 @@ export default function ReportPage() {
       {/* 回線別リードタイム */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <h2 className="text-sm font-bold text-gray-700 mb-3">回線別リードタイム（獲得→開通）</h2>
-        {leadTimeOverall === null ? (
+        <div className="flex flex-wrap gap-2 mb-3">
+          <select
+            value={ltMonth}
+            onChange={(e) => setLtMonth(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-gray-50"
+          >
+            <option value="all">全期間</option>
+            {leadTimeMonthOptions.map((m) => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+          <select
+            value={ltUserId}
+            onChange={(e) => setLtUserId(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-gray-50"
+          >
+            <option value="all">全員</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+        {ltLoading ? (
+          <p className="text-sm text-gray-400">読み込み中...</p>
+        ) : !ltData || ltData.leadTimeOverall === null ? (
           <p className="text-sm text-gray-400">データがまだありません</p>
         ) : (
           <>
             <div className="mb-3">
-              <span className="text-3xl font-bold text-gray-900">{leadTimeOverall.avgDays}</span>
-              <span className="text-sm text-gray-400 ml-1">日（全体平均・{leadTimeOverall.count}件）</span>
+              <span className="text-3xl font-bold text-gray-900">{ltData.leadTimeOverall.avgDays}</span>
+              <span className="text-sm text-gray-400 ml-1">日（全体平均・{ltData.leadTimeOverall.count}件）</span>
             </div>
             <div className="space-y-2">
-              {leadTimeByType.map((lt) => (
+              {ltData.leadTimeByType.map((lt) => (
                 <div key={lt.type} className="flex items-center justify-between text-sm border-t border-gray-50 pt-2 first:border-0 first:pt-0">
                   <span className="text-gray-600">{lt.label}</span>
                   <span className="text-gray-900 font-semibold">{lt.avgDays}日<span className="text-gray-400 font-normal ml-1">（{lt.count}件）</span></span>

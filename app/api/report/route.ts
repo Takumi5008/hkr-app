@@ -123,39 +123,6 @@ export async function GET() {
     .filter(m => m.thisMonthActivation < (teamThisMonth / memberStats.length) * 0.5)
     .sort((a, b) => a.thisMonthActivation - b.thisMonthActivation)
 
-  // 回線別リードタイム（獲得date → 開通opening_calendar.activation_date）
-  const LEAD_TIME_LABELS: Record<string, string> = {
-    sonet: 'So-net',
-    nifty: '@nifty光',
-    wimax_post: 'WiMAX後送り',
-    wimax_direct: 'WiMAX直せち',
-  }
-  const leadTimeRows = await dbQuery<{ type: string; cnt: number; avg_days: number }>(
-    `SELECT ar.type,
-            COUNT(*)::int AS cnt,
-            AVG(oc.activation_date::date - ar.date::date)::float AS avg_days
-     FROM activation_records ar
-     JOIN opening_calendar oc ON oc.activation_record_id = ar.id
-     WHERE ar.date ~ '^\\d{4}-\\d{2}-\\d{2}$'
-       AND oc.activation_date ~ '^\\d{4}-\\d{2}-\\d{2}$'
-       AND oc.activation_date::date >= ar.date::date
-     GROUP BY ar.type`,
-    []
-  )
-  const leadTimeByType = leadTimeRows.map(r => ({
-    type: r.type,
-    label: LEAD_TIME_LABELS[r.type] ?? r.type,
-    avgDays: Math.round(r.avg_days * 10) / 10,
-    count: r.cnt,
-  }))
-  const leadTimeTotalCount = leadTimeRows.reduce((s, r) => s + r.cnt, 0)
-  const leadTimeOverall = leadTimeTotalCount > 0
-    ? {
-        avgDays: Math.round((leadTimeRows.reduce((s, r) => s + r.avg_days * r.cnt, 0) / leadTimeTotalCount) * 10) / 10,
-        count: leadTimeTotalCount,
-      }
-    : null
-
   return NextResponse.json({
     period: { year: curYear, month: curMonth, weekStart: weekStartStr, weekEnd: todayStr },
     team: {
@@ -171,7 +138,5 @@ export async function GET() {
     activationRanking,
     activityRanking,
     needsSupport,
-    leadTimeByType,
-    leadTimeOverall,
   })
 }

@@ -213,7 +213,8 @@ graph TD
 | Method | Path | 説明 | 権限 |
 |--------|------|------|------|
 | GET/POST | /api/team | チームデータ | 管理者 |
-| GET | /api/report | チームレポート（週次・月次、回線別リードタイム含む） | 管理者 |
+| GET | /api/report | チームレポート（週次・月次） | 管理者 |
+| GET | /api/report/lead-time | 回線別リードタイム（獲得→開通、月・メンバー絞り込み可） | 管理者 |
 | GET | /api/performance/ranking | 行動表ランキング | 全員 |
 | GET | /api/progress | 個人進捗 | 全員 |
 
