@@ -11,6 +11,8 @@ type MemberStat = {
   lastWeekActivityTotal: number; weekGrowth: number
 }
 
+type LeadTimeStat = { type: string; label: string; avgDays: number; count: number }
+
 type ReportData = {
   period: { year: number; month: number; weekStart: string; weekEnd: string }
   team: { thisMonthTotal: number; lastMonthTotal: number; monthGrowth: number; thisWeekActivity: number; lastWeekActivity: number; weekGrowth: number; memberCount: number }
@@ -18,6 +20,8 @@ type ReportData = {
   activationRanking: MemberStat[]
   activityRanking: MemberStat[]
   needsSupport: MemberStat[]
+  leadTimeByType: LeadTimeStat[]
+  leadTimeOverall: { avgDays: number; count: number } | null
 }
 
 function GrowthTag({ v }: { v: number }) {
@@ -39,7 +43,7 @@ export default function ReportPage() {
   if (loading) return <div className="p-6 flex items-center justify-center min-h-screen"><p className="text-gray-400">読み込み中...</p></div>
   if (!data || role === 'member') return <div className="p-6 text-center text-gray-400">閲覧権限がありません</div>
 
-  const { period, team, activationRanking, activityRanking, needsSupport, members } = data
+  const { period, team, activationRanking, activityRanking, needsSupport, members, leadTimeByType, leadTimeOverall } = data
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-6">
@@ -67,6 +71,29 @@ export default function ReportPage() {
             <GrowthTag v={team.weekGrowth} />
           </div>
         </div>
+      </div>
+
+      {/* 回線別リードタイム */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <h2 className="text-sm font-bold text-gray-700 mb-3">回線別リードタイム（獲得→開通）</h2>
+        {leadTimeOverall === null ? (
+          <p className="text-sm text-gray-400">データがまだありません</p>
+        ) : (
+          <>
+            <div className="mb-3">
+              <span className="text-3xl font-bold text-gray-900">{leadTimeOverall.avgDays}</span>
+              <span className="text-sm text-gray-400 ml-1">日（全体平均・{leadTimeOverall.count}件）</span>
+            </div>
+            <div className="space-y-2">
+              {leadTimeByType.map((lt) => (
+                <div key={lt.type} className="flex items-center justify-between text-sm border-t border-gray-50 pt-2 first:border-0 first:pt-0">
+                  <span className="text-gray-600">{lt.label}</span>
+                  <span className="text-gray-900 font-semibold">{lt.avgDays}日<span className="text-gray-400 font-normal ml-1">（{lt.count}件）</span></span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 要サポート */}
