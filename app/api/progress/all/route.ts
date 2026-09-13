@@ -11,9 +11,14 @@ export async function GET(req: NextRequest) {
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
 
+  // 在籍中メンバーに加えて、退会済みでも当月の目標・稼働予定が残っているメンバーも取得する。
+  // 退会者は稼働人数・メンバー一覧には出さないが、目標件数はチーム合計に残したいケースがあるため。
   const members = await dbQuery(
-    `SELECT id, name FROM users WHERE is_active = true AND role != 'viewer' ORDER BY display_order, id`,
-    []
+    `SELECT id, name, is_active FROM users
+     WHERE role != 'viewer'
+       AND (is_active = true OR id IN (SELECT user_id FROM monthly_progress WHERE year = $1 AND month = $2))
+     ORDER BY display_order, id`,
+    [year, month]
   )
   const dateLike = `${year}-${String(month).padStart(2, '0')}-%`
 
@@ -51,6 +56,7 @@ export async function GET(req: NextRequest) {
       actualCancel: cancelMap[m.id] ?? 0,
       workDates,
       hasRecord: !!p,
+      isActive: m.is_active,
     }
   })
 

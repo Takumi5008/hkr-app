@@ -12,6 +12,7 @@ type MemberProgress = {
   actualCancel: number
   workDates: number[]
   hasRecord: boolean
+  isActive: boolean
 }
 
 export default function ProgressPage() {
@@ -138,12 +139,16 @@ export default function ProgressPage() {
     return { memberTotal, memberTargetByToday, memberDiff, pct }
   }
 
+  // 退会済みでも当月の目標・稼働予定が残っているメンバーは、目標件数の合算には含めるが
+  // 稼働人数やメンバー一覧のカードには出さない（在籍中メンバーのみに絞る）
+  const activeProgress = allProgress.filter((m) => m.isActive)
+
   const teamCancelTarget = allProgress.reduce((s, m) => s + m.cancelTarget, 0)
   const teamActualCancel = allProgress.reduce((s, m) => s + m.actualCancel, 0)
   const teamTargetByToday = allProgress.reduce((s, m) => s + computeMemberPace(m).memberTargetByToday, 0)
   const teamDiff = teamActualCancel - teamTargetByToday
-  const aheadCount = allProgress.filter((m) => computeMemberPace(m).memberDiff >= 0 && (m.cancelTarget > 0 || m.actualCancel > 0)).length
-  const trackedCount = allProgress.filter((m) => m.cancelTarget > 0 || m.actualCancel > 0).length
+  const aheadCount = activeProgress.filter((m) => computeMemberPace(m).memberDiff >= 0 && (m.cancelTarget > 0 || m.actualCancel > 0)).length
+  const trackedCount = activeProgress.filter((m) => m.cancelTarget > 0 || m.actualCancel > 0).length
 
   // 指定した暦日までの、1メンバー分の累計目標（個人ページの累計目標と同じ計算をその日付ベースで算出）
   const memberCumAt = (m: MemberProgress, day: number) => {
@@ -152,10 +157,10 @@ export default function ProgressPage() {
     const doneCount = m.workDates.filter((d) => d <= day).length
     return Math.round((m.cancelTarget * doneCount) / memberTotal)
   }
-  // 全メンバーの累計目標を合算した「チーム全体の累計目標」（指定日まで）
+  // 全メンバー（退会済みの目標のみ残っている人も含む）の累計目標を合算した「チーム全体の累計目標」（指定日まで）
   const teamCumAt = (day: number) => allProgress.reduce((s, m) => s + memberCumAt(m, day), 0)
-  // 指定した日に稼働予定のメンバー数
-  const teamHeadcountAt = (day: number) => allProgress.filter((m) => m.workDates.includes(day)).length
+  // 指定した日に稼働予定のメンバー数（在籍中メンバーのみ）
+  const teamHeadcountAt = (day: number) => activeProgress.filter((m) => m.workDates.includes(day)).length
 
   // チームの誰かが稼働する日（＝チーム累計が動きうる日）を昇順で列挙
   const teamWorkDaySet = new Set<number>()
@@ -469,7 +474,7 @@ export default function ProgressPage() {
 
               {/* メンバー別一覧 */}
               <div className="space-y-3">
-                {allProgress.map((m) => {
+                {activeProgress.map((m) => {
                   const { memberTotal, memberTargetByToday, memberDiff, pct } = computeMemberPace(m)
                   const untracked = m.cancelTarget === 0 && m.actualCancel === 0
                   return (
