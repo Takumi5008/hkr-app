@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock, Users } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 
 type User = { id: number; name: string }
@@ -154,6 +154,8 @@ export default function ProgressPage() {
   }
   // 全メンバーの累計目標を合算した「チーム全体の累計目標」（指定日まで）
   const teamCumAt = (day: number) => allProgress.reduce((s, m) => s + memberCumAt(m, day), 0)
+  // 指定した日に稼働予定のメンバー数
+  const teamHeadcountAt = (day: number) => allProgress.filter((m) => m.workDates.includes(day)).length
 
   // チームの誰かが稼働する日（＝チーム累計が動きうる日）を昇順で列挙
   const teamWorkDaySet = new Set<number>()
@@ -434,17 +436,23 @@ export default function ProgressPage() {
                       const { label, dow, isRed } = formatDate(day)
                       const cumToday = teamCumAt(day)
                       const dailyQuota = cumToday - teamCumAt(day - 1)
+                      const headcount = teamHeadcountAt(day)
                       const isPast = isCurrentMonth ? day < todayDay : true
                       const isToday = isCurrentMonth && day === todayDay
                       return (
                         <div key={day} className={`flex items-center px-4 py-2.5 ${isToday ? 'bg-orange-50' : ''}`}>
                           <div className="flex-1">
-                            <span className={`text-sm font-semibold ${
-                              isRed ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'
-                            }`}>
-                              {label}
+                            <div>
+                              <span className={`text-sm font-semibold ${
+                                isRed ? 'text-rose-500' : dow === 6 ? 'text-indigo-500' : 'text-gray-700'
+                              }`}>
+                                {label}
+                              </span>
+                              {isToday && <span className="ml-2 text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">今日</span>}
+                            </div>
+                            <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-400">
+                              <Users size={11} />稼働 {headcount}人
                             </span>
-                            {isToday && <span className="ml-2 text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full">今日</span>}
                           </div>
                           <div className="text-right">
                             <span className={`text-base font-black ${isPast || isToday ? 'text-orange-500' : 'text-gray-300'}`}>
