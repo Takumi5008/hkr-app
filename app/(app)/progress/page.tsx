@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock, Users } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
 
-type User = { id: number; name: string }
+type User = { id: number; name: string; is_active?: boolean }
 type MemberProgress = {
   id: number
   name: string
@@ -40,8 +40,8 @@ export default function ProgressPage() {
   const isCurrentMonth = year === todayYear && month === todayMonth
 
   const isViewingOther = selectedUserId !== null
-  // カレンダー操作がロックされるか（メンバーかつ締切過ぎ、または他メンバー閲覧中）
-  const calendarLocked = isViewingOther || (deadlinePassed && role !== 'manager' && role !== 'admin')
+  // カレンダー操作がロックされるか（メンバーかつ締切過ぎの場合のみ。マネージャー・管理者は他メンバー閲覧中でも編集可）
+  const calendarLocked = deadlinePassed && role !== 'manager' && role !== 'admin'
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -96,7 +96,7 @@ export default function ProgressPage() {
     await fetch('/api/progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ year, month, cancelTarget, workDates }),
+      body: JSON.stringify({ year, month, cancelTarget, workDates, userId: selectedUserId ?? undefined }),
     })
     setSaving(false)
     setSaved(true)
@@ -210,7 +210,7 @@ export default function ProgressPage() {
           >
             <option value="">自分</option>
             {members.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
+              <option key={m.id} value={m.id}>{m.name}{m.is_active === false ? '（退会）' : ''}</option>
             ))}
           </select>
         </div>
@@ -301,16 +301,19 @@ export default function ProgressPage() {
         </div>
         <p className="text-xs text-gray-400 mt-2 text-right">稼働日数：<span className="font-bold text-orange-500">{workDates.length}日</span></p>
 
-        {!isViewingOther && (
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
-          >
-            <Save size={15} />
-            {saving ? '保存中...' : saved ? '✓ 保存しました' : '保存する'}
-          </button>
+        {isViewingOther && (
+          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mt-3">
+            {members.find((m) => m.id === selectedUserId)?.name ?? 'このメンバー'}さんの目標・稼働予定を代理入力しています
+          </p>
         )}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-400 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition shadow-sm"
+        >
+          <Save size={15} />
+          {saving ? '保存中...' : saved ? '✓ 保存しました' : isViewingOther ? 'このメンバーの分を保存する' : '保存する'}
+        </button>
       </div>
 
       {/* 今日の状況 */}
