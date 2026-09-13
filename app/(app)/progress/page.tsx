@@ -11,6 +11,8 @@ type MemberProgress = {
   cancelTarget: number
   actualCancel: number
   workDates: number[]
+  // シフトに実際に提出された稼働日のみ（進捗ページで目標配分用に手入力しただけの日は含まない）
+  shiftDays: number[]
   hasRecord: boolean
   isActive: boolean
 }
@@ -159,8 +161,9 @@ export default function ProgressPage() {
   }
   // 全メンバー（退会済みの目標のみ残っている人も含む）の累計目標を合算した「チーム全体の累計目標」（指定日まで）
   const teamCumAt = (day: number) => allProgress.reduce((s, m) => s + memberCumAt(m, day), 0)
-  // 指定した日に稼働予定のメンバー数（在籍中メンバーのみ）
-  const teamHeadcountAt = (day: number) => activeProgress.filter((m) => m.workDates.includes(day)).length
+  // 指定した日に稼働予定のメンバー数（在籍中メンバーのみ）。
+  // シフト提出済みの稼働日だけを数える（進捗ページで目標配分用に手入力しただけの日はカウントしない）
+  const teamHeadcountAt = (day: number) => activeProgress.filter((m) => m.shiftDays.includes(day)).length
 
   // チームの誰かが稼働する日（＝チーム累計が動きうる日）を昇順で列挙
   const teamWorkDaySet = new Set<number>()

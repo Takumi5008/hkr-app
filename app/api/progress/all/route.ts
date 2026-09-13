@@ -55,6 +55,9 @@ export async function GET(req: NextRequest) {
       cancelTarget: p?.cancel_target ?? 0,
       actualCancel: cancelMap[m.id] ?? 0,
       workDates,
+      // シフトに実際に提出された稼働日のみ（進捗ページ側で目標配分用に手入力された日は含まない）。
+      // 稼働人数のカウントはこちらを使う。
+      shiftDays,
       hasRecord: !!p,
       isActive: m.is_active,
     }
