@@ -372,23 +372,31 @@ export default function InputPage() {
 
   const isManager = role === 'manager' || role === 'admin'
 
-  const isWimax = (e: CalendarEntry) => e.line_type?.includes('🏠')
-  const isSonet = (e: CalendarEntry) => e.line_type?.includes('🍑')
-  const isNifty = (e: CalendarEntry) => e.line_type?.includes('🐏')
+  const isWimax    = (e: CalendarEntry) => e.line_type?.includes('🏠')
+  const isSonet    = (e: CalendarEntry) => e.line_type?.includes('🍑')
+  const isNifty    = (e: CalendarEntry) => e.line_type?.includes('🐏')
+  const isSbair    = (e: CalendarEntry) => e.line_type?.includes('(Air)')
+  const isSbhikari = (e: CalendarEntry) => e.line_type?.includes('(光)')
 
   const calConfirmed = calEntries.filter((e) => e.status === '○').length
   const calRemaining = calEntries.filter((e) => e.status === '').length
   const calForecast  = calConfirmed + calRemaining
 
-  const calConfirmedWimax = calEntries.filter((e) => e.status === '○' && isWimax(e)).length
-  const calConfirmedSonet = calEntries.filter((e) => e.status === '○' && isSonet(e)).length
-  const calConfirmedNifty = calEntries.filter((e) => e.status === '○' && isNifty(e)).length
-  const calRemainingWimax = calEntries.filter((e) => e.status === '' && isWimax(e)).length
-  const calRemainingSonet = calEntries.filter((e) => e.status === '' && isSonet(e)).length
-  const calRemainingNifty = calEntries.filter((e) => e.status === '' && isNifty(e)).length
-  const calForecastWimax  = calConfirmedWimax + calRemainingWimax
-  const calForecastSonet  = calConfirmedSonet + calRemainingSonet
-  const calForecastNifty  = calConfirmedNifty + calRemainingNifty
+  const calConfirmedWimax    = calEntries.filter((e) => e.status === '○' && isWimax(e)).length
+  const calConfirmedSonet    = calEntries.filter((e) => e.status === '○' && isSonet(e)).length
+  const calConfirmedNifty    = calEntries.filter((e) => e.status === '○' && isNifty(e)).length
+  const calConfirmedSbair    = calEntries.filter((e) => e.status === '○' && isSbair(e)).length
+  const calConfirmedSbhikari = calEntries.filter((e) => e.status === '○' && isSbhikari(e)).length
+  const calRemainingWimax    = calEntries.filter((e) => e.status === '' && isWimax(e)).length
+  const calRemainingSonet    = calEntries.filter((e) => e.status === '' && isSonet(e)).length
+  const calRemainingNifty    = calEntries.filter((e) => e.status === '' && isNifty(e)).length
+  const calRemainingSbair    = calEntries.filter((e) => e.status === '' && isSbair(e)).length
+  const calRemainingSbhikari = calEntries.filter((e) => e.status === '' && isSbhikari(e)).length
+  const calForecastWimax     = calConfirmedWimax + calRemainingWimax
+  const calForecastSonet     = calConfirmedSonet + calRemainingSonet
+  const calForecastNifty     = calConfirmedNifty + calRemainingNifty
+  const calForecastSbair     = calConfirmedSbair + calRemainingSbair
+  const calForecastSbhikari  = calConfirmedSbhikari + calRemainingSbhikari
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -803,10 +811,10 @@ export default function InputPage() {
               <p className="text-xs font-semibold text-gray-500 mb-3">{year}年 {periodLabel(month)} まとめ</p>
               <div className="grid grid-cols-3 gap-3 mb-3">
                 {[
-                  { label: '開通数', value: calConfirmed, color: 'text-emerald-600', wimax: calConfirmedWimax, sonet: calConfirmedSonet, nifty: calConfirmedNifty },
-                  { label: '残り', value: calRemaining, color: 'text-indigo-600', wimax: calRemainingWimax, sonet: calRemainingSonet, nifty: calRemainingNifty },
-                  { label: '見込み', value: calForecast, color: 'text-blue-600', wimax: calForecastWimax, sonet: calForecastSonet, nifty: calForecastNifty },
-                ].map(({ label, value, color, wimax, sonet, nifty }) => (
+                  { label: '開通数', value: calConfirmed, color: 'text-emerald-600', wimax: calConfirmedWimax, sonet: calConfirmedSonet, nifty: calConfirmedNifty, sbair: calConfirmedSbair, sbhikari: calConfirmedSbhikari },
+                  { label: '残り', value: calRemaining, color: 'text-indigo-600', wimax: calRemainingWimax, sonet: calRemainingSonet, nifty: calRemainingNifty, sbair: calRemainingSbair, sbhikari: calRemainingSbhikari },
+                  { label: '見込み', value: calForecast, color: 'text-blue-600', wimax: calForecastWimax, sonet: calForecastSonet, nifty: calForecastNifty, sbair: calForecastSbair, sbhikari: calForecastSbhikari },
+                ].map(({ label, value, color, wimax, sonet, nifty, sbair, sbhikari }) => (
                   <div key={label} className="bg-gray-50 rounded-lg px-3 py-3 text-center">
                     <p className={`text-2xl font-bold ${color}`}>{value}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{label}</p>
@@ -814,6 +822,8 @@ export default function InputPage() {
                       <span>🏠 {wimax}</span>
                       <span>🍑 {sonet}</span>
                       <span>🐏 {nifty}</span>
+                      <span>💰(Air) {sbair}</span>
+                      <span>💰(光) {sbhikari}</span>
                     </div>
                   </div>
                 ))}
