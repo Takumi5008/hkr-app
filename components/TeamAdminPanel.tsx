@@ -95,7 +95,7 @@ export default function TeamAdminPanel({ year, month, currentTeams, allUsers, on
                 <div>
                   <p className="text-sm font-semibold text-gray-800">{team.name}</p>
                   <p className="text-xs text-gray-400">
-                    目標 {team.target}件（開通） ／ {team.memberIds.length}人
+                    目標解除数（参考） {team.target}件 ／ {team.memberIds.length}人
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export default function TeamAdminPanel({ year, month, currentTeams, allUsers, on
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-600 block mb-1">目標開通数（チームチャレンジ用）</label>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">目標解除数（参考・自動計算には使われません）</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number" min={0}
@@ -155,6 +155,9 @@ export default function TeamAdminPanel({ year, month, currentTeams, allUsers, on
                   />
                   <span className="text-sm text-gray-500">件</span>
                 </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  チームカードの「目標」はメンバー各自の解除目標の合算です。ここは参考メモとして残せます。
+                </p>
               </div>
 
               <div>
