@@ -75,7 +75,10 @@ export default function ActivityPage() {
   const [rankingYear, setRankingYear] = useState(today.getFullYear())
   const [rankingMonth, setRankingMonth] = useState(today.getMonth() + 1)
   type RankingData = {
-    monthlyCancel: { member_name: string; total_cancel: number; work_hours: number; productivity: number }[]
+    monthlyCancel: {
+      member_name: string; total_cancel: number; work_hours: number; productivity: number
+      work_days: number; day_productivity: number
+    }[]
   }
   const [rankingData, setRankingData] = useState<RankingData | null>(null)
   const [rankingLoading, setRankingLoading] = useState(false)
@@ -481,7 +484,7 @@ export default function ActivityPage() {
               <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
                 <div className="px-5 py-3 bg-orange-50 border-b border-orange-100">
                   <h2 className="text-sm font-bold text-orange-700">解除時間生産性ランキング</h2>
-                  <p className="text-xs text-orange-400 mt-0.5">{rankingYear}年{rankingMonth}月 — 解除数 ÷ 稼働時間（件/h）</p>
+                  <p className="text-xs text-orange-400 mt-0.5">{rankingYear}年{rankingMonth}月 — 解除時間生産性：解除数 ÷ 稼働時間（件/h）／ 解除生産性：解除数 ÷ 稼働日数（件/日）</p>
                 </div>
                 {rankingData.monthlyCancel.length === 0 ? (
                   <p className="text-sm text-gray-300 text-center py-10">データがありません</p>
@@ -501,7 +504,8 @@ export default function ActivityPage() {
                               <span className="text-sm font-semibold text-gray-800">{r.member_name}</span>
                               <div className="text-right shrink-0 ml-2">
                                 <span className="text-sm font-bold text-orange-500">{r.productivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/h</span></span>
-                                <span className="text-xs text-gray-400 ml-2">({r.total_cancel}件 / {r.work_hours}h)</span>
+                                <span className="text-sm font-bold text-indigo-500 ml-2">{r.day_productivity}<span className="text-xs font-normal text-gray-400 ml-0.5">件/日</span></span>
+                                <span className="text-xs text-gray-400 ml-2">({r.total_cancel}件 / {r.work_hours}h / {r.work_days}日)</span>
                               </div>
                             </div>
                             <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">

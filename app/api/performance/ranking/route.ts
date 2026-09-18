@@ -11,11 +11,16 @@ export async function GET(req: NextRequest) {
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
 
   try {
-    const monthlyCancel = await dbQuery<{ member_name: string; total_cancel: number; work_hours: number; productivity: number }>(
+    const monthlyCancel = await dbQuery<{
+      member_name: string; total_cancel: number; work_hours: number; productivity: number
+      work_days: number; day_productivity: number
+    }>(
       `SELECT u.name AS member_name,
               SUM(da.cancel)::int AS total_cancel,
               ROUND(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 2) AS work_hours,
-              ROUND(SUM(da.cancel)::numeric / NULLIF(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 0), 3) AS productivity
+              ROUND(SUM(da.cancel)::numeric / NULLIF(SUM(CASE WHEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.') ~ '^[0-9]+(\.[0-9]+)?$' THEN TRANSLATE(da.work_hours,'０１２３４５６７８９。','0123456789.')::numeric ELSE NULL END), 0), 3) AS productivity,
+              COUNT(CASE WHEN da.work_hours IS NOT NULL AND da.work_hours != '' THEN 1 END)::int AS work_days,
+              ROUND(SUM(da.cancel)::numeric / NULLIF(COUNT(CASE WHEN da.work_hours IS NOT NULL AND da.work_hours != '' THEN 1 END), 0), 2) AS day_productivity
        FROM daily_activity da
        JOIN users u ON u.id = da.user_id
        WHERE EXTRACT(YEAR FROM da.date::date) = $1
