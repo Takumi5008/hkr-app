@@ -25,9 +25,6 @@ function TeamPageInner() {
   const [loading, setLoading] = useState(true)
   const [memberStats, setMemberStats] = useState<any>(null)
   const [challengeGoal, setChallengeGoal] = useState(200)
-  const [challengeTeams, setChallengeTeams] = useState<any[]>([])
-  const [memberActivations, setMemberActivations] = useState<Record<number, number>>({})
-  const [userNameMap, setUserNameMap] = useState<Record<number, string>>({})
 
   useEffect(() => {
     fetch('/api/products')
@@ -41,24 +38,10 @@ function TeamPageInner() {
       fetch(`/api/team?year=${year}&month=${month}`).then((r) => r.status === 403 ? [] : r.json()),
       fetch(`/api/team/member-stats?year=${year}&month=${month}`).then((r) => r.ok ? r.json() : null),
       fetch(`/api/challenge/settings?year=${year}&month=${month}`).then((r) => r.ok ? r.json() : null),
-      fetch(`/api/challenge/teams?year=${year}&month=${month}`).then((r) => r.ok ? r.json() : []),
-      fetch(`/api/challenge/members?year=${year}&month=${month}`).then((r) => r.ok ? r.json() : []),
-    ]).then(([d, ms, cs, ct, cm]) => {
+    ]).then(([d, ms, cs]) => {
       setTeamData(d)
       setMemberStats(ms)
       if (cs?.goal) setChallengeGoal(cs.goal)
-      setChallengeTeams(ct ?? [])
-      const actMap: Record<number, number> = {}
-      const nameMap: Record<number, string> = {}
-      // Build name map from team data (all users)
-      ;(d ?? []).forEach((t: any) => { if (t.user?.id) nameMap[Number(t.user.id)] = t.user.name })
-      // Build activation map and supplement name map from opening_calendar members
-      ;(cm ?? []).forEach((m: any) => {
-        actMap[Number(m.id)] = m.activation
-        nameMap[Number(m.id)] = m.name
-      })
-      setMemberActivations(actMap)
-      setUserNameMap(nameMap)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [year, month])
@@ -166,77 +149,6 @@ function TeamPageInner() {
         <div className="mb-6">
           <TeamChallengeCard total={teamTotal} year={year} month={month} goal={challengeGoal} />
           <AccountCardsSection stats={teamStats} products={products} memberStats={memberStats} />
-        </div>
-      )}
-
-      {/* チームチャレンジ達成状況 */}
-      {!loading && (
-        <div className="mb-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-600 flex items-center gap-2">🎯 チーム別達成状況</h2>
-          {challengeTeams.length === 0 && (
-            <p className="text-xs text-gray-400 bg-white rounded-2xl border border-gray-200 px-4 py-3">この月のチームは設定されていません（チャレンジページから設定できます）</p>
-          )}
-          {challengeTeams.map((team) => {
-            const members = (team.memberIds ?? [])
-              .map((id: number) => {
-                const uid = Number(id)
-                const name = userNameMap[uid]
-                if (!name) return null
-                return { id: uid, name, activation: memberActivations[uid] ?? 0 }
-              })
-              .filter(Boolean)
-            const ctTotal = members.reduce((s: number, m: any) => s + m.activation, 0)
-            const pct = team.target > 0 ? Math.min(Math.round((ctTotal / team.target) * 100), 100) : 0
-            const achieved = team.target > 0 && ctTotal >= team.target
-            return (
-              <div key={team.id} className={`bg-white rounded-2xl border p-4 ${achieved ? 'border-emerald-300' : 'border-gray-200'}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">{achieved ? '🏆' : '🎯'}</span>
-                    <span className="text-sm font-bold text-gray-800">{team.name}</span>
-                    {team.target > 0 && (
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${achieved ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                        目標 {team.target}件
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-lg font-black ${achieved ? 'text-emerald-600' : 'text-indigo-600'}`}>{ctTotal}件</span>
-                    {team.target > 0 && (
-                      <p className={`text-sm font-black ${achieved ? 'text-emerald-500' : pct >= 50 ? 'text-indigo-500' : 'text-gray-400'}`}>
-                        達成率 {Math.round((ctTotal / team.target) * 100)}%
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {team.target > 0 && (
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-                    <div
-                      className={`h-full rounded-full transition-all ${achieved ? 'bg-emerald-400' : 'bg-indigo-400'}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                )}
-                {members.length > 0 && (
-                  <div className="space-y-1.5">
-                    {members.map((m: any) => {
-                      const memberPct = ctTotal > 0 ? Math.round((m.activation / ctTotal) * 100) : 0
-                      return (
-                        <div key={m.id} className="flex items-center gap-2">
-                          <span className="text-xs text-gray-600 w-20 shrink-0 truncate">{m.name}</span>
-                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-indigo-400 to-violet-400 rounded-full" style={{ width: `${memberPct}%` }} />
-                          </div>
-                          <span className="text-xs font-bold text-indigo-600 w-8 text-right shrink-0">{m.activation}</span>
-                          <span className="text-xs text-gray-400 w-8 text-right shrink-0">{memberPct}%</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
         </div>
       )}
 
