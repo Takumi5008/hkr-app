@@ -1,6 +1,6 @@
 import { getSession } from '@/lib/session'
 import { dbQuery } from '@/lib/db'
-import { calcHKR, formatMonth, getTwoMonthsAgo, isMonthlyCheckPeriod } from '@/lib/hkr'
+import { calcHKR, formatMonth, getJSTParts, getTwoMonthsAgo, isMonthlyCheckPeriod } from '@/lib/hkr'
 import HKRCard from '@/components/HKRCard'
 import TodayTasksList, { type TodayTask, type FollowAlert } from '@/components/TodayTasksList'
 import StatusRadarWidget from '@/components/StatusRadarWidget'
@@ -14,10 +14,8 @@ export default async function DashboardPage() {
   const session = await getSession()
   if (!session.userId) redirect('/login')
 
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-  const currentDay = now.getDate()
+  // サーバーはUTCで動くため、JSTの日付を明示的に取り出す（0:00〜8:59 JSTに前日扱いになるズレを防ぐ）
+  const { year: currentYear, month: currentMonth, day: currentDay } = getJSTParts()
   const twoAgo = getTwoMonthsAgo()
   const showBanner = isMonthlyCheckPeriod()
 

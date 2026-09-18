@@ -12,12 +12,26 @@ export function isAboveTarget(hkr: number | null): boolean {
   return hkr >= HKR_TARGET
 }
 
+// サーバー(Vercel)はデフォルトでUTC実行のため、素の new Date().getDate() 等は
+// JST 0:00〜8:59 の間「前日」を指してしまう。日付だけは常に Asia/Tokyo で取り出す。
+export function getJSTParts(base: Date = new Date()): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(base)
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0)
+  return { year: get('year'), month: get('month'), day: get('day') }
+}
+
 export function isMonthlyCheckPeriod(): boolean {
-  return new Date().getDate() <= 7
+  return getJSTParts().day <= 7
 }
 
 export function getTwoMonthsAgo(): { year: number; month: number } {
-  const d = new Date()
+  const { year, month } = getJSTParts()
+  const d = new Date(year, month - 1, 1)
   d.setMonth(d.getMonth() - 2)
   return { year: d.getFullYear(), month: d.getMonth() + 1 }
 }
