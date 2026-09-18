@@ -57,7 +57,7 @@ async function syncCalendar(userId: number, recordId: number) {
     return
   }
 
-  const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : rec.type === 'sbhikari' ? '💡' : rec.type === 'sbair_direct' || rec.type === 'sbair_post' ? '📶' : '🏠'
+  const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : rec.type === 'sbhikari' ? '💰(光)' : rec.type === 'sbair_direct' || rec.type === 'sbair_post' ? '💰(Air)' : '🏠'
   const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
   // M/D 形式 → YYYY-MM-DD に正規化
