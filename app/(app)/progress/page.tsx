@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock,
 import { isHoliday } from '@/lib/holidays'
 
 type User = { id: number; name: string; is_active?: boolean }
+type ChallengeTeam = { id: number; name: string; target: number; memberIds: number[] }
 type MemberProgress = {
   id: number
   name: string
@@ -34,6 +35,7 @@ export default function ProgressPage() {
   const [showAll, setShowAll] = useState(false)
   const [allProgress, setAllProgress] = useState<MemberProgress[]>([])
   const [allLoading, setAllLoading] = useState(false)
+  const [challengeTeams, setChallengeTeams] = useState<ChallengeTeam[]>([])
   const canViewAll = role === 'manager' || role === 'admin' || role === 'viewer'
 
   const todayDay = today.getDate()
@@ -72,9 +74,14 @@ export default function ProgressPage() {
   useEffect(() => {
     if (!showAll || !canViewAll) return
     setAllLoading(true)
-    fetch(`/api/progress/all?year=${year}&month=${month}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setAllProgress(Array.isArray(d) ? d : []))
+    Promise.all([
+      fetch(`/api/progress/all?year=${year}&month=${month}`).then((r) => (r.ok ? r.json() : [])),
+      fetch(`/api/challenge/teams?year=${year}&month=${month}`).then((r) => (r.ok ? r.json() : [])),
+    ])
+      .then(([progress, teams]) => {
+        setAllProgress(Array.isArray(progress) ? progress : [])
+        setChallengeTeams(Array.isArray(teams) ? teams : [])
+      })
       .finally(() => setAllLoading(false))
   }, [showAll, year, month, canViewAll])
 
@@ -151,6 +158,20 @@ export default function ProgressPage() {
   const teamDiff = teamActualCancel - teamTargetByToday
   const aheadCount = activeProgress.filter((m) => computeMemberPace(m).memberDiff >= 0 && (m.cancelTarget > 0 || m.actualCancel > 0)).length
   const trackedCount = activeProgress.filter((m) => m.cancelTarget > 0 || m.actualCancel > 0).length
+
+  // チーム（チャレンジページで組んだチーム分け）ごとの解除進捗を集計
+  const teamRollups = challengeTeams.map((team) => {
+    const teamMembers = allProgress.filter((m) => team.memberIds.includes(m.id))
+    const cancelTarget = teamMembers.reduce((s, m) => s + m.cancelTarget, 0)
+    const actualCancel = teamMembers.reduce((s, m) => s + m.actualCancel, 0)
+    const targetByToday = teamMembers.reduce((s, m) => s + computeMemberPace(m).memberTargetByToday, 0)
+    const diff = actualCancel - targetByToday
+    const pct = cancelTarget > 0 ? Math.min(Math.round((actualCancel / cancelTarget) * 100), 100) : 0
+    return { ...team, memberCount: teamMembers.length, cancelTarget, actualCancel, targetByToday, diff, pct }
+  })
+  // どのチームにも属していないメンバー（チーム分けが設定されている場合のみ意味を持つ）
+  const assignedIds = new Set(challengeTeams.flatMap((t) => t.memberIds))
+  const unassignedMembers = challengeTeams.length > 0 ? activeProgress.filter((m) => !assignedIds.has(m.id)) : []
 
   // 指定した暦日までの、1メンバー分の累計目標（個人ページの累計目標と同じ計算をその日付ベースで算出）
   const memberCumAt = (m: MemberProgress, day: number) => {
@@ -434,6 +455,51 @@ export default function ProgressPage() {
                   )}
                 </div>
               )}
+
+              {/* チームごとの解除進捗（チャレンジページで組んだチーム分けを流用） */}
+              <div className="mb-4">
+                <h3 className="text-sm font-bold text-gray-600 mb-2">チーム別 解除進捗</h3>
+                {challengeTeams.length === 0 ? (
+                  <p className="text-xs text-gray-400 bg-white rounded-2xl border border-gray-100 px-4 py-3">
+                    この月のチームは設定されていません（チャレンジページから設定できます）
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {teamRollups.map((team) => (
+                      <div key={team.id} className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-bold text-gray-800">{team.name}<span className="ml-2 text-xs font-normal text-gray-400">{team.memberCount}人</span></span>
+                          {team.cancelTarget === 0 && team.actualCancel === 0 ? (
+                            <span className="text-xs font-semibold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">未設定</span>
+                          ) : (
+                            <span className={`text-sm font-black ${
+                              team.diff > 0 ? 'text-emerald-600' : team.diff < 0 ? 'text-rose-600' : 'text-indigo-600'
+                            }`}>
+                              {team.diff > 0 ? `アド ${team.diff}` : team.diff < 0 ? `ビハ ${Math.abs(team.diff)}` : 'オンタイム'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-2 flex-wrap">
+                          <span>実績 <b className="text-gray-800">{team.actualCancel}</b>件</span>
+                          <span>目標 <b className="text-gray-800">{team.cancelTarget}</b>件</span>
+                          <span>目標ペース {team.targetByToday}件</span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${team.pct >= 100 ? 'bg-emerald-400' : 'bg-orange-400'}`}
+                            style={{ width: `${team.pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {unassignedMembers.length > 0 && (
+                      <p className="text-xs text-gray-400 px-1">
+                        チーム未所属：{unassignedMembers.map((m) => m.name).join('、')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* チーム日別ノルマ（全員の累計目標を合算し、前日との差分をその日のノルマとする） */}
               {teamWorkDays.length > 0 && (
