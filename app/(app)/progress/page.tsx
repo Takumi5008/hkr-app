@@ -29,6 +29,7 @@ export default function ProgressPage() {
   const [deadlineAt, setDeadlineAt] = useState<string | null>(null)
   const [deadlinePassed, setDeadlinePassed] = useState(false)
   const [role, setRole] = useState<string>('member')
+  const [myEmail, setMyEmail] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [members, setMembers] = useState<User[]>([])
@@ -38,6 +39,16 @@ export default function ProgressPage() {
   const [allLoading, setAllLoading] = useState(false)
   const [challengeTeams, setChallengeTeams] = useState<ChallengeTeam[]>([])
   const canViewAll = role === 'manager' || role === 'admin' || role === 'viewer'
+  const isKomoriya = myEmail === 'komotaku0508@gmail.com'
+
+  // 目標算出ツール（小守谷さんのみ表示）：過去の解除生産性（件/日）から目標解除数を逆算する
+  const [goalMonths, setGoalMonths] = useState(3)
+  const [goalWorkDaysInput, setGoalWorkDaysInput] = useState('')
+  const [goalData, setGoalData] = useState<{
+    months: { year: number; month: number; cancel: number; workDays: number; dayProductivity: number | null }[]
+    avgDayProductivity: number | null
+  } | null>(null)
+  const [goalLoading, setGoalLoading] = useState(false)
 
   const todayDay = today.getDate()
   const todayMonth = today.getMonth() + 1
@@ -51,6 +62,7 @@ export default function ProgressPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       setRole(d.role ?? 'member')
+      setMyEmail(d.email ?? '')
       if (d.role === 'manager' || d.role === 'admin') {
         fetch('/api/users').then(r => r.json()).then((users: User[]) => {
           setMembers(users.filter((u: any) => u.role !== 'viewer'))
@@ -91,6 +103,15 @@ export default function ProgressPage() {
     fetchAllData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAll, year, month, canViewAll])
+
+  useEffect(() => {
+    if (!isKomoriya || showAll || isViewingOther) return
+    setGoalLoading(true)
+    fetch(`/api/my/day-productivity?year=${year}&month=${month}&months=${goalMonths}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setGoalData(d))
+      .finally(() => setGoalLoading(false))
+  }, [isKomoriya, showAll, isViewingOther, year, month, goalMonths])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
@@ -260,6 +281,65 @@ export default function ProgressPage() {
 
       {!showAll && (
       <>
+      {/* 目標算出ツール（小守谷さん専用） */}
+      {isKomoriya && !isViewingOther && (
+        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-gray-700">目標算出ツール</p>
+            <select
+              value={goalMonths}
+              onChange={(e) => setGoalMonths(Number(e.target.value))}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            >
+              <option value={1}>直近1ヶ月平均</option>
+              <option value={3}>直近3ヶ月平均</option>
+              <option value={6}>直近6ヶ月平均</option>
+            </select>
+          </div>
+
+          {goalLoading ? (
+            <p className="text-xs text-gray-400">読み込み中...</p>
+          ) : !goalData || goalData.avgDayProductivity === null ? (
+            <p className="text-xs text-gray-400">過去の実績データがまだありません（{month}月より前の行動表を記入すると算出できます）</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
+                {goalData.months.map((m) => (
+                  <span key={`${m.year}-${m.month}`} className="text-xs text-gray-400">
+                    {m.month}月：{m.dayProductivity !== null ? `${m.dayProductivity}件/日` : 'データなし'}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                過去実績の解除生産性（平均）：<span className="font-bold text-gray-800">{goalData.avgDayProductivity}件/日</span>
+              </p>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-bold text-gray-700 w-24 shrink-0">稼働日数</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={goalWorkDaysInput}
+                  onChange={(e) => setGoalWorkDaysInput(e.target.value)}
+                  placeholder="0"
+                  className="w-24 text-center text-lg font-bold border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+                <span className="text-sm text-gray-500">日</span>
+              </div>
+              {goalWorkDaysInput !== '' && (
+                <p className="text-sm text-gray-700 mt-3 bg-orange-50 rounded-xl px-4 py-2.5">
+                  推奨目標：<span className="text-xl font-black text-orange-600">
+                    {Math.round(goalData.avgDayProductivity * (parseInt(goalWorkDaysInput) || 0))}
+                  </span>件
+                  <span className="text-xs text-gray-400 ml-2">
+                    （{goalData.avgDayProductivity}件/日 × {goalWorkDaysInput}日）
+                  </span>
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* 目標入力 */}
       <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 mb-4">
         <div className="flex items-center gap-3 mb-3">
