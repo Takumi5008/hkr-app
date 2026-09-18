@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Network, Activity, BarChart } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, ClipboardList, CheckSquare, CalendarDays, BarChart2, StickyNote, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, FileText, Activity, BarChart } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -25,7 +25,6 @@ const navItems = [
   { href: '/knowledge', label: '知識向上', icon: GraduationCap },
   { href: '/school', label: '学校管理', icon: ClipboardList },
   { href: '/review', label: '月次振り返り', icon: FileText },
-  { href: '/org', label: '組織図', icon: Network },
   { href: '/howto', label: '使い方', icon: BookOpen },
 ]
 
