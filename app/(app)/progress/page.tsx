@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Minus, Save, Lock, Users } from 'lucide-react'
 import { isHoliday } from '@/lib/holidays'
+import TeamAdminPanel from '@/components/TeamAdminPanel'
 
 type User = { id: number; name: string; is_active?: boolean }
 type ChallengeTeam = { id: number; name: string; target: number; memberIds: number[] }
@@ -71,8 +72,8 @@ export default function ProgressPage() {
       })
   }, [year, month, selectedUserId])
 
-  useEffect(() => {
-    if (!showAll || !canViewAll) return
+  const fetchAllData = () => {
+    if (!canViewAll) return
     setAllLoading(true)
     Promise.all([
       fetch(`/api/progress/all?year=${year}&month=${month}`).then((r) => (r.ok ? r.json() : [])),
@@ -83,6 +84,12 @@ export default function ProgressPage() {
         setChallengeTeams(Array.isArray(teams) ? teams : [])
       })
       .finally(() => setAllLoading(false))
+  }
+
+  useEffect(() => {
+    if (!showAll || !canViewAll) return
+    fetchAllData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAll, year, month, canViewAll])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
@@ -456,12 +463,23 @@ export default function ProgressPage() {
                 </div>
               )}
 
-              {/* チームごとの解除進捗（チャレンジページで組んだチーム分けを流用） */}
+              {/* チームごとの解除進捗 */}
               <div className="mb-4">
                 <h3 className="text-sm font-bold text-gray-600 mb-2">チーム別 解除進捗</h3>
+                {(role === 'manager' || role === 'admin') && (
+                  <div className="mb-3">
+                    <TeamAdminPanel
+                      year={year}
+                      month={month}
+                      currentTeams={challengeTeams}
+                      allUsers={members.filter((m) => m.is_active !== false)}
+                      onChange={fetchAllData}
+                    />
+                  </div>
+                )}
                 {challengeTeams.length === 0 ? (
                   <p className="text-xs text-gray-400 bg-white rounded-2xl border border-gray-100 px-4 py-3">
-                    この月のチームは設定されていません（チャレンジページから設定できます）
+                    この月のチームは設定されていません（上の「チーム編集」から追加できます）
                   </p>
                 ) : (
                   <div className="space-y-3">

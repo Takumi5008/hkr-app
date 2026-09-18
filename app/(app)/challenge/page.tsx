@@ -352,14 +352,12 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {/* 管理者パネル（目標・チーム編集） */}
+      {/* 管理者パネル（目標） */}
       {isManager && (
         <ChallengeAdminPanel
           year={year}
           month={month}
           currentGoal={goal}
-          currentTeams={challengeTeams}
-          allUsers={allUsers}
         />
       )}
     </div>
