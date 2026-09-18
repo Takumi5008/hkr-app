@@ -29,11 +29,14 @@ export async function POST(req: NextRequest) {
 
   for (const user of users) {
     for (const product of products) {
-      const types = product.activation_type === 'sonet'
-        ? ["'sonet'"]
-        : product.activation_type === 'nifty'
-        ? ["'nifty'"]
-        : ["'wimax_direct'", "'wimax_post'"]
+      const TYPE_MAP: Record<string, string[]> = {
+        sonet: ["'sonet'"],
+        nifty: ["'nifty'"],
+        sbhikari: ["'sbhikari'"],
+        wimax: ["'wimax_direct'", "'wimax_post'"],
+        sbair: ["'sbair_direct'", "'sbair_post'"],
+      }
+      const types = TYPE_MAP[product.activation_type] ?? ["'wimax_direct'", "'wimax_post'"]
 
       const rows = await dbQuery<{ cancel_count: number; activation_count: number }>(
         `SELECT

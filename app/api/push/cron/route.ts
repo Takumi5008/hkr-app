@@ -62,6 +62,11 @@ export async function GET(req: NextRequest) {
 
   const formats = todayFormats()
   const notifyMap = new Map<number, string[]>() // user_id -> messages
+  const TYPE_LABEL: Record<string, string> = {
+    sonet: 'So-net', nifty: '@nifty光', sbhikari: 'SB光',
+    wimax_direct: 'WiMAX直せち', sbair_direct: 'SBAir直せち',
+    wimax_post: 'WiMAX後送り', sbair_post: 'SBAir後送り',
+  }
 
   for (const { field, doneField, label } of CHECK_FIELDS) {
     // Build OR conditions for all date formats
@@ -73,7 +78,7 @@ export async function GET(req: NextRequest) {
     )
     for (const row of rows) {
       const msgs = notifyMap.get(row.user_id) ?? []
-      const typeLabel = row.type === 'sonet' ? 'So-net' : row.type === 'nifty' ? '@nifty光' : row.type === 'wimax_post' ? 'WiMAX後送り' : 'WiMAX直せち'
+      const typeLabel = TYPE_LABEL[row.type] ?? row.type
       msgs.push(`${row.name} (${typeLabel}) の${label}`)
       notifyMap.set(row.user_id, msgs)
     }

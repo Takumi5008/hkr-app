@@ -44,10 +44,21 @@ export default async function DashboardPage() {
     [session.userId, currentYear, currentMonth, twoAgo.year, twoAgo.month]
   )
 
+  // フォロー対応の判定対象（開通表の種別ごとに、日付が一致する未対応案件を拾う）
+  const FOLLOW_QUERIES = [
+    { type: 'sonet',        field: 'construction_date',  typeLabel: 'So-net',        fieldLabel: '工事日当日' },
+    { type: 'nifty',        field: 'construction_date',  typeLabel: '@nifty光',      fieldLabel: '工事日当日' },
+    { type: 'sbhikari',     field: 'construction_date',  typeLabel: 'SB光',          fieldLabel: '工事日当日' },
+    { type: 'wimax_direct', field: 'week_after',         typeLabel: 'WiMAX直せち',   fieldLabel: '獲得後1週間後' },
+    { type: 'sbair_direct', field: 'week_after',         typeLabel: 'SBAir直せち',   fieldLabel: '獲得後1週間後' },
+    { type: 'wimax_post',   field: 'week_after_delivery', typeLabel: 'WiMAX後送り',  fieldLabel: '受取日1週間後' },
+    { type: 'sbair_post',   field: 'week_after_delivery', typeLabel: 'SBAir後送り',  fieldLabel: '受取日1週間後' },
+  ] as const
+
   // Run all today's task condition queries in parallel
   // ※ フォロー対応の各クエリは対応する *_done フラグが立っている（/activation で対応済みにした）
   //   案件は除外する。これがないと対応済みでも日付が一致する限り毎日出続けてしまう。
-  const [shiftRows, progressRows, calendarRows, sonetRows, niftyRows, directRows, postRows] = await Promise.all([
+  const [shiftRows, progressRows, calendarRows, ...followRowsList] = await Promise.all([
     dbQuery(
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
@@ -60,22 +71,12 @@ export default async function DashboardPage() {
       `SELECT status FROM opening_calendar WHERE user_id = $1 AND year = $2 AND month = $3`,
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
-    dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`,
-      [session.userId, ...todayFmts]
-    ).catch(() => []),
-    dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`,
-      [session.userId, ...todayFmts]
-    ).catch(() => []),
-    dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_done = 0`,
-      [session.userId, ...todayFmts]
-    ).catch(() => []),
-    dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_delivery_done = 0`,
-      [session.userId, ...todayFmts]
-    ).catch(() => []),
+    ...FOLLOW_QUERIES.map((fq) =>
+      dbQuery(
+        `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='${fq.type}' AND ar.${fq.field} IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.${fq.field}_done = 0`,
+        [session.userId, ...todayFmts]
+      ).catch(() => [])
+    ),
   ])
 
   // 行動表: 今日がシフトの日か
@@ -93,12 +94,9 @@ export default async function DashboardPage() {
 
 
   // 開通表確認 / フォロー対応 (自分の分のみ)
-  const followAlerts: FollowAlert[] = [
-    ...(sonetRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-    ...(niftyRows as any[]).map((r: any) => ({ name: r.name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })),
-    ...(directRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-    ...(postRows as any[]).map((r: any) => ({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
-  ]
+  const followAlerts: FollowAlert[] = FOLLOW_QUERIES.flatMap((fq, i) =>
+    (followRowsList[i] as any[]).map((r: any) => ({ name: r.name, typeLabel: fq.typeLabel, fieldLabel: fq.fieldLabel }))
+  )
   const hasFollowToday = followAlerts.length > 0
 
   // 月次振り返り: 今月の第1月曜〜第1金曜が受付期間

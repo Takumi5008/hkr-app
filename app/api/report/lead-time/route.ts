@@ -5,8 +5,11 @@ import { dbQuery } from '@/lib/db'
 const LEAD_TIME_LABELS: Record<string, string> = {
   sonet: 'So-net',
   nifty: '@nifty光',
+  sbhikari: 'SB光',
   wimax_post: 'WiMAX後送り',
   wimax_direct: 'WiMAX直せち',
+  sbair_post: 'SBAir後送り',
+  sbair_direct: 'SBAir直せち',
 }
 
 export async function GET(req: NextRequest) {

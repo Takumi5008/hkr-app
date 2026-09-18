@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
          (p.activation_type = 'sonet' AND ar.type = 'sonet')
          OR (p.activation_type = 'wimax' AND ar.type IN ('wimax_direct', 'wimax_post'))
          OR (p.activation_type = 'nifty' AND ar.type = 'nifty')
+         OR (p.activation_type = 'sbhikari' AND ar.type = 'sbhikari')
+         OR (p.activation_type = 'sbair' AND ar.type IN ('sbair_direct', 'sbair_post'))
        )
      )
      WHERE p.activation_type IS NOT NULL

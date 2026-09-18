@@ -53,20 +53,28 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
   type FollowItem = { name: string; staffName: string; typeLabel: string; fieldLabel: string }
+  const FOLLOW_QUERIES = [
+    { type: 'sonet',        field: 'construction_date',  typeLabel: 'So-net',        fieldLabel: '工事日当日' },
+    { type: 'nifty',        field: 'construction_date',  typeLabel: '@nifty光',      fieldLabel: '工事日当日' },
+    { type: 'sbhikari',     field: 'construction_date',  typeLabel: 'SB光',          fieldLabel: '工事日当日' },
+    { type: 'wimax_direct', field: 'week_after',         typeLabel: 'WiMAX直せち',   fieldLabel: '獲得後1週間後' },
+    { type: 'sbair_direct', field: 'week_after',         typeLabel: 'SBAir直せち',   fieldLabel: '獲得後1週間後' },
+    { type: 'wimax_post',   field: 'week_after_delivery', typeLabel: 'WiMAX後送り',  fieldLabel: '受取日1週間後' },
+    { type: 'sbair_post',   field: 'week_after_delivery', typeLabel: 'SBAir後送り',  fieldLabel: '受取日1週間後' },
+  ] as const
   let followAlerts: FollowItem[] = []
   if (isCurrentMonth) try {
-    const [sonetRows, niftyRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_done = 0`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_delivery_done = 0`, todayFmts),
-    ])
-    followAlerts = [
-      ...sonetRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
-      ...niftyRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })),
-      ...directRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })),
-      ...postRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })),
-    ]
+    const followRowsList = await Promise.all(
+      FOLLOW_QUERIES.map((fq) =>
+        dbQuery<{ name: string; staff_name: string }>(
+          `SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='${fq.type}' AND ar.${fq.field} IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.${fq.field}_done = 0`,
+          todayFmts
+        )
+      )
+    )
+    followAlerts = FOLLOW_QUERIES.flatMap((fq, i) =>
+      followRowsList[i].map((r) => ({ name: r.name, staffName: r.staff_name, typeLabel: fq.typeLabel, fieldLabel: fq.fieldLabel }))
+    )
   } catch {}
 
   let total = 0

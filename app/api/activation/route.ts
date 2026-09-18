@@ -38,16 +38,16 @@ async function syncCalendar(userId: number, recordId: number) {
   let shouldSync = false
   let activationDate = ''
 
-  if (rec.type === 'sonet' || rec.type === 'nifty') {
-    // So-net / @nifty光: 解除⭕️ or 開通⭕️のいずれかで反映
+  if (rec.type === 'sonet' || rec.type === 'nifty' || rec.type === 'sbhikari') {
+    // So-net / @nifty光 / SB光: 解除⭕️ or 開通⭕️のいずれかで反映
     shouldSync = rec.cancel === '○' || rec.activation === '○'
     activationDate = rec.construction_date
-  } else if (rec.type === 'wimax_direct') {
-    // WiMAX直せち: 獲得日＝開通日
+  } else if (rec.type === 'wimax_direct' || rec.type === 'sbair_direct') {
+    // WiMAX直せち / SBAir直せち: 獲得日＝開通日
     shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
     activationDate = rec.date
   } else {
-    // WiMAX後送り: 配送日＝開通日
+    // WiMAX後送り / SBAir後送り: 配送日＝開通日
     shouldSync = rec.delivery_date_done >= 1
     activationDate = rec.delivery_date
   }
@@ -57,7 +57,7 @@ async function syncCalendar(userId: number, recordId: number) {
     return
   }
 
-  const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : '🏠'
+  const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : rec.type === 'sbhikari' ? '💡' : rec.type === 'sbair_direct' || rec.type === 'sbair_post' ? '📶' : '🏠'
   const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
   // M/D 形式 → YYYY-MM-DD に正規化

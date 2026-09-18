@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Save, X } from 'lucide
 import TableScrollContainer from '@/components/TableScrollContainer'
 import { useConfirm } from '@/components/useConfirm'
 
-type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'nifty' | 'all'
+type ActivationType = 'sonet' | 'wimax_post' | 'wimax_direct' | 'nifty' | 'sbhikari' | 'sbair_direct' | 'sbair_post' | 'all'
 
 type ActivationRecord = {
   id: number
@@ -113,6 +113,54 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'activation', label: '開通' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
+  // SB光: So-net / @nifty光と同じ構成（工事日ベース）
+  sbhikari: [
+    { key: 'name', label: '名前' },
+    { key: 'date', label: '日にち' },
+    { key: 'line', label: '回線' },
+    { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
+    { key: 'neg_apply', label: '申込時ネガキャン' },
+    { key: 'neg_cancel', label: '解除時ネガキャン' },
+    { key: 'fm', label: 'FM' },
+    { key: 'week_after', label: '獲得1週間後' },
+    { key: 'day_before_construction', label: '工事日前日' },
+    { key: 'construction_date', label: '工事日' },
+    { key: 'construction_time', label: '工事時間帯' },
+    { key: 'construction_type', label: '工事' },
+    { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
+  ],
+  // SBAir直せち: WiMAX直せちと同じ構成（獲得日ベース）
+  sbair_direct: [
+    { key: 'name', label: '名前' },
+    { key: 'date', label: '日にち' },
+    { key: 'line', label: '回線' },
+    { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
+    { key: 'neg_apply', label: '申込時ネガキャン' },
+    { key: 'neg_cancel', label: '解除時ネガキャン' },
+    { key: 'fm', label: 'FM' },
+    { key: 'week_after', label: '獲得1週間後' },
+    { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
+  ],
+  // SBAir後送り: WiMAX後送りと同じ構成（受取日ベース）
+  sbair_post: [
+    { key: 'name', label: '名前' },
+    { key: 'date', label: '日にち' },
+    { key: 'line', label: '回線' },
+    { key: 'cancel', label: '解除' },
+    { key: 'callback_info', label: '解除アポ/折り返し' },
+    { key: 'neg_apply', label: '申込時ネガキャン' },
+    { key: 'neg_cancel', label: '解除時ネガキャン' },
+    { key: 'fm', label: 'FM' },
+    { key: 'day_before_delivery', label: '受け取り日前日' },
+    { key: 'delivery_date', label: '受取日' },
+    { key: 'week_after_delivery', label: '受け取り1週間後' },
+    { key: 'activation', label: '開通' },
+    { key: 'cancel_reason', label: 'キャンセル理由' },
+  ],
 }
 
 const TYPE_LABELS: Record<ActivationType, string> = {
@@ -120,6 +168,9 @@ const TYPE_LABELS: Record<ActivationType, string> = {
   wimax_post: 'WiMAX後送り',
   wimax_direct: 'WiMAX直せち',
   nifty: '@nifty光',
+  sbhikari: 'SB光',
+  sbair_direct: 'SBAir直せち',
+  sbair_post: 'SBAir後送り',
   all: '一覧',
 }
 
@@ -150,6 +201,9 @@ const TYPE_NA_FIELDS: Record<Exclude<ActivationType, 'all'>, (keyof ActivationRe
   wimax_post:   ['week_after', 'day_before_construction', 'construction_date'],
   wimax_direct: ['day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'],
   nifty:        ['day_before_delivery', 'delivery_date', 'week_after_delivery'],
+  sbhikari:     ['day_before_delivery', 'delivery_date', 'week_after_delivery'],
+  sbair_direct: ['day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'],
+  sbair_post:   ['week_after', 'day_before_construction', 'construction_date'],
 }
 
 type User = { id: number; name: string; role: string }

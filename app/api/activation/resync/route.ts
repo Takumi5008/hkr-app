@@ -67,15 +67,15 @@ export async function POST(req: NextRequest) {
     let shouldSync = false
     let activationDate = ''
 
-    if (rec.type === 'sonet' || rec.type === 'nifty') {
+    if (rec.type === 'sonet' || rec.type === 'nifty' || rec.type === 'sbhikari') {
       // 解除⭕️ or 開通⭕️のいずれかで反映
       shouldSync = rec.cancel === '○' || rec.activation === '○'
       activationDate = rec.construction_date
-    } else if (rec.type === 'wimax_direct') {
+    } else if (rec.type === 'wimax_direct' || rec.type === 'sbair_direct') {
       shouldSync = !!(rec.date && rec.date !== '-' && rec.date !== '未定' && rec.date.trim() !== '')
       activationDate = rec.date  // 直せちは獲得日＝開通日なので+7日しない
     } else {
-      // wimax_post
+      // wimax_post / sbair_post
       shouldSync = rec.delivery_date_done >= 1
       activationDate = rec.delivery_date  // 後送りは配送日そのまま
     }
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       continue
     }
 
-    const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : '🏠'
+    const lineType = rec.type === 'sonet' ? '🍑' : rec.type === 'nifty' ? '🐏' : rec.type === 'sbhikari' ? '💡' : rec.type === 'sbair_direct' || rec.type === 'sbair_post' ? '📶' : '🏠'
     const status = rec.activation === '○' ? '○' : rec.activation === '×' ? '×' : ''
 
     // M/D 形式 → 2026-MM-DD に正規化（全て2026年として扱う）

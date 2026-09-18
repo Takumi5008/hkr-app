@@ -887,6 +887,8 @@ export default function InputPage() {
                       <option value="sonet">So-net系</option>
                       <option value="wimax">WiMAX系</option>
                       <option value="nifty">@nifty光系</option>
+                      <option value="sbair">SBAir系</option>
+                      <option value="sbhikari">SB光系</option>
                     </select>
                     <button
                       onClick={() => { setEditingId(p.id); setEditingName(p.name); setProductError('') }}
