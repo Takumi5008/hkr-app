@@ -105,13 +105,14 @@ export default function ProgressPage() {
   }, [showAll, year, month, canViewAll])
 
   useEffect(() => {
-    if (!isKomoriya || showAll || isViewingOther) return
+    if (!isKomoriya || showAll) return
     setGoalLoading(true)
-    fetch(`/api/my/day-productivity?year=${year}&month=${month}&months=${goalMonths}`)
+    const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
+    fetch(`/api/my/day-productivity?year=${year}&month=${month}&months=${goalMonths}${userParam}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setGoalData(d))
       .finally(() => setGoalLoading(false))
-  }, [isKomoriya, showAll, isViewingOther, year, month, goalMonths])
+  }, [isKomoriya, showAll, selectedUserId, year, month, goalMonths])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
@@ -282,10 +283,15 @@ export default function ProgressPage() {
       {!showAll && (
       <>
       {/* 目標算出ツール（小守谷さん専用） */}
-      {isKomoriya && !isViewingOther && (
+      {isKomoriya && (
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold text-gray-700">目標算出ツール</p>
+            <div>
+              <p className="text-sm font-bold text-gray-700">目標算出ツール</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {isViewingOther ? `${members.find((m) => m.id === selectedUserId)?.name ?? ''}さんの実績` : '自分の実績'}を基準に算出
+              </p>
+            </div>
             <select
               value={goalMonths}
               onChange={(e) => setGoalMonths(Number(e.target.value))}

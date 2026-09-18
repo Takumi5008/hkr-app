@@ -24,6 +24,11 @@ export async function GET(req: NextRequest) {
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
   const count = Math.min(12, Math.max(1, parseInt(searchParams.get('months') ?? '3')))
 
+  // マネージャー・管理者・閲覧者は他メンバーの実績も参照可能
+  const isManager = session.role === 'manager' || session.role === 'admin' || session.role === 'viewer'
+  const userIdParam = searchParams.get('userId')
+  const targetUserId = isManager && userIdParam ? parseInt(userIdParam) : session.userId
+
   const targets = pastMonths(year, month, count)
 
   const rows = await dbQuery<{ y: number; m: number; cancel: number; work_days: number }>(
@@ -35,7 +40,7 @@ export async function GET(req: NextRequest) {
      WHERE user_id = $1
        AND (${targets.map((_, i) => `(EXTRACT(YEAR FROM date::date) = $${i * 2 + 2} AND EXTRACT(MONTH FROM date::date) = $${i * 2 + 3})`).join(' OR ')})
      GROUP BY y, m`,
-    [session.userId, ...targets.flatMap((t) => [t.year, t.month])]
+    [targetUserId, ...targets.flatMap((t) => [t.year, t.month])]
   )
 
   const rowMap = new Map(rows.map((r) => [`${r.y}-${r.m}`, r]))
