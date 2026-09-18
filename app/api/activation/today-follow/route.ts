@@ -39,34 +39,34 @@ export async function GET(req: NextRequest) {
 
   const items: TodayFollowItem[] = []
 
-  // So-net: 工事日当日（開通❌除外）
+  // So-net: 工事日当日（開通❌除外、対応済み除外）
   const sonetRows = await dbQuery<{ name: string }>(
     `SELECT name FROM activation_records
-     WHERE user_id = $1 AND type = 'sonet' AND construction_date IN (${ph}) AND (activation IS NULL OR activation != '×')`,
+     WHERE user_id = $1 AND type = 'sonet' AND construction_date IN (${ph}) AND (activation IS NULL OR activation != '×') AND construction_date_done = 0`,
     [session.userId, ...formats]
   )
   for (const r of sonetRows) items.push({ name: r.name, typeLabel: 'So-net', fieldLabel: '工事日当日' })
 
-  // @nifty光: 工事日当日（開通❌除外）
+  // @nifty光: 工事日当日（開通❌除外、対応済み除外）
   const niftyRows = await dbQuery<{ name: string }>(
     `SELECT name FROM activation_records
-     WHERE user_id = $1 AND type = 'nifty' AND construction_date IN (${ph}) AND (activation IS NULL OR activation != '×')`,
+     WHERE user_id = $1 AND type = 'nifty' AND construction_date IN (${ph}) AND (activation IS NULL OR activation != '×') AND construction_date_done = 0`,
     [session.userId, ...formats]
   )
   for (const r of niftyRows) items.push({ name: r.name, typeLabel: '@nifty光', fieldLabel: '工事日当日' })
 
-  // WiMAX直せち: 獲得後1週間後（開通❌除外）
+  // WiMAX直せち: 獲得後1週間後（開通❌除外、対応済み除外）
   const directRows = await dbQuery<{ name: string }>(
     `SELECT name FROM activation_records
-     WHERE user_id = $1 AND type = 'wimax_direct' AND week_after IN (${ph}) AND (activation IS NULL OR activation != '×')`,
+     WHERE user_id = $1 AND type = 'wimax_direct' AND week_after IN (${ph}) AND (activation IS NULL OR activation != '×') AND week_after_done = 0`,
     [session.userId, ...formats]
   )
   for (const r of directRows) items.push({ name: r.name, typeLabel: 'WiMAX直せち', fieldLabel: '獲得後1週間後' })
 
-  // WiMAX後送り: 受取日1週間後（開通❌除外）
+  // WiMAX後送り: 受取日1週間後（開通❌除外、対応済み除外）
   const postRows = await dbQuery<{ name: string }>(
     `SELECT name FROM activation_records
-     WHERE user_id = $1 AND type = 'wimax_post' AND week_after_delivery IN (${ph}) AND (activation IS NULL OR activation != '×')`,
+     WHERE user_id = $1 AND type = 'wimax_post' AND week_after_delivery IN (${ph}) AND (activation IS NULL OR activation != '×') AND week_after_delivery_done = 0`,
     [session.userId, ...formats]
   )
   for (const r of postRows) items.push({ name: r.name, typeLabel: 'WiMAX後送り', fieldLabel: '受取日1週間後' })

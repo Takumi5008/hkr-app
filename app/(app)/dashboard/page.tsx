@@ -45,6 +45,8 @@ export default async function DashboardPage() {
   )
 
   // Run all today's task condition queries in parallel
+  // ※ フォロー対応の各クエリは対応する *_done フラグが立っている（/activation で対応済みにした）
+  //   案件は除外する。これがないと対応済みでも日付が一致する限り毎日出続けてしまう。
   const [shiftRows, progressRows, calendarRows, sonetRows, niftyRows, directRows, postRows] = await Promise.all([
     dbQuery(
       `SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3`,
@@ -59,19 +61,19 @@ export default async function DashboardPage() {
       [session.userId, currentYear, currentMonth]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_done = 0`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
     dbQuery(
-      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`,
+      `SELECT ar.name FROM activation_records ar WHERE ar.user_id = $1 AND ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_delivery_done = 0`,
       [session.userId, ...todayFmts]
     ).catch(() => []),
   ])

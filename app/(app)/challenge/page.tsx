@@ -1,5 +1,6 @@
 import { dbQuery } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { getJSTParts } from '@/lib/hkr'
 import { redirect } from 'next/navigation'
 import TeamChallengeCard from '@/components/TeamChallengeCard'
 import WeeklyRankingCard from '@/components/WeeklyRankingCard'
@@ -12,10 +13,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 // 業務月：25日以降は当月、24日以前は前月
-function getBusinessMonth(d: Date): { year: number; month: number } {
-  if (d.getDate() >= 25) return { year: d.getFullYear(), month: d.getMonth() + 1 }
-  if (d.getMonth() === 0) return { year: d.getFullYear() - 1, month: 12 }
-  return { year: d.getFullYear(), month: d.getMonth() }
+function getBusinessMonth({ year, month, day }: { year: number; month: number; day: number }): { year: number; month: number } {
+  if (day >= 25) return { year, month }
+  if (month === 1) return { year: year - 1, month: 12 }
+  return { year, month: month - 1 }
 }
 
 // 業務期間ラベル: month=5 → "5/25〜6/24"
@@ -28,8 +29,9 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   if (!session.userId) redirect('/login')
 
   const params = await searchParams
-  const now = new Date()
-  const bm = getBusinessMonth(now)
+  // サーバーはUTCで動くため、JSTの日付を明示的に取り出す
+  const todayJST = getJSTParts()
+  const bm = getBusinessMonth(todayJST)
   const year = params.year ? parseInt(params.year) : bm.year
   const month = params.month ? parseInt(params.month) : bm.month
   const isCurrentMonth = year === bm.year && month === bm.month
@@ -38,13 +40,15 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 }
   const isNextFuture = nextMonth.year > bm.year || (nextMonth.year === bm.year && nextMonth.month > bm.month)
 
-  const day = now.getDate()
-
-  const mm = String(month).padStart(2, '0')
-  const dd = String(day).padStart(2, '0')
+  // フォロー対応の「本日」判定は実際の暦日（今月・今日）で行う。
+  // 業務月(month/year、25日ルールで前月にずれることがある)を使うと、
+  // 日だけ実際の今日のまま・月だけ1ヶ月ずれた日付と誤って一致してしまうため分けている。
+  const { year: realYear, month: realMonth, day: realDay } = todayJST
+  const rmm = String(realMonth).padStart(2, '0')
+  const rdd = String(realDay).padStart(2, '0')
   const todayFmts = [
-    `${year}-${mm}-${dd}`, `${year}/${mm}/${dd}`, `${year}/${month}/${day}`,
-    `${month}/${day}`, `${mm}/${dd}`, `${month}月${day}日`, `${mm}月${dd}日`,
+    `${realYear}-${rmm}-${rdd}`, `${realYear}/${rmm}/${rdd}`, `${realYear}/${realMonth}/${realDay}`,
+    `${realMonth}/${realDay}`, `${rmm}/${rdd}`, `${realMonth}月${realDay}日`, `${rmm}月${rdd}日`,
   ]
   const ph = todayFmts.map((_, i) => `$${i + 1}`).join(', ')
 
@@ -52,10 +56,10 @@ export default async function ChallengePage({ searchParams }: { searchParams: Pr
   let followAlerts: FollowItem[] = []
   if (isCurrentMonth) try {
     const [sonetRows, niftyRows, directRows, postRows] = await Promise.all([
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
-      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×')`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='sonet' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='nifty' AND ar.construction_date IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.construction_date_done = 0`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_direct' AND ar.week_after IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_done = 0`, todayFmts),
+      dbQuery<{ name: string; staff_name: string }>(`SELECT ar.name, u.name AS staff_name FROM activation_records ar JOIN users u ON u.id = ar.user_id WHERE ar.type='wimax_post' AND ar.week_after_delivery IN (${ph}) AND (ar.activation IS NULL OR ar.activation != '×') AND ar.week_after_delivery_done = 0`, todayFmts),
     ])
     followAlerts = [
       ...sonetRows.map((r: { name: string; staff_name: string }) => ({ name: r.name, staffName: r.staff_name, typeLabel: 'So-net', fieldLabel: '工事日当日' })),
