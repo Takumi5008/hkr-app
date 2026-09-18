@@ -13,6 +13,7 @@ interface Team {
 interface User {
   id: number
   name: string
+  is_active?: boolean
 }
 
 interface Props {
@@ -177,7 +178,7 @@ export default function TeamAdminPanel({ year, month, currentTeams, allUsers, on
                             : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                         }`}
                       >
-                        {selected ? '✓ ' : '　'}{u.name}
+                        {selected ? '✓ ' : '　'}{u.name}{u.is_active === false ? '（退会）' : ''}
                       </button>
                     )
                   })}

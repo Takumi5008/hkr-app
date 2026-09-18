@@ -472,7 +472,7 @@ export default function ProgressPage() {
                       year={year}
                       month={month}
                       currentTeams={challengeTeams}
-                      allUsers={members.filter((m) => m.is_active !== false)}
+                      allUsers={allProgress.map((m) => ({ id: m.id, name: m.name, is_active: m.isActive }))}
                       onChange={fetchAllData}
                     />
                   </div>
