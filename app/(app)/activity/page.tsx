@@ -19,6 +19,8 @@ type DailyActivity = {
   wimax: number
   sonet: number
   nifty: number
+  sbair: number
+  sbhikari: number
   cancel: number
 }
 
@@ -34,6 +36,8 @@ const emptyForm = {
   wimax: '',
   sonet: '',
   nifty: '',
+  sbair: '',
+  sbhikari: '',
   cancel: '',
 }
 
@@ -49,6 +53,8 @@ const COLS = [
   { key: 'wimax',           label: 'WiMAX',     formKey: 'wimax',          type: 'number' },
   { key: 'sonet',           label: 'So-net',    formKey: 'sonet',          type: 'number' },
   { key: 'nifty',           label: '@nifty',    formKey: 'nifty',          type: 'number' },
+  { key: 'sbair',           label: 'SBAir',     formKey: 'sbair',          type: 'number' },
+  { key: 'sbhikari',        label: 'SB光',      formKey: 'sbhikari',       type: 'number' },
   { key: 'cancel',          label: '解除',      formKey: 'cancel',         type: 'number' },
 ] as const
 
@@ -79,7 +85,7 @@ export default function ActivityPage() {
     user_id: number; name: string; work_days: number; work_hours: number
     pin_count: number; pingpong_count: number; intercom_count: number
     face_other: number; face_unused: number; hearing_sheet: number
-    consent_form: number; wimax: number; sonet: number; nifty: number; cancel: number
+    consent_form: number; wimax: number; sonet: number; nifty: number; sbair: number; sbhikari: number; cancel: number
   }
   const [allData, setAllData] = useState<AllMemberRow[]>([])
 
@@ -161,6 +167,8 @@ export default function ActivityPage() {
       wimax:         rec?.wimax          ? String(rec.wimax)          : '',
       sonet:         rec?.sonet          ? String(rec.sonet)          : '',
       nifty:         rec?.nifty          ? String(rec.nifty)          : '',
+      sbair:         rec?.sbair          ? String(rec.sbair)          : '',
+      sbhikari:      rec?.sbhikari       ? String(rec.sbhikari)       : '',
       cancel:        rec?.cancel         ? String(rec.cancel)         : '',
     })
   }
@@ -186,6 +194,8 @@ export default function ActivityPage() {
         wimax:         parseInt(form.wimax)         || 0,
         sonet:         parseInt(form.sonet)         || 0,
         nifty:         parseInt(form.nifty)         || 0,
+        sbair:         parseInt(form.sbair)         || 0,
+        sbhikari:      parseInt(form.sbhikari)      || 0,
         cancel:        parseInt(form.cancel)        || 0,
       }),
     })
@@ -213,6 +223,8 @@ export default function ActivityPage() {
     wimax:          records.reduce((s, r) => s + r.wimax, 0),
     sonet:          records.reduce((s, r) => s + r.sonet, 0),
     nifty:          records.reduce((s, r) => s + r.nifty, 0),
+    sbair:          records.reduce((s, r) => s + r.sbair, 0),
+    sbhikari:       records.reduce((s, r) => s + r.sbhikari, 0),
     cancel:         records.reduce((s, r) => s + r.cancel, 0),
   }
 
@@ -309,6 +321,8 @@ export default function ActivityPage() {
           { label: 'WiMAX',          key: 'wimax' as const },
           { label: 'So-net',         key: 'sonet' as const },
           { label: '@nifty',         key: 'nifty' as const },
+          { label: 'SBAir',          key: 'sbair' as const },
+          { label: 'SB光',           key: 'sbhikari' as const },
           { label: '解除',            key: 'cancel' as const },
           { label: '生産性',          key: '_productivity' as const },
           { label: 'PP→対面',         key: '_r_pp_face' as const },
@@ -332,23 +346,25 @@ export default function ActivityPage() {
           wimax: acc.wimax + r.wimax,
           sonet: acc.sonet + r.sonet,
           nifty: acc.nifty + r.nifty,
+          sbair: acc.sbair + r.sbair,
+          sbhikari: acc.sbhikari + r.sbhikari,
           cancel: acc.cancel + r.cancel,
-        }), { work_days:0, work_hours:0, pin_count:0, pingpong_count:0, intercom_count:0, face_other:0, face_unused:0, hearing_sheet:0, consent_form:0, wimax:0, sonet:0, nifty:0, cancel:0 })
+        }), { work_days:0, work_hours:0, pin_count:0, pingpong_count:0, intercom_count:0, face_other:0, face_unused:0, hearing_sheet:0, consent_form:0, wimax:0, sonet:0, nifty:0, sbair:0, sbhikari:0, cancel:0 })
 
         const pct = (num: number, den: number) =>
           den > 0 ? `${Math.round(num / den * 1000) / 10}%` : '-'
 
         const getCell = (r: typeof allData[0], key: typeof ALL_COLS[number]['key']): number | string => {
-          if (key === '_total') return r.wimax + r.sonet + r.nifty
+          if (key === '_total') return r.wimax + r.sonet + r.nifty + r.sbair + r.sbhikari
           if (key === '_productivity') {
             if (r.work_days === 0) return '-'
-            return Math.round((r.wimax + r.sonet + r.nifty) / r.work_days * 100) / 100
+            return Math.round((r.wimax + r.sonet + r.nifty + r.sbair + r.sbhikari) / r.work_days * 100) / 100
           }
           const face = r.face_other + r.face_unused
           if (key === '_r_pp_face')       return pct(face, r.pingpong_count)
           if (key === '_r_face_hs')       return pct(r.hearing_sheet, face)
           if (key === '_r_hs_consent')    return pct(r.consent_form, r.hearing_sheet)
-          if (key === '_r_consent_total') return pct(r.wimax + r.sonet + r.nifty, r.consent_form)
+          if (key === '_r_consent_total') return pct(r.wimax + r.sonet + r.nifty + r.sbair + r.sbhikari, r.consent_form)
           if (key === 'work_hours') return Number(r.work_hours)
           return r[key]
         }
@@ -391,12 +407,12 @@ export default function ActivityPage() {
                     <td className="border border-gray-100 px-3 py-2.5 font-bold text-teal-700 sticky left-0 bg-teal-50/60">合計</td>
                     {ALL_COLS.map((c) => {
                       let v: number | string = 0
-                      if (c.key === '_total') v = totals.wimax + totals.sonet + totals.nifty
-                      else if (c.key === '_productivity') v = totals.work_days > 0 ? Math.round((totals.wimax + totals.sonet + totals.nifty) / totals.work_days * 100) / 100 : '-'
+                      if (c.key === '_total') v = totals.wimax + totals.sonet + totals.nifty + totals.sbair + totals.sbhikari
+                      else if (c.key === '_productivity') v = totals.work_days > 0 ? Math.round((totals.wimax + totals.sonet + totals.nifty + totals.sbair + totals.sbhikari) / totals.work_days * 100) / 100 : '-'
                       else if (c.key === '_r_pp_face')       v = pct(totals.face_other + totals.face_unused, totals.pingpong_count)
                       else if (c.key === '_r_face_hs')       v = pct(totals.hearing_sheet, totals.face_other + totals.face_unused)
                       else if (c.key === '_r_hs_consent')    v = pct(totals.consent_form, totals.hearing_sheet)
-                      else if (c.key === '_r_consent_total') v = pct(totals.wimax + totals.sonet + totals.nifty, totals.consent_form)
+                      else if (c.key === '_r_consent_total') v = pct(totals.wimax + totals.sonet + totals.nifty + totals.sbair + totals.sbhikari, totals.consent_form)
                       else v = totals[c.key as keyof typeof totals]
                       return (
                         <td key={c.label} className="border border-gray-100 px-2 py-2.5 text-center font-bold text-teal-700">
@@ -550,6 +566,8 @@ export default function ActivityPage() {
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.wimax)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.sonet)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.nifty)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.sbair)}</td>
+                      <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.sbhikari)}</td>
                       <td className="border border-gray-100 px-2 py-3 text-center">{cell(rec?.cancel)}</td>
                       {!isOtherMember && (
                         <td className="border border-gray-100 px-2 py-3 text-center" onClick={(e) => e.stopPropagation()}>
@@ -569,7 +587,7 @@ export default function ActivityPage() {
 
                     {isEditing && (
                       <tr>
-                        <td colSpan={13} className="border border-gray-100 p-3 bg-teal-50/40">
+                        <td colSpan={15} className="border border-gray-100 p-3 bg-teal-50/40">
                           <form onSubmit={handleSave} className="space-y-2">
                             <p className="text-sm font-bold text-teal-700">
                               {year}年{month}月{day}日（{['日','月','火','水','木','金','土'][new Date(year, month - 1, day).getDay()]}）の記入
@@ -621,6 +639,8 @@ export default function ActivityPage() {
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.wimax)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.sonet)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.nifty)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.sbair)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.sbhikari)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(totals.cancel)}</td>
                 <td className="border border-gray-100" />
               </tr>
@@ -639,6 +659,8 @@ export default function ActivityPage() {
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.wimax / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.sonet / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.nifty / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.sbair / daysWithData * 10) / 10 : 0)}</td>
+                <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.sbhikari / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100 px-2 py-2.5 text-center text-xs">{totalCell(daysWithData > 0 ? Math.round(totals.cancel / daysWithData * 10) / 10 : 0)}</td>
                 <td className="border border-gray-100" />
               </tr>

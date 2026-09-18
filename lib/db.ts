@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 28
+const DB_VERSION = 29
 let initialized = false
 
 async function initDb() {
@@ -506,6 +506,10 @@ async function initDb() {
       UNIQUE(user_id, day_of_week, period)
     )
   `)
+
+  // v29: 行動表に SBAir / SB光 を追加（@niftyの右）
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS sbair INTEGER NOT NULL DEFAULT 0`)
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS sbhikari INTEGER NOT NULL DEFAULT 0`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }
