@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest) {
   const col = `${field}_done`
   const val = typeof done === 'number' ? Math.min(2, Math.max(0, done)) : (done ? 1 : 0)
   await dbRun(
-    `UPDATE activation_records SET ${col} = $1 WHERE id = $2 AND user_id = $3`,
+    `UPDATE activation_records SET ${col} = $1, updated_at = TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') WHERE id = $2 AND user_id = $3`,
     [val, id, session.userId]
   )
   return NextResponse.json({ ok: true })
