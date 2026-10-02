@@ -60,21 +60,23 @@ export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
-  const { date, workHours, pinCount, pingpongCount, intercomCount, faceOther, faceUnused, hearingSheet, consentForm, wimax, sonet, nifty, sbair, sbhikari, cancel } = await req.json()
+  const { date, workHours, pinCount, pingpongCount, intercomCount, faceOther, faceUnused, hearingSheet, consentForm, wimax, sonet, nifty, sbair, sbhikari, cancel, planText, reflectionText } = await req.json()
 
   // 全角数字を半角に正規化してからDBへ
   const normWorkHours = String(workHours ?? '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
 
   await dbRun(
     `INSERT INTO daily_activity
-     (user_id, date, work_hours, pin_count, pingpong_count, intercom_count, face_other, face_unused, hearing_sheet, consent_form, wimax, sonet, nifty, sbair, sbhikari, cancel)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+     (user_id, date, work_hours, pin_count, pingpong_count, intercom_count, face_other, face_unused, hearing_sheet, consent_form, wimax, sonet, nifty, sbair, sbhikari, cancel, plan_text, reflection_text, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      ON CONFLICT (user_id, date) DO UPDATE SET
        work_hours=$3, pin_count=$4, pingpong_count=$5, intercom_count=$6,
        face_other=$7, face_unused=$8, hearing_sheet=$9, consent_form=$10,
-       wimax=$11, sonet=$12, nifty=$13, sbair=$14, sbhikari=$15, cancel=$16`,
+       wimax=$11, sonet=$12, nifty=$13, sbair=$14, sbhikari=$15, cancel=$16,
+       plan_text=$17, reflection_text=$18, updated_at=TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`,
     [session.userId, date, normWorkHours, toInt(pinCount), toInt(pingpongCount), toInt(intercomCount),
-     toInt(faceOther), toInt(faceUnused), toInt(hearingSheet), toInt(consentForm), toInt(wimax), toInt(sonet), toInt(nifty), toInt(sbair), toInt(sbhikari), toInt(cancel)]
+     toInt(faceOther), toInt(faceUnused), toInt(hearingSheet), toInt(consentForm), toInt(wimax), toInt(sonet), toInt(nifty), toInt(sbair), toInt(sbhikari), toInt(cancel),
+     String(planText ?? ''), String(reflectionText ?? '')]
   )
 
   const rows = await dbQuery(

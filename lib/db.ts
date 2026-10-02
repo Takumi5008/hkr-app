@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 29
+const DB_VERSION = 30
 let initialized = false
 
 async function initDb() {
@@ -510,6 +510,22 @@ async function initDb() {
   // v29: 行動表に SBAir / SB光 を追加（@niftyの右）
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS sbair INTEGER NOT NULL DEFAULT 0`)
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS sbhikari INTEGER NOT NULL DEFAULT 0`)
+
+  // v30: 案件の更新履歴・確認ワークフロー・委託費、行動表の予定/振り返りを追加
+  // cancel_appt / callback_info / construction_time はコードから既に参照されているが
+  // マイグレーションに存在しなかったため、まっさらな環境向けに合わせて安全化する
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS cancel_appt TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS callback_info TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS construction_time TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS cancel_date TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS committed_fee INTEGER NOT NULL DEFAULT 0`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS reviewer_id INTEGER`)
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS reviewed_at TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS plan_text TEXT NOT NULL DEFAULT ''`)
+  await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS reflection_text TEXT NOT NULL DEFAULT ''`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

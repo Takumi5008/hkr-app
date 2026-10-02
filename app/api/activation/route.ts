@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { addPointTransaction, removePointTransaction } from '@/lib/points'
+import { toInt } from '@/lib/parse'
 
 // WiMAX獲得日ベースの開通日計算：2026年5月以前は獲得日そのまま、6月以降は+7日
 function wimaxActivationDate(baseDate: string, year: number, month: number): string {
@@ -143,20 +144,23 @@ export async function POST(req: NextRequest) {
   const { year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
     week_after_delivery, activation, construction_type,
-    cancel_appt, callback_info, construction_time } = body
+    cancel_appt, callback_info, construction_time, cancel_date, committed_fee } = body
 
   const result = await dbRun(
     `INSERT INTO activation_records
      (user_id, year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
       week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
-      week_after_delivery, activation, construction_type, cancel_appt, callback_info, construction_time)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+      week_after_delivery, activation, construction_type, cancel_appt, callback_info, construction_time,
+      cancel_date, committed_fee, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,
+             TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      RETURNING id`,
     [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '',
      neg_apply ?? '', neg_cancel ?? '', fm ?? '', week_after ?? '',
      day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
-     construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '']
+     construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '',
+     cancel_date ?? '', toInt(committed_fee)]
   )
 
   if (result.id) await syncCalendar(session.userId as number, result.id)
@@ -171,7 +175,7 @@ export async function PATCH(req: NextRequest) {
   const { id, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
     week_after_delivery, activation, construction_type,
-    cancel_appt, callback_info, construction_time } = body
+    cancel_appt, callback_info, construction_time, cancel_date, committed_fee } = body
 
   const isManager = session.role === 'manager' || session.role === 'admin'
 
@@ -191,12 +195,14 @@ export async function PATCH(req: NextRequest) {
      name=$1, date=$2, line=$3, cancel=$4, cancel_reason=$5, neg_apply=$6, neg_cancel=$7, fm=$8,
      week_after=$9, day_before_construction=$10, construction_date=$11,
      day_before_delivery=$12, delivery_date=$13, week_after_delivery=$14, activation=$15,
-     construction_type=$16, cancel_appt=$17, callback_info=$18, construction_time=$19
-     WHERE id=$20`,
+     construction_type=$16, cancel_appt=$17, callback_info=$18, construction_time=$19,
+     cancel_date=$20, committed_fee=$21, updated_at=TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+     WHERE id=$22`,
     [name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
      week_after ?? '', day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
      construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '',
+     cancel_date ?? '', toInt(committed_fee),
      id]
   )
 
