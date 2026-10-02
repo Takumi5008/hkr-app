@@ -44,6 +44,7 @@ const monthOptions = getPastMonths(12).map(({ year, month, label }) => ({
 export default function AdminCasesPage() {
   const [role, setRole] = useState('')
   const [roleLoaded, setRoleLoaded] = useState(false)
+  const [myUserId, setMyUserId] = useState<number | null>(null)
   const [members, setMembers] = useState<User[]>([])
   const [monthFilter, setMonthFilter] = useState('all')
   const [userFilter, setUserFilter] = useState('all')
@@ -52,11 +53,24 @@ export default function AdminCasesPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.json()).then(d => { setRole(d.role ?? ''); setRoleLoaded(true) })
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
+      setRole(d.role ?? '')
+      setMyUserId(d.id ?? d.userId ?? null)
+      setRoleLoaded(true)
+    })
     fetch('/api/users').then(r => (r.ok ? r.json() : [])).then((users: User[]) => {
       setMembers(Array.isArray(users) ? users.filter(u => u.role !== 'viewer') : [])
     }).catch(() => {})
   }, [])
+
+  const confirmItem = async (id: number) => {
+    setData((prev) => prev ? { ...prev, items: prev.items.filter((it) => !(it.id === id && it.reason === 'review_pending')) } : prev)
+    await fetch('/api/activation/review', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, confirmed: true }),
+    })
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -152,9 +166,19 @@ export default function AdminCasesPage() {
                     <p className="text-xs text-gray-400">{TYPE_LABELS[it.type] ?? it.type} ・ 担当: {it.staff_name}</p>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-gray-400">最終更新</p>
-                  <p className="text-xs text-gray-600 font-medium">{it.updated_at ? it.updated_at.slice(0, 10) : '未更新'}</p>
+                <div className="text-right shrink-0 flex items-center gap-3">
+                  <div>
+                    <p className="text-xs text-gray-400">最終更新</p>
+                    <p className="text-xs text-gray-600 font-medium">{it.updated_at ? it.updated_at.slice(0, 10) : '未更新'}</p>
+                  </div>
+                  {it.reason === 'review_pending' && it.user_id !== myUserId && (
+                    <button
+                      onClick={() => confirmItem(it.id)}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-500 text-white hover:bg-violet-600 transition"
+                    >
+                      確認する
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
