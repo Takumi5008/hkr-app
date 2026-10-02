@@ -39,14 +39,17 @@ export default function ProgressPage() {
   const [allLoading, setAllLoading] = useState(false)
   const [challengeTeams, setChallengeTeams] = useState<ChallengeTeam[]>([])
   const canViewAll = role === 'manager' || role === 'admin' || role === 'viewer'
-  const isKomoriya = myEmail === 'komotaku0508@gmail.com'
-
-  // 目標算出ツール（小守谷さんのみ表示）：過去の解除生産性（件/日）から目標解除数を逆算する
+  // 目標算出ツール：過去実績（解除生産性・開通生産性・開通率）から翌月目標を逆算する「提案値」表示
   const [goalMonths, setGoalMonths] = useState(3)
   const [goalWorkDaysInput, setGoalWorkDaysInput] = useState('')
   const [goalData, setGoalData] = useState<{
-    months: { year: number; month: number; cancel: number; workDays: number; dayProductivity: number | null }[]
+    months: {
+      year: number; month: number; cancel: number; activationCount: number; workDays: number
+      dayProductivity: number | null; activationDayProductivity: number | null; openingRate: number | null
+    }[]
     avgDayProductivity: number | null
+    avgActivationDayProductivity: number | null
+    avgOpeningRate: number | null
   } | null>(null)
   const [goalLoading, setGoalLoading] = useState(false)
 
@@ -58,6 +61,8 @@ export default function ProgressPage() {
   const isViewingOther = selectedUserId !== null
   // カレンダー操作がロックされるか（メンバーかつ締切過ぎの場合のみ。マネージャー・管理者は他メンバー閲覧中でも編集可）
   const calendarLocked = deadlinePassed && role !== 'manager' && role !== 'admin'
+  // 目標算出ツールの表示可否：マネージャー・管理者は誰を見ていても使える／一般メンバーは自分の閲覧時のみ
+  const canUseGoalTool = role === 'manager' || role === 'admin' || !isViewingOther
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -105,14 +110,14 @@ export default function ProgressPage() {
   }, [showAll, year, month, canViewAll])
 
   useEffect(() => {
-    if (!isKomoriya || showAll) return
+    if (!canUseGoalTool || showAll) return
     setGoalLoading(true)
     const userParam = selectedUserId ? `&userId=${selectedUserId}` : ''
     fetch(`/api/my/day-productivity?year=${year}&month=${month}&months=${goalMonths}${userParam}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setGoalData(d))
       .finally(() => setGoalLoading(false))
-  }, [isKomoriya, showAll, selectedUserId, year, month, goalMonths])
+  }, [canUseGoalTool, showAll, selectedUserId, year, month, goalMonths])
 
   const prevMonth = () => { if (month === 1) { setYear((y) => y - 1); setMonth(12) } else setMonth((m) => m - 1) }
   const nextMonth = () => { if (month === 12) { setYear((y) => y + 1); setMonth(1) } else setMonth((m) => m + 1) }
@@ -282,8 +287,8 @@ export default function ProgressPage() {
 
       {!showAll && (
       <>
-      {/* 目標算出ツール（小守谷さん専用） */}
-      {isKomoriya && (
+      {/* 目標算出ツール */}
+      {canUseGoalTool && (
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -312,15 +317,20 @@ export default function ProgressPage() {
               <div className="flex flex-wrap gap-x-3 gap-y-1 mb-3">
                 {goalData.months.map((m) => (
                   <span key={`${m.year}-${m.month}`} className="text-xs text-gray-400">
-                    {m.month}月：{m.dayProductivity !== null ? `${m.dayProductivity}件/日` : 'データなし'}
+                    {m.month}月：解除{m.cancel}件・開通{m.activationCount}件・稼働{m.workDays}日
+                    {m.openingRate !== null && `（開通率${m.openingRate}%）`}
                   </span>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mb-1">
+                過去実績の解除生産性（加重平均）：<span className="font-bold text-gray-800">{goalData.avgDayProductivity}件/日</span>
+              </p>
               <p className="text-xs text-gray-500 mb-3">
-                過去実績の解除生産性（平均）：<span className="font-bold text-gray-800">{goalData.avgDayProductivity}件/日</span>
+                過去実績の開通生産性（加重平均）：<span className="font-bold text-gray-800">{goalData.avgActivationDayProductivity ?? '-'}件/日</span>
+                　開通率（加重平均）：<span className="font-bold text-gray-800">{goalData.avgOpeningRate !== null ? `${goalData.avgOpeningRate}%` : '-'}</span>
               </p>
               <div className="flex items-center gap-3">
-                <label className="text-sm font-bold text-gray-700 w-24 shrink-0">稼働日数</label>
+                <label className="text-sm font-bold text-gray-700 w-24 shrink-0">来月の稼働日数</label>
                 <input
                   type="number"
                   min={0}
@@ -332,14 +342,26 @@ export default function ProgressPage() {
                 <span className="text-sm text-gray-500">日</span>
               </div>
               {goalWorkDaysInput !== '' && (
-                <p className="text-sm text-gray-700 mt-3 bg-orange-50 rounded-xl px-4 py-2.5">
-                  推奨目標：<span className="text-xl font-black text-orange-600">
-                    {Math.round(goalData.avgDayProductivity * (parseInt(goalWorkDaysInput) || 0))}
-                  </span>件
-                  <span className="text-xs text-gray-400 ml-2">
-                    （{goalData.avgDayProductivity}件/日 × {goalWorkDaysInput}日）
-                  </span>
-                </p>
+                <div className="mt-3 bg-orange-50 rounded-xl px-4 py-3 space-y-1.5">
+                  <p className="text-sm text-gray-700">
+                    解除目標（提案）：<span className="text-xl font-black text-orange-600">
+                      {Math.round(goalData.avgDayProductivity * (parseInt(goalWorkDaysInput) || 0))}
+                    </span>件
+                    <span className="text-xs text-gray-400 ml-2">（{goalData.avgDayProductivity}件/日 × {goalWorkDaysInput}日）</span>
+                  </p>
+                  {goalData.avgActivationDayProductivity !== null && (
+                    <p className="text-sm text-gray-700">
+                      開通目標（提案）：<span className="text-xl font-black text-indigo-600">
+                        {Math.round(goalData.avgActivationDayProductivity * (parseInt(goalWorkDaysInput) || 0))}
+                      </span>件
+                      <span className="text-xs text-gray-400 ml-2">（{goalData.avgActivationDayProductivity}件/日 × {goalWorkDaysInput}日）</span>
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    1日あたり目標（解除）：<span className="font-bold text-gray-700">{goalData.avgDayProductivity}件/日</span>
+                    　この提案値は表示のみです。実際の「解除目標」欄には手動で入力してください。
+                  </p>
+                </div>
               )}
             </>
           )}
