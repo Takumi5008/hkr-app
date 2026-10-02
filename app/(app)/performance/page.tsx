@@ -72,9 +72,6 @@ export default function PerformancePage() {
   const [selectedName, setSelectedName] = useState<string>('')
   const [selectedPersonalYear, setSelectedPersonalYear] = useState<number>(0)
   const [memberMonthly, setMemberMonthly] = useState<{member_name:string;year:number;month:number;total_activation:number;total_cancel:number;work_days:number;work_hours:number;opening_count:number}[]>([])
-  const [editingPersonalMonth, setEditingPersonalMonth] = useState<number | null>(null)
-  const [personalMonthForm, setPersonalMonthForm] = useState({ totalActivation: '', totalCancel: '', workDays: '', workHours: '', openingCount: '' })
-  const [savingPersonalMonth, setSavingPersonalMonth] = useState(false)
   const [tab, setTab] = useState<'personal' | 'team'>('personal')
   const [personalTab, setPersonalTab] = useState<'view' | 'add' | 'delete' | 'sort'>('view')
   const isManager = role === 'manager' || role === 'admin'
@@ -224,39 +221,6 @@ export default function PerformancePage() {
       { activation: 0, cancel: 0, opening: 0 }
     )
 
-  const openEditPersonalMonth = (month: number, data?: { total_activation: number; total_cancel: number; work_days: number; work_hours: number; opening_count: number }) => {
-    setEditingPersonalMonth(month)
-    setPersonalMonthForm({
-      totalActivation: data && data.total_activation > 0 ? String(data.total_activation) : '',
-      totalCancel: data && data.total_cancel > 0 ? String(data.total_cancel) : '',
-      workDays: data && data.work_days > 0 ? String(data.work_days) : '',
-      workHours: data && data.work_hours > 0 ? String(data.work_hours) : '',
-      openingCount: data && data.opening_count !== null && data.opening_count !== undefined ? String(data.opening_count) : '',
-    })
-  }
-
-  const handleSavePersonalMonth = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingPersonalMonth || !selectedName || !selectedPersonalYear) return
-    setSavingPersonalMonth(true)
-    const res = await fetch('/api/performance/member-monthly', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        memberName: selectedName,
-        year: selectedPersonalYear,
-        month: editingPersonalMonth,
-        totalActivation: parseInt(personalMonthForm.totalActivation) || 0,
-        totalCancel: parseInt(personalMonthForm.totalCancel) || 0,
-        workDays: parseInt(personalMonthForm.workDays) || 0,
-        workHours: parseFloat(personalMonthForm.workHours) || 0,
-        openingCount: personalMonthForm.openingCount === '' ? null : (parseInt(personalMonthForm.openingCount) || 0),
-      }),
-    })
-    if (res.ok) setMemberMonthly(await res.json())
-    setSavingPersonalMonth(false)
-    setEditingPersonalMonth(null)
-  }
 
   const openEditMonth = (r: MonthlyRecord) => {
     setEditingMonth({ year: r.year, month: r.month })
@@ -895,6 +859,9 @@ export default function PerformancePage() {
                 <div className="mt-4">
                   {/* 月別リスト */}
                   <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                      <p className="text-xs text-gray-400">獲得数・開通数・解除数は開通表、稼働日数・稼働時間は行動表から自動反映されます</p>
+                    </div>
                     <div className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 gap-2">
                       <span className="text-xs font-semibold text-gray-400 w-8">月</span>
                       <div className="flex-1 grid grid-cols-10 gap-1 text-right">
@@ -909,117 +876,49 @@ export default function PerformancePage() {
                         <span className="text-xs font-semibold text-gray-400">開通時間生産性</span>
                         <span className="text-xs font-semibold text-gray-400">稼働生産性</span>
                       </div>
-                      {isManager && <div className="w-7 shrink-0" />}
                     </div>
                     <div className="divide-y divide-gray-50">
                       {filteredMemberMonthly.map((r) => {
                         const hasData = r.total_activation > 0 || r.total_cancel > 0 || r.work_days > 0
-                        const isEditing = editingPersonalMonth === r.month
                         const hkr = (r.total_cancel > 0 && r.opening_count !== null && r.opening_count !== undefined) ? `${Math.round((r.opening_count / r.total_cancel) * 1000) / 10}%` : '-'
                         const cancelTimeProductivity = r.work_hours > 0 ? (r.total_cancel / r.work_hours).toFixed(2) : '-'
                         const openingTimeProductivity = r.work_hours > 0 && (r.opening_count ?? 0) > 0 ? ((r.opening_count ?? 0) / r.work_hours).toFixed(2) : '-'
                         const openingDayProductivity = r.work_days > 0 && (r.opening_count ?? 0) > 0 ? ((r.opening_count ?? 0) / r.work_days).toFixed(2) : '-'
                         return (
-                          <div key={r.month}>
-                            <div className={`flex items-center px-4 py-3 gap-2 ${!hasData && !isEditing ? 'opacity-40' : ''}`}>
-                              <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
-                              <div className="flex-1 grid grid-cols-10 gap-1 text-right">
-                                <span className="text-sm font-bold text-violet-600">
-                                  {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
-                                </span>
-                                <span className="text-sm font-bold text-indigo-600">
-                                  {r.opening_count !== null && r.opening_count !== undefined ? <>{r.opening_count}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
-                                </span>
-                                <span className="text-sm font-bold text-violet-600">
-                                  {hasData ? <>{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
-                                </span>
-                                <span className="text-sm font-bold text-gray-600">
-                                  {hasData ? <>{r.work_days}<span className="text-xs font-normal text-gray-400">日</span></> : '-'}
-                                </span>
-                                <span className="text-sm font-bold text-gray-600">
-                                  {r.work_hours > 0 ? <>{r.work_hours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
-                                </span>
-                                <span className="text-sm font-semibold text-emerald-600">
-                                  {hasData ? cancelRate(r.total_activation, r.total_cancel) : '-'}
-                                </span>
-                                <span className="text-sm font-semibold text-teal-600">
-                                  {hkr}
-                                </span>
-                                <span className="text-sm font-semibold text-orange-500">
-                                  {cancelTimeProductivity}
-                                </span>
-                                <span className="text-sm font-semibold text-teal-500">
-                                  {openingTimeProductivity}
-                                </span>
-                                <span className="text-sm font-semibold text-blue-500">
-                                  {openingDayProductivity}
-                                </span>
-                              </div>
-                              {isManager && !isEditing && (
-                                <button onClick={() => openEditPersonalMonth(r.month, r)}
-                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-violet-500 hover:bg-violet-50 transition shrink-0">
-                                  <Pencil size={13} />
-                                </button>
-                              )}
-                              {isManager && isEditing && (
-                                <button onClick={() => setEditingPersonalMonth(null)}
-                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-gray-500 transition shrink-0">
-                                  <X size={13} />
-                                </button>
-                              )}
+                          <div key={r.month} className={`flex items-center px-4 py-3 gap-2 ${!hasData ? 'opacity-40' : ''}`}>
+                            <span className="text-sm font-semibold text-gray-700 w-8">{r.month}月</span>
+                            <div className="flex-1 grid grid-cols-10 gap-1 text-right">
+                              <span className="text-sm font-bold text-violet-600">
+                                {hasData ? <>{r.total_activation}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                              </span>
+                              <span className="text-sm font-bold text-indigo-600">
+                                {r.opening_count !== null && r.opening_count !== undefined ? <>{r.opening_count}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                              </span>
+                              <span className="text-sm font-bold text-violet-600">
+                                {hasData ? <>{r.total_cancel}<span className="text-xs font-normal text-gray-400">件</span></> : '-'}
+                              </span>
+                              <span className="text-sm font-bold text-gray-600">
+                                {hasData ? <>{r.work_days}<span className="text-xs font-normal text-gray-400">日</span></> : '-'}
+                              </span>
+                              <span className="text-sm font-bold text-gray-600">
+                                {r.work_hours > 0 ? <>{r.work_hours}<span className="text-xs font-normal text-gray-400">h</span></> : '-'}
+                              </span>
+                              <span className="text-sm font-semibold text-emerald-600">
+                                {hasData ? cancelRate(r.total_activation, r.total_cancel) : '-'}
+                              </span>
+                              <span className="text-sm font-semibold text-teal-600">
+                                {hkr}
+                              </span>
+                              <span className="text-sm font-semibold text-orange-500">
+                                {cancelTimeProductivity}
+                              </span>
+                              <span className="text-sm font-semibold text-teal-500">
+                                {openingTimeProductivity}
+                              </span>
+                              <span className="text-sm font-semibold text-blue-500">
+                                {openingDayProductivity}
+                              </span>
                             </div>
-
-                            {isEditing && (
-                              <form onSubmit={handleSavePersonalMonth} className="px-4 pb-4 bg-violet-50/40 space-y-2">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <label className="text-xs text-gray-500 mb-0.5 block">獲得数</label>
-                                    <input type="number" min={0} value={personalMonthForm.totalActivation}
-                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, totalActivation: e.target.value }))}
-                                      placeholder="0"
-                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-500 mb-0.5 block">開通数</label>
-                                    <input type="number" min={0} value={personalMonthForm.openingCount}
-                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, openingCount: e.target.value }))}
-                                      placeholder="0"
-                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-500 mb-0.5 block">解除数</label>
-                                    <input type="number" min={0} value={personalMonthForm.totalCancel}
-                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, totalCancel: e.target.value }))}
-                                      placeholder="0"
-                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-500 mb-0.5 block">稼働日数</label>
-                                    <input type="number" min={0} value={personalMonthForm.workDays}
-                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, workDays: e.target.value }))}
-                                      placeholder="0"
-                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                                  </div>
-                                  <div>
-                                    <label className="text-xs text-gray-500 mb-0.5 block">稼働時間（h）</label>
-                                    <input type="number" min={0} step="0.5" value={personalMonthForm.workHours}
-                                      onChange={(e) => setPersonalMonthForm((p) => ({ ...p, workHours: e.target.value }))}
-                                      placeholder="0"
-                                      className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400" />
-                                  </div>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button type="button" onClick={() => setEditingPersonalMonth(null)}
-                                    className="flex-1 py-1.5 border border-gray-200 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50 transition">
-                                    キャンセル
-                                  </button>
-                                  <button type="submit" disabled={savingPersonalMonth}
-                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-violet-500 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition">
-                                    <Save size={12} />{savingPersonalMonth ? '保存中...' : '保存'}
-                                  </button>
-                                </div>
-                              </form>
-                            )}
                           </div>
                         )
                       })}
