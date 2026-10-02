@@ -22,6 +22,8 @@ type DailyActivity = {
   sbair: number
   sbhikari: number
   cancel: number
+  plan_text: string
+  reflection_text: string
 }
 
 const emptyForm = {
@@ -39,6 +41,8 @@ const emptyForm = {
   sbair: '',
   sbhikari: '',
   cancel: '',
+  planText: '',
+  reflectionText: '',
 }
 
 const COLS = [
@@ -173,6 +177,8 @@ export default function ActivityPage() {
       sbair:         rec?.sbair          ? String(rec.sbair)          : '',
       sbhikari:      rec?.sbhikari       ? String(rec.sbhikari)       : '',
       cancel:        rec?.cancel         ? String(rec.cancel)         : '',
+      planText:      rec?.plan_text ?? '',
+      reflectionText: rec?.reflection_text ?? '',
     })
   }
 
@@ -200,6 +206,8 @@ export default function ActivityPage() {
         sbair:         parseInt(form.sbair)         || 0,
         sbhikari:      parseInt(form.sbhikari)      || 0,
         cancel:        parseInt(form.cancel)        || 0,
+        planText:      form.planText,
+        reflectionText: form.reflectionText,
       }),
     })
     if (res.ok) setRecords(await res.json())
@@ -610,6 +618,28 @@ export default function ActivityPage() {
                                   />
                                 </div>
                               ))}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">行動予定</label>
+                                <textarea
+                                  value={form.planText}
+                                  onChange={(e) => setForm((p) => ({ ...p, planText: e.target.value }))}
+                                  placeholder="今日やる予定のこと"
+                                  rows={2}
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-0.5 block">振り返り</label>
+                                <textarea
+                                  value={form.reflectionText}
+                                  onChange={(e) => setForm((p) => ({ ...p, reflectionText: e.target.value }))}
+                                  placeholder="やってみてどうだったか"
+                                  rows={2}
+                                  className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400"
+                                />
+                              </div>
                             </div>
                             <div className="flex gap-2 pt-1">
                               <button type="button" onClick={() => setEditingDay(null)}

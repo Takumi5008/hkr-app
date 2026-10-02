@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { getPastMonths } from '@/lib/hkr'
 
-type Reason = 'construction_unconfirmed' | 'activation_missing' | 'update_overdue' | 'review_pending'
+type Reason = 'construction_unconfirmed' | 'activation_missing' | 'update_overdue' | 'review_pending' | 'missing_activity'
 
 type OverviewItem = {
   id: number
@@ -23,6 +23,8 @@ type OverviewData = {
 
 type User = { id: number; name: string; role: string }
 
+type MissingDay = { user_id: number; name: string; day: number; date: string }
+
 const TYPE_LABELS: Record<string, string> = {
   sonet: 'So-net', nifty: '@nifty光', sbhikari: 'SB光',
   wimax_direct: 'WiMAX直せち', sbair_direct: 'SBAir直せち',
@@ -34,6 +36,7 @@ const REASON_TABS: { key: Reason; label: string; emoji: string }[] = [
   { key: 'activation_missing', label: '開通結果未入力', emoji: '📋' },
   { key: 'update_overdue', label: '更新期限超過', emoji: '⏰' },
   { key: 'review_pending', label: '他者確認待ち', emoji: '👀' },
+  { key: 'missing_activity', label: '行動表未入力', emoji: '📝' },
 ]
 
 const monthOptions = getPastMonths(12).map(({ year, month, label }) => ({
@@ -51,6 +54,8 @@ export default function AdminCasesPage() {
   const [reasonTab, setReasonTab] = useState<Reason>('construction_unconfirmed')
   const [data, setData] = useState<OverviewData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [missingDays, setMissingDays] = useState<MissingDay[]>([])
+  const [missingLoading, setMissingLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -87,6 +92,21 @@ export default function AdminCasesPage() {
       .catch(() => setLoading(false))
   }, [monthFilter, userFilter])
 
+  useEffect(() => {
+    setMissingLoading(true)
+    const params = new URLSearchParams()
+    if (monthFilter !== 'all') {
+      const [y, m] = monthFilter.split('-')
+      params.set('year', y)
+      params.set('month', String(parseInt(m, 10)))
+    }
+    if (userFilter !== 'all') params.set('userId', userFilter)
+    fetch(`/api/activity/missing?${params.toString()}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { setMissingDays(d?.missing ?? []); setMissingLoading(false) })
+      .catch(() => setMissingLoading(false))
+  }, [monthFilter, userFilter])
+
   if (!roleLoaded) return <div className="p-6 flex items-center justify-center min-h-screen"><p className="text-gray-400">読み込み中...</p></div>
   if (role === 'member') return <div className="p-6 text-center text-gray-400">このページはマネージャーのみ閲覧できます</div>
 
@@ -95,6 +115,7 @@ export default function AdminCasesPage() {
     activation_missing: data?.counts.activationMissing ?? 0,
     update_overdue: data?.counts.updateOverdue ?? 0,
     review_pending: data?.counts.reviewPending ?? 0,
+    missing_activity: missingDays.length,
   }
   const filteredItems = (data?.items ?? []).filter((it) => it.reason === reasonTab)
 
@@ -103,7 +124,7 @@ export default function AdminCasesPage() {
       <div className="bg-gradient-to-br from-rose-600 to-orange-500 rounded-2xl px-6 py-5 text-white shadow-lg">
         <p className="text-xs text-rose-100 uppercase tracking-widest mb-1">Case Review</p>
         <h1 className="text-2xl font-bold">案件確認</h1>
-        <p className="text-sm text-rose-100 mt-1">工事日未確認・開通結果未入力・更新期限超過・他者確認待ちの案件を自動抽出</p>
+        <p className="text-sm text-rose-100 mt-1">工事日未確認・開通結果未入力・更新期限超過・他者確認待ち・行動表未入力を自動抽出</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -129,7 +150,7 @@ export default function AdminCasesPage() {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {REASON_TABS.map((t) => (
           <button
             key={t.key}
@@ -148,7 +169,28 @@ export default function AdminCasesPage() {
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-700">{REASON_TABS.find((t) => t.key === reasonTab)?.label}の一覧</h2>
         </div>
-        {loading ? (
+        {reasonTab === 'missing_activity' ? (
+          missingLoading ? (
+            <p className="text-sm text-gray-400 text-center py-10">読み込み中...</p>
+          ) : missingDays.length === 0 ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-emerald-600">
+              <CheckCircle2 size={18} />
+              <p className="text-sm font-medium">未入力の行動表はありません</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {missingDays.map((d) => (
+                <div key={`${d.user_id}-${d.date}`} className="flex items-center justify-between px-4 py-3 gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <AlertCircle size={15} className="text-rose-400 shrink-0" />
+                    <p className="text-sm font-semibold text-gray-800">{d.name}</p>
+                  </div>
+                  <p className="text-xs text-gray-600 font-medium shrink-0">{d.date}（シフト提出済み・未記入）</p>
+                </div>
+              ))}
+            </div>
+          )
+        ) : loading ? (
           <p className="text-sm text-gray-400 text-center py-10">読み込み中...</p>
         ) : filteredItems.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-10 text-emerald-600">
