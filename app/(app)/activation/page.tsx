@@ -29,6 +29,12 @@ type ActivationRecord = {
   cancel_appt: string
   callback_info: string
   construction_time: string
+  cancel_date: string
+  committed_fee: number
+  updated_at: string
+  review_status: string
+  reviewer_id: number | null
+  reviewed_at: string
   fm_done: number
   week_after_done: number
   day_before_construction_done: number
@@ -48,6 +54,7 @@ const emptyRecord = {
   week_after: '', day_before_construction: '', construction_date: '',
   day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
   construction_type: '', cancel_appt: '', callback_info: '', construction_time: '',
+  cancel_date: '', committed_fee: '',
 }
 
 const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyRecord; label: string }[]> = {
@@ -56,6 +63,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
@@ -66,6 +74,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_post: [
@@ -73,6 +82,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
@@ -81,6 +91,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_direct: [
@@ -88,12 +99,14 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   nifty: [
@@ -101,6 +114,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
@@ -111,6 +125,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SB光: So-net / @nifty光と同じ構成（工事日ベース）
@@ -119,6 +134,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
@@ -129,6 +145,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir直せち: WiMAX直せちと同じ構成（獲得日ベース）
@@ -137,12 +154,14 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir後送り: WiMAX後送りと同じ構成（受取日ベース）
@@ -151,6 +170,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'date', label: '日にち' },
     { key: 'line', label: '回線' },
     { key: 'cancel', label: '解除' },
+    { key: 'cancel_date', label: '解除日' },
     { key: 'callback_info', label: '解除アポ/折り返し' },
     { key: 'neg_apply', label: '申込時ネガキャン' },
     { key: 'neg_cancel', label: '解除時ネガキャン' },
@@ -159,6 +179,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
 }
@@ -174,12 +195,14 @@ const TYPE_LABELS: Record<ActivationType, string> = {
   all: '一覧',
 }
 
-const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[] = [
+const LIST_COLS: { key: keyof ActivationRecord | 'type_label' | 'status_label'; label: string }[] = [
   { key: 'type_label',              label: '種別' },
+  { key: 'status_label',            label: '状態' },
   { key: 'name',                    label: '名前' },
   { key: 'date',                    label: '日にち' },
   { key: 'line',                    label: '回線' },
   { key: 'cancel',                  label: '解除' },
+  { key: 'cancel_date',             label: '解除日' },
   { key: 'callback_info',           label: '解除アポ/折り返し' },
   { key: 'neg_apply',               label: '申込時ネガキャン' },
   { key: 'neg_cancel',              label: '解除時ネガキャン' },
@@ -192,7 +215,9 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label'; label: string }[]
   { key: 'delivery_date',           label: '受取日' },
   { key: 'week_after_delivery',     label: '受け取り1週間後' },
   { key: 'activation',              label: '開通' },
+  { key: 'committed_fee',           label: '確定委託費' },
   { key: 'cancel_reason',           label: 'キャンセル理由' },
+  { key: 'updated_at',              label: '最終更新日' },
 ]
 
 // 各タイプで使用しないフィールド（一覧でハイフン表示）
@@ -419,6 +444,7 @@ export default function ActivationPage() {
       activation: rec.activation, construction_type: rec.construction_type ?? '',
       cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
       construction_time: rec.construction_time ?? '',
+      cancel_date: rec.cancel_date ?? '', committed_fee: rec.committed_fee ? String(rec.committed_fee) : '',
     })
   }
 
@@ -612,6 +638,7 @@ export default function ActivationPage() {
                         const isNegApply = c.key === 'neg_apply'
                         const isNegCancel = c.key === 'neg_cancel'
                         const isCancelReason = c.key === 'cancel_reason'
+                        const isStatusLabel = c.key === 'status_label'
                         const isDoneField = (DONE_KEYS as readonly string[]).includes(c.key)
                         const doneKey = `${c.key}_done` as keyof ActivationRecord
                         const doneVal = isDoneField ? (rec[doneKey] as number) : 0
@@ -657,6 +684,12 @@ export default function ActivationPage() {
                                   {doneEmoji(doneVal)}
                                 </button>
                               </div>
+                            ) : isStatusLabel ? (
+                              rec.activation === '○' || rec.activation === '×' ? (
+                                <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">完了</span>
+                              ) : (
+                                <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">未完了</span>
+                              )
                             ) : val ? (
                               c.key === 'date' && isToday ? (
                                 <div className="flex items-center justify-center gap-1">
@@ -832,7 +865,8 @@ export default function ActivationPage() {
           <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel', 'activation', 'cancel_reason'].includes(c.key)).map((c) => {
-              const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery'].includes(c.key)
+              const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery', 'cancel_date'].includes(c.key)
+              const isNumberField = c.key === 'committed_fee'
               const isUndecided = isDateField && form[c.key] === '未定'
               return (
                 <div key={c.key}>
@@ -852,9 +886,11 @@ export default function ActivationPage() {
                     <div className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">未定</div>
                   ) : (
                     <input
-                      type={isDateField ? 'date' : 'text'}
+                      type={isDateField ? 'date' : isNumberField ? 'number' : 'text'}
+                      min={isNumberField ? 0 : undefined}
                       value={form[c.key]}
                       onChange={f(c.key)}
+                      placeholder={isNumberField ? '0' : undefined}
                       className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-400"
                     />
                   )}
