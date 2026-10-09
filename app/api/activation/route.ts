@@ -180,10 +180,13 @@ export async function PATCH(req: NextRequest) {
   const isManager = session.role === 'manager' || session.role === 'admin'
 
   // マネージャーは他ユーザーのレコードも編集可、メンバーは自分のみ
-  const prev = await dbQueryOne<{ activation: string; cancel: string; neg_apply: string; neg_cancel: string; date: string; user_id: number }>(
+  // SELECT * で全カラムを取得しておき、body に無いフィールドは既存値を維持する
+  // （クイックトグルなど一部フィールドだけ送ってくる呼び出し元が、未送信フィールドを
+  // 空/0で消してしまわないようにするため）。
+  const prev = await dbQueryOne<Record<string, any>>(
     isManager
-      ? 'SELECT activation, cancel, neg_apply, neg_cancel, date, user_id FROM activation_records WHERE id=$1'
-      : 'SELECT activation, cancel, neg_apply, neg_cancel, date, user_id FROM activation_records WHERE id=$1 AND user_id=$2',
+      ? 'SELECT * FROM activation_records WHERE id=$1'
+      : 'SELECT * FROM activation_records WHERE id=$1 AND user_id=$2',
     isManager ? [id] : [id, session.userId]
   )
   if (!prev) return NextResponse.json({ ok: true })
@@ -198,11 +201,12 @@ export async function PATCH(req: NextRequest) {
      construction_type=$16, cancel_appt=$17, callback_info=$18, construction_time=$19,
      cancel_date=$20, committed_fee=$21, updated_at=TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
      WHERE id=$22`,
-    [name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '', neg_apply ?? '', neg_cancel ?? '', fm ?? '',
-     week_after ?? '', day_before_construction ?? '', construction_date ?? '',
-     day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
-     construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '',
-     cancel_date ?? '', toInt(committed_fee),
+    [name ?? prev.name ?? '', date ?? prev.date ?? '', line ?? prev.line ?? '', cancel ?? prev.cancel ?? '',
+     cancel_reason ?? prev.cancel_reason ?? '', neg_apply ?? prev.neg_apply ?? '', neg_cancel ?? prev.neg_cancel ?? '', fm ?? prev.fm ?? '',
+     week_after ?? prev.week_after ?? '', day_before_construction ?? prev.day_before_construction ?? '', construction_date ?? prev.construction_date ?? '',
+     day_before_delivery ?? prev.day_before_delivery ?? '', delivery_date ?? prev.delivery_date ?? '', week_after_delivery ?? prev.week_after_delivery ?? '', activation ?? prev.activation ?? '',
+     construction_type ?? prev.construction_type ?? '', cancel_appt ?? prev.cancel_appt ?? '', callback_info ?? prev.callback_info ?? '', construction_time ?? prev.construction_time ?? '',
+     cancel_date ?? prev.cancel_date ?? '', committed_fee !== undefined ? toInt(committed_fee) : (prev.committed_fee ?? 0),
      id]
   )
 
