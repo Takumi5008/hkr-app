@@ -31,21 +31,11 @@ export async function POST(req: NextRequest) {
     []
   )
 
-  // 苗字だけのエントリを削除（同一 user/year/month 内にフルネームが存在する場合）
-  await dbRun(
-    `DELETE FROM opening_calendar
-     WHERE id IN (
-       SELECT oc1.id FROM opening_calendar oc1
-       JOIN opening_calendar oc2
-         ON oc1.user_id = oc2.user_id
-         AND oc1.year = oc2.year
-         AND oc1.month = oc2.month
-         AND oc1.id != oc2.id
-         AND oc2.customer_name LIKE oc1.customer_name || '%'
-         AND char_length(oc2.customer_name) > char_length(oc1.customer_name)
-     )`,
-    []
-  )
+  // 「苗字だけのエントリを削除」という前方一致ヒューリスティックは撤去した。
+  // 別人の顧客名が偶然前方一致するだけで（例: 「ハマ」と「ハマダ」）正しいエントリが
+  // 削除されてしまうバグがあったため（/api/opening-calendar の表示フィルタにも同種の
+  // バグがあり、合わせて修正済み）。重複排除は下の DISTINCT ON（同名の完全一致）のみ
+  // で十分。
 
   // 同一 (user_id, customer_name, year, month) の重複エントリを物理削除
   // activation_record_id ありを優先し、古い手動入力の重複を除去する

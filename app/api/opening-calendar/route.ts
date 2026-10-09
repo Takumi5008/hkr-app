@@ -78,15 +78,11 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  // 苗字だけのエントリを除外（同じ結果内にフルネームが存在する場合）
-  const deduped = distinct.filter(row =>
-    !distinct.some(other =>
-      other.id !== row.id &&
-      other.customer_name.startsWith(row.customer_name) &&
-      other.customer_name.length > row.customer_name.length
-    )
-  )
-  return NextResponse.json(deduped)
+  // 「苗字だけのエントリを除外」という名前の前方一致ヒューリスティックは撤去した。
+  // 別人の顧客名が偶然前方一致するだけで（例: 「ハマ」と「ハマダ」）正しいエントリが
+  // 非表示になってしまうバグがあったため。重複排除は上の distinct（activation_record_id
+  // ベース）のみで十分。
+  return NextResponse.json(distinct)
 }
 
 export async function POST(req: NextRequest) {

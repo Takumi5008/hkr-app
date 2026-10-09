@@ -345,6 +345,7 @@ export default function ActivationPage() {
     activation: rec.activation, construction_type: rec.construction_type ?? '',
     cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
     construction_time: rec.construction_time ?? '',
+    cancel_date: rec.cancel_date ?? '', committed_fee: rec.committed_fee ?? 0,
     ...overrides,
   })
 
