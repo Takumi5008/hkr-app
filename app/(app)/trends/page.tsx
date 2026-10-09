@@ -66,27 +66,23 @@ export default function TrendsPage() {
   const hasData = chartData.some((d) => d.hkr !== null)
 
   const monthRows = months.map(({ year, month }) => {
-    let cancel = 0, activation = 0, expected = 0
+    let cancel = 0, activation = 0
     if (tab === '合算') {
       cancel     = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.cancel_count     ?? 0), 0)
       activation = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.activation_count ?? 0), 0)
-      expected   = products.reduce((sum, p) => sum + (records.find((r) => r.year === year && r.month === month && r.product === p)?.expected_opening  ?? 0), 0)
     } else {
       const r = records.find((r) => r.year === year && r.month === month && r.product === tab)
       cancel     = r?.cancel_count     ?? 0
       activation = r?.activation_count ?? 0
-      expected   = r?.expected_opening  ?? 0
     }
-    return { year, month, cancel, activation, expected, hkr: calcHKR(activation, cancel) }
+    return { year, month, cancel, activation, hkr: calcHKR(activation, cancel) }
   })
 
   const dataMonths = monthRows.filter((r) => r.cancel > 0)
   const totalCancel      = monthRows.reduce((s, r) => s + r.cancel, 0)
   const totalActivation  = monthRows.reduce((s, r) => s + r.activation, 0)
-  const totalExpected    = monthRows.reduce((s, r) => s + r.expected, 0)
   const avgCancel        = dataMonths.length > 0 ? Math.round(dataMonths.reduce((s, r) => s + r.cancel, 0)     / dataMonths.length * 10) / 10 : null
   const avgActivation    = dataMonths.length > 0 ? Math.round(dataMonths.reduce((s, r) => s + r.activation, 0) / dataMonths.length * 10) / 10 : null
-  const avgExpected      = dataMonths.length > 0 ? Math.round(dataMonths.reduce((s, r) => s + r.expected, 0)   / dataMonths.length * 10) / 10 : null
   const validHkrs = monthRows.filter((r) => r.hkr !== null).map((r) => r.hkr!)
   const avgHkr = validHkrs.length > 0 ? Math.round(validHkrs.reduce((a, b) => a + b, 0) / validHkrs.length * 10) / 10 : null
 
@@ -170,15 +166,13 @@ export default function TrendsPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-500">月</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">HKR</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">解除</th>
-                <th className="text-right px-4 py-3 font-medium text-indigo-500">見込み開通</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">開通</th>
-                <th className="text-right px-4 py-3 font-medium text-indigo-500">見込み委託費</th>
                 <th className="text-right px-4 py-3 font-medium text-emerald-600">委託費</th>
                 <th className="text-center px-4 py-3 font-medium text-gray-500">状態</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {monthRows.map(({ year, month, cancel, activation, expected, hkr }) => {
+              {monthRows.map(({ year, month, cancel, activation, hkr }) => {
                 const label = months.find((m) => m.year === year && m.month === month)?.label ?? ''
                 return (
                   <tr key={`${year}-${month}`} className="hover:bg-gray-50">
@@ -187,11 +181,7 @@ export default function TrendsPage() {
                       {hkr != null ? `${hkr}%` : '-'}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-600">{cancel > 0 ? cancel : '-'}</td>
-                    <td className="px-4 py-3 text-right text-indigo-500">{expected > 0 ? expected : '-'}</td>
                     <td className="px-4 py-3 text-right text-gray-600">{activation > 0 ? activation : '-'}</td>
-                    <td className="px-4 py-3 text-right text-indigo-500">
-                      {expected > 0 ? fmt(expected * COMMISSION) : '-'}
-                    </td>
                     <td className="px-4 py-3 text-right font-medium text-emerald-600">
                       {activation > 0 ? fmt(activation * COMMISSION) : '-'}
                     </td>
@@ -211,11 +201,7 @@ export default function TrendsPage() {
                   {avgHkr != null ? `${avgHkr}%` : '-'}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">{avgCancel ?? '-'}</td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-indigo-500">{avgExpected ?? '-'}</td>
                 <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">{avgActivation ?? '-'}</td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-indigo-500">
-                  {avgExpected != null ? fmt(Math.round(avgExpected) * COMMISSION) : '-'}
-                </td>
                 <td className="px-4 py-3 text-right text-sm font-semibold text-blue-700">
                   {avgActivation != null ? fmt(Math.round(avgActivation) * COMMISSION) : '-'}
                 </td>
@@ -225,11 +211,7 @@ export default function TrendsPage() {
                 <td className="px-4 py-3 text-sm font-semibold text-emerald-700">{period}ヶ月合計</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-400">-</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">{totalCancel > 0 ? totalCancel : '-'}</td>
-                <td className="px-4 py-3 text-right text-sm font-bold text-indigo-500">{totalExpected > 0 ? totalExpected : '-'}</td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">{totalActivation > 0 ? totalActivation : '-'}</td>
-                <td className="px-4 py-3 text-right text-sm font-bold text-indigo-500">
-                  {totalExpected > 0 ? fmt(totalExpected * COMMISSION) : '-'}
-                </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">
                   {totalActivation > 0 ? fmt(totalActivation * COMMISSION) : '-'}
                 </td>
