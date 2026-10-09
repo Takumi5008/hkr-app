@@ -69,8 +69,9 @@ export async function GET(req: NextRequest) {
     ),
     dbQueryOne<{ count: number }>(
       `SELECT COUNT(*)::int AS count FROM activation_records
-       WHERE type IN (${typesPh}) AND construction_date != '' AND construction_date != '未定'
-         AND construction_date_done != 1 AND (activation IS NULL OR activation = '')`,
+       WHERE type IN (${typesPh})
+         AND (construction_date = '' OR construction_date = '未定' OR construction_date IS NULL)
+         AND (activation IS NULL OR activation = '')`,
       CONSTRUCTION_TYPES
     ),
     dbQueryOne<{ count: number }>(

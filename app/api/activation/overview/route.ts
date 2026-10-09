@@ -44,18 +44,18 @@ export async function GET(req: NextRequest) {
 
   type Row = { id: number; type: string; name: string; user_id: number; staff_name: string; updated_at: string }
 
-  // 工事日未確認: 工事日ベースの種別で、工事日は入っているが construction_date_done が未確認(≠1)、かつ開通未確定
+  // 工事日未確認: 工事日ベースの種別で、工事日そのものが未定（空欄 or 「未定」）のまま、かつ開通未確定。
+  // 工事日が入力済み（確定している）ものは、確認済みチェックの有無に関係なく対象から外す。
   const typesPh = CONSTRUCTION_TYPES.map((_, i) => `$${i + 1}`).join(', ')
   const f1 = buildFilter(CONSTRUCTION_TYPES.length, year, month, userIdParam)
   const constructionUnconfirmed = await dbQuery<Row>(
     `SELECT ar.id, ar.type, ar.name, ar.user_id, u.name AS staff_name, ar.updated_at
      FROM activation_records ar JOIN users u ON u.id = ar.user_id
      WHERE ar.type IN (${typesPh})
-       AND ar.construction_date != '' AND ar.construction_date != '未定'
-       AND ar.construction_date_done != 1
+       AND (ar.construction_date = '' OR ar.construction_date = '未定' OR ar.construction_date IS NULL)
        AND (ar.activation IS NULL OR ar.activation = '')
        ${f1.sql}
-     ORDER BY ar.construction_date ASC`,
+     ORDER BY ar.id DESC`,
     [...CONSTRUCTION_TYPES, ...f1.params]
   )
 
