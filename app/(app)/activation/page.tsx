@@ -75,7 +75,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_post: [
@@ -92,7 +91,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_direct: [
@@ -107,7 +105,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   nifty: [
@@ -126,7 +123,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SB光: So-net / @nifty光と同じ構成（工事日ベース）
@@ -146,7 +142,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir直せち: WiMAX直せちと同じ構成（獲得日ベース）
@@ -162,7 +157,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir後送り: WiMAX後送りと同じ構成（受取日ベース）
@@ -180,7 +174,6 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
-    { key: 'committed_fee', label: '確定委託費' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
 }
@@ -216,7 +209,6 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label' | 'status_label'; 
   { key: 'delivery_date',           label: '受取日' },
   { key: 'week_after_delivery',     label: '受け取り1週間後' },
   { key: 'activation',              label: '開通' },
-  { key: 'committed_fee',           label: '確定委託費' },
   { key: 'cancel_reason',           label: 'キャンセル理由' },
   { key: 'updated_at',              label: '最終更新日' },
 ]
