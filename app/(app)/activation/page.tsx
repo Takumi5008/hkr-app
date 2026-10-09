@@ -260,7 +260,6 @@ export default function ActivationPage() {
   const [saving, setSaving] = useState(false)
   const [cancelModal, setCancelModal] = useState<{ rec: ActivationRecord; reason: string } | null>(null)
   const [myRole, setMyRole] = useState<string>('')
-  const [myUserId, setMyUserId] = useState<number | null>(null)
   const [members, setMembers] = useState<User[]>([])
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
   const [notifEnabled, setNotifEnabled] = useState(false)
@@ -395,20 +394,7 @@ export default function ActivationPage() {
         })
       }
     })
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => setMyUserId(d.id ?? d.userId ?? null)).catch(() => {})
   }, [])
-
-  const toggleReview = async (rec: ActivationRecord) => {
-    const next = rec.review_status === '○' ? false : true
-    setRecords((prev) => prev.map((r) => r.id === rec.id
-      ? { ...r, review_status: next ? '○' : '', reviewer_id: next ? (myUserId ?? r.reviewer_id) : null }
-      : r))
-    await fetch('/api/activation/review', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: rec.id, confirmed: next }),
-    })
-  }
 
   const parseDate = (s: string) => {
     if (!s) return 0
@@ -694,24 +680,7 @@ export default function ActivationPage() {
                               </div>
                             ) : isStatusLabel ? (
                               rec.activation === '○' || rec.activation === '×' ? (
-                                <div className="flex flex-col items-center gap-1">
-                                  <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">完了</span>
-                                  {rec.review_status === '○' ? (
-                                    <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">他者確認済み</span>
-                                  ) : (
-                                    <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600">未確認</span>
-                                  )}
-                                  {(myRole === 'manager' || myRole === 'admin') && rec.user_id !== myUserId && (
-                                    <button
-                                      onClick={() => toggleReview(rec)}
-                                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full transition ${
-                                        rec.review_status === '○' ? 'text-gray-400 hover:bg-gray-100' : 'bg-violet-500 text-white hover:bg-violet-600'
-                                      }`}
-                                    >
-                                      {rec.review_status === '○' ? '確認を取消' : '確認する'}
-                                    </button>
-                                  )}
-                                </div>
+                                <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">完了</span>
                               ) : (
                                 <span className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">未完了</span>
                               )

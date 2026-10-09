@@ -99,11 +99,10 @@ export default function AdminDashboardPage() {
 
           <div>
             <h2 className="text-sm font-bold text-gray-600 mb-2">案件確認</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <Card label="工事日未確認案件数" value={data.cases.constructionUnconfirmed} unit="件" href="/admin/cases" accent={data.cases.constructionUnconfirmed > 0 ? 'text-rose-600' : undefined} />
               <Card label="開通結果未入力案件数" value={data.cases.activationMissing} unit="件" href="/admin/cases" accent={data.cases.activationMissing > 0 ? 'text-rose-600' : undefined} />
               <Card label="更新漏れ件数（更新期限超過）" value={data.cases.updateOverdue} unit="件" href="/admin/cases" accent={data.cases.updateOverdue > 0 ? 'text-rose-600' : undefined} />
-              <Card label="他者確認待ち／確認漏れ件数" value={data.cases.reviewPending} unit="件" href="/admin/cases" accent={data.cases.reviewPending > 0 ? 'text-rose-600' : undefined} />
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { getPastMonths } from '@/lib/hkr'
 
-type Reason = 'construction_unconfirmed' | 'activation_missing' | 'update_overdue' | 'review_pending' | 'missing_activity'
+type Reason = 'construction_unconfirmed' | 'activation_missing' | 'update_overdue' | 'missing_activity'
 
 type OverviewItem = {
   id: number
@@ -19,6 +19,8 @@ type OverviewItem = {
 type OverviewData = {
   items: OverviewItem[]
   counts: { constructionUnconfirmed: number; activationMissing: number; updateOverdue: number; reviewPending: number }
+  // reviewPending は他者確認機能が不要になったため画面には出していないが、
+  // バックエンド（/api/activation/overview）は後方互換のため値を返し続けている
 }
 
 type User = { id: number; name: string; role: string }
@@ -35,7 +37,6 @@ const REASON_TABS: { key: Reason; label: string; emoji: string }[] = [
   { key: 'construction_unconfirmed', label: '工事日未確認', emoji: '🏗️' },
   { key: 'activation_missing', label: '開通結果未入力', emoji: '📋' },
   { key: 'update_overdue', label: '更新期限超過', emoji: '⏰' },
-  { key: 'review_pending', label: '他者確認待ち', emoji: '👀' },
   { key: 'missing_activity', label: '行動表未入力', emoji: '📝' },
 ]
 
@@ -47,7 +48,6 @@ const monthOptions = getPastMonths(12).map(({ year, month, label }) => ({
 export default function AdminCasesPage() {
   const [role, setRole] = useState('')
   const [roleLoaded, setRoleLoaded] = useState(false)
-  const [myUserId, setMyUserId] = useState<number | null>(null)
   const [members, setMembers] = useState<User[]>([])
   const [monthFilter, setMonthFilter] = useState('all')
   const [userFilter, setUserFilter] = useState('all')
@@ -60,22 +60,12 @@ export default function AdminCasesPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       setRole(d.role ?? '')
-      setMyUserId(d.id ?? d.userId ?? null)
       setRoleLoaded(true)
     })
     fetch('/api/users').then(r => (r.ok ? r.json() : [])).then((users: User[]) => {
       setMembers(Array.isArray(users) ? users.filter(u => u.role !== 'viewer') : [])
     }).catch(() => {})
   }, [])
-
-  const confirmItem = async (id: number) => {
-    setData((prev) => prev ? { ...prev, items: prev.items.filter((it) => !(it.id === id && it.reason === 'review_pending')) } : prev)
-    await fetch('/api/activation/review', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, confirmed: true }),
-    })
-  }
 
   useEffect(() => {
     setLoading(true)
@@ -114,7 +104,6 @@ export default function AdminCasesPage() {
     construction_unconfirmed: data?.counts.constructionUnconfirmed ?? 0,
     activation_missing: data?.counts.activationMissing ?? 0,
     update_overdue: data?.counts.updateOverdue ?? 0,
-    review_pending: data?.counts.reviewPending ?? 0,
     missing_activity: missingDays.length,
   }
   const filteredItems = (data?.items ?? []).filter((it) => it.reason === reasonTab)
@@ -124,7 +113,7 @@ export default function AdminCasesPage() {
       <div className="bg-gradient-to-br from-rose-600 to-orange-500 rounded-2xl px-6 py-5 text-white shadow-lg">
         <p className="text-xs text-rose-100 uppercase tracking-widest mb-1">Case Review</p>
         <h1 className="text-2xl font-bold">案件確認</h1>
-        <p className="text-sm text-rose-100 mt-1">工事日未確認・開通結果未入力・更新期限超過・他者確認待ち・行動表未入力を自動抽出</p>
+        <p className="text-sm text-rose-100 mt-1">工事日未確認・開通結果未入力・更新期限超過・行動表未入力を自動抽出</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -150,7 +139,7 @@ export default function AdminCasesPage() {
         </select>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {REASON_TABS.map((t) => (
           <button
             key={t.key}
@@ -208,19 +197,9 @@ export default function AdminCasesPage() {
                     <p className="text-xs text-gray-400">{TYPE_LABELS[it.type] ?? it.type} ・ 担当: {it.staff_name}</p>
                   </div>
                 </div>
-                <div className="text-right shrink-0 flex items-center gap-3">
-                  <div>
-                    <p className="text-xs text-gray-400">最終更新</p>
-                    <p className="text-xs text-gray-600 font-medium">{it.updated_at ? it.updated_at.slice(0, 10) : '未更新'}</p>
-                  </div>
-                  {it.reason === 'review_pending' && it.user_id !== myUserId && (
-                    <button
-                      onClick={() => confirmItem(it.id)}
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-500 text-white hover:bg-violet-600 transition"
-                    >
-                      確認する
-                    </button>
-                  )}
+                <div className="text-right shrink-0">
+                  <p className="text-xs text-gray-400">最終更新</p>
+                  <p className="text-xs text-gray-600 font-medium">{it.updated_at ? it.updated_at.slice(0, 10) : '未更新'}</p>
                 </div>
               </div>
             ))}
