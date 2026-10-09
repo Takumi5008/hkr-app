@@ -98,7 +98,8 @@ export default function AdminCasesPage() {
   }, [monthFilter, userFilter])
 
   if (!roleLoaded) return <div className="p-6 flex items-center justify-center min-h-screen"><p className="text-gray-400">読み込み中...</p></div>
-  if (role === 'member') return <div className="p-6 text-center text-gray-400">このページはマネージャーのみ閲覧できます</div>
+
+  const canViewOthers = role === 'manager' || role === 'admin' || role === 'viewer'
 
   const countMap: Record<Reason, number> = {
     construction_unconfirmed: data?.counts.constructionUnconfirmed ?? 0,
@@ -127,16 +128,18 @@ export default function AdminCasesPage() {
             <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
-        <select
-          value={userFilter}
-          onChange={(e) => setUserFilter(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white"
-        >
-          <option value="all">全員</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
-        </select>
+        {canViewOthers && (
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 bg-white"
+          >
+            <option value="all">全員</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

@@ -265,6 +265,21 @@ export default function Sidebar({ name, role }: SidebarProps) {
           </>
         )}
 
+        {role === 'member' && (
+          <Link
+            href="/admin/cases"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              pathname === '/admin/cases'
+                ? 'bg-white/15 text-white shadow-sm'
+                : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            <AlertCircle size={17} className={pathname === '/admin/cases' ? 'text-blue-300' : ''} />
+            案件確認
+          </Link>
+        )}
+
         {role === 'admin' && (
           <>
             <div className="pt-4 pb-1 px-3">

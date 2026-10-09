@@ -21,12 +21,13 @@ export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
   const isManager = session.role === 'manager' || session.role === 'admin' || session.role === 'viewer'
-  if (!isManager) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  if (!isManager && session.role !== 'member') return NextResponse.json({ error: '権限がありません' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
-  const userIdParam = searchParams.get('userId')
+  // member は自分のデータのみ閲覧可能（クライアント指定の userId を無視し強制的に自分に固定）
+  const userIdParam = isManager ? searchParams.get('userId') : String(session.userId)
 
   const dateLike = `${year}-${String(month).padStart(2, '0')}-%`
 
