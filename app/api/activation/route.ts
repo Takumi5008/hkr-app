@@ -144,15 +144,15 @@ export async function POST(req: NextRequest) {
   const { year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
     week_after_delivery, activation, construction_type,
-    cancel_appt, callback_info, construction_time, cancel_date, committed_fee } = body
+    cancel_appt, callback_info, construction_time, cancel_date, committed_fee, payment } = body
 
   const result = await dbRun(
     `INSERT INTO activation_records
      (user_id, year, month, type, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
       week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
       week_after_delivery, activation, construction_type, cancel_appt, callback_info, construction_time,
-      cancel_date, committed_fee, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,
+      cancel_date, committed_fee, payment, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,
              TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      RETURNING id`,
     [session.userId, year, month, type, name ?? '', date ?? '', line ?? '', cancel ?? '', cancel_reason ?? '',
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
      day_before_construction ?? '', construction_date ?? '',
      day_before_delivery ?? '', delivery_date ?? '', week_after_delivery ?? '', activation ?? '',
      construction_type ?? '', cancel_appt ?? '', callback_info ?? '', construction_time ?? '',
-     cancel_date ?? '', toInt(committed_fee)]
+     cancel_date ?? '', toInt(committed_fee), payment ?? '']
   )
 
   if (result.id) await syncCalendar(session.userId as number, result.id)
@@ -175,7 +175,7 @@ export async function PATCH(req: NextRequest) {
   const { id, name, date, line, cancel, cancel_reason, neg_apply, neg_cancel, fm,
     week_after, day_before_construction, construction_date, day_before_delivery, delivery_date,
     week_after_delivery, activation, construction_type,
-    cancel_appt, callback_info, construction_time, cancel_date, committed_fee } = body
+    cancel_appt, callback_info, construction_time, cancel_date, committed_fee, payment } = body
 
   const isManager = session.role === 'manager' || session.role === 'admin'
 
@@ -199,15 +199,15 @@ export async function PATCH(req: NextRequest) {
      week_after=$9, day_before_construction=$10, construction_date=$11,
      day_before_delivery=$12, delivery_date=$13, week_after_delivery=$14, activation=$15,
      construction_type=$16, cancel_appt=$17, callback_info=$18, construction_time=$19,
-     cancel_date=$20, committed_fee=$21, updated_at=TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-     WHERE id=$22`,
+     cancel_date=$20, committed_fee=$21, payment=$22, updated_at=TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+     WHERE id=$23`,
     [name ?? prev.name ?? '', date ?? prev.date ?? '', line ?? prev.line ?? '', cancel ?? prev.cancel ?? '',
      cancel_reason ?? prev.cancel_reason ?? '', neg_apply ?? prev.neg_apply ?? '', neg_cancel ?? prev.neg_cancel ?? '', fm ?? prev.fm ?? '',
      week_after ?? prev.week_after ?? '', day_before_construction ?? prev.day_before_construction ?? '', construction_date ?? prev.construction_date ?? '',
      day_before_delivery ?? prev.day_before_delivery ?? '', delivery_date ?? prev.delivery_date ?? '', week_after_delivery ?? prev.week_after_delivery ?? '', activation ?? prev.activation ?? '',
      construction_type ?? prev.construction_type ?? '', cancel_appt ?? prev.cancel_appt ?? '', callback_info ?? prev.callback_info ?? '', construction_time ?? prev.construction_time ?? '',
      cancel_date ?? prev.cancel_date ?? '', committed_fee !== undefined ? toInt(committed_fee) : (prev.committed_fee ?? 0),
-     id]
+     payment ?? prev.payment ?? '', id]
   )
 
   await syncCalendar(recordOwnerId, id)

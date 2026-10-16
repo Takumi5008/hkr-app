@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 30
+const DB_VERSION = 31
 let initialized = false
 
 async function initDb() {
@@ -526,6 +526,9 @@ async function initDb() {
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS updated_at TEXT NOT NULL DEFAULT ''`)
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS plan_text TEXT NOT NULL DEFAULT ''`)
   await pool.query(`ALTER TABLE daily_activity ADD COLUMN IF NOT EXISTS reflection_text TEXT NOT NULL DEFAULT ''`)
+
+  // v31: 開通表に支払い登録確認（○/×/空）を追加
+  await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS payment TEXT NOT NULL DEFAULT ''`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

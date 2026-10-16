@@ -26,6 +26,7 @@ type ActivationRecord = {
   delivery_date: string
   week_after_delivery: string
   activation: string
+  payment: string
   construction_type: string
   cancel_appt: string
   callback_info: string
@@ -53,7 +54,7 @@ const DONE_KEYS = [
 const emptyRecord = {
   name: '', date: '', line: '', cancel: '', cancel_reason: '', neg_apply: '', neg_cancel: '', fm: '',
   week_after: '', day_before_construction: '', construction_date: '',
-  day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '',
+  day_before_delivery: '', delivery_date: '', week_after_delivery: '', activation: '', payment: '',
   construction_type: '', cancel_appt: '', callback_info: '', construction_time: '',
   cancel_date: '', committed_fee: '',
 }
@@ -74,6 +75,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_post: [
@@ -89,6 +91,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   wimax_direct: [
@@ -102,6 +105,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   nifty: [
@@ -119,6 +123,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SB光: So-net / @nifty光と同じ構成（工事日ベース）
@@ -137,6 +142,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'construction_time', label: '工事時間帯' },
     { key: 'construction_type', label: '工事' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir直せち: WiMAX直せちと同じ構成（獲得日ベース）
@@ -151,6 +157,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'fm', label: 'FM' },
     { key: 'week_after', label: '獲得1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
   // SBAir後送り: WiMAX後送りと同じ構成（受取日ベース）
@@ -167,6 +174,7 @@ const COLS: Record<Exclude<ActivationType, 'all'>, { key: keyof typeof emptyReco
     { key: 'delivery_date', label: '受取日' },
     { key: 'week_after_delivery', label: '受け取り1週間後' },
     { key: 'activation', label: '開通' },
+    { key: 'payment', label: '支払い登録' },
     { key: 'cancel_reason', label: 'キャンセル理由' },
   ],
 }
@@ -201,6 +209,7 @@ const LIST_COLS: { key: keyof ActivationRecord | 'type_label' | 'status_label'; 
   { key: 'delivery_date',           label: '受取日' },
   { key: 'week_after_delivery',     label: '受け取り1週間後' },
   { key: 'activation',              label: '開通' },
+  { key: 'payment',                 label: '支払い登録' },
   { key: 'cancel_reason',           label: 'キャンセル理由' },
   { key: 'updated_at',              label: '最終更新日' },
 ]
@@ -313,7 +322,14 @@ export default function ActivationPage() {
     }
   }
 
-  const openCancelReasonModal = (rec: ActivationRecord) => {
+  // 支払い登録トグル（3段階）
+  const togglePayment = async (rec: ActivationRecord) => {
+    const newVal = cycleTextVal(rec.payment ?? '')
+    setRecords((prev) => prev.map((r) => r.id === rec.id ? { ...r, payment: newVal } : r))
+    await patchRecord(buildPatch(rec, { payment: newVal }))
+  }
+
+  const openCancelReasonModal =(rec: ActivationRecord) => {
     setCancelModal({ rec, reason: rec.cancel_reason })
   }
 
@@ -325,7 +341,7 @@ export default function ActivationPage() {
     week_after: rec.week_after, day_before_construction: rec.day_before_construction,
     construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
     delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
-    activation: rec.activation, construction_type: rec.construction_type ?? '',
+    activation: rec.activation, payment: rec.payment ?? '', construction_type: rec.construction_type ?? '',
     cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
     construction_time: rec.construction_time ?? '',
     cancel_date: rec.cancel_date ?? '', committed_fee: rec.committed_fee ?? 0,
@@ -427,7 +443,7 @@ export default function ActivationPage() {
       week_after: rec.week_after, day_before_construction: rec.day_before_construction,
       construction_date: rec.construction_date, day_before_delivery: rec.day_before_delivery,
       delivery_date: rec.delivery_date, week_after_delivery: rec.week_after_delivery,
-      activation: rec.activation, construction_type: rec.construction_type ?? '',
+      activation: rec.activation, payment: rec.payment ?? '', construction_type: rec.construction_type ?? '',
       cancel_appt: rec.cancel_appt ?? '', callback_info: rec.callback_info ?? '',
       construction_time: rec.construction_time ?? '',
       cancel_date: rec.cancel_date ?? '', committed_fee: rec.committed_fee ? String(rec.committed_fee) : '',
@@ -620,6 +636,7 @@ export default function ActivationPage() {
                       {LIST_COLS.map((c) => {
                         const isNA = c.key !== 'type_label' && c.key !== 'cancel_reason' && naFields.includes(c.key as keyof ActivationRecord)
                         const isActivation = c.key === 'activation'
+                        const isPayment = c.key === 'payment'
                         const isCancel = c.key === 'cancel'
                         const isNegApply = c.key === 'neg_apply'
                         const isNegCancel = c.key === 'neg_cancel'
@@ -633,6 +650,7 @@ export default function ActivationPage() {
                           : rec[c.key as keyof ActivationRecord]
                         const cellBg = isNA ? 'bg-gray-50/50'
                           : isActivation ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
+                          : isPayment ? (rec.payment === '○' ? 'bg-green-50' : rec.payment === '×' ? 'bg-red-50' : '')
                           : (isCancel || isNegApply || isNegCancel) ? (rec[c.key as keyof ActivationRecord] === '○' ? 'bg-red-50' : rec[c.key as keyof ActivationRecord] === '×' ? 'bg-amber-50' : '')
                           : isDoneField ? (doneVal === 1 ? 'bg-green-50' : doneVal === 2 ? 'bg-red-50' : '')
                           : ''
@@ -643,6 +661,10 @@ export default function ActivationPage() {
                             ) : isActivation ? (
                               <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
                                 {textEmoji(rec.activation)}
+                              </button>
+                            ) : isPayment ? (
+                              <button onClick={() => togglePayment(rec)} className="text-lg leading-none">
+                                {textEmoji(rec.payment ?? '')}
                               </button>
                             ) : isCancelReason ? (
                               <button
@@ -742,6 +764,7 @@ export default function ActivationPage() {
                     const doneKey = `${c.key}_done` as keyof ActivationRecord
                     const doneVal = isDoneField ? (rec[doneKey] as number) : 0
                     const isActivation = c.key === 'activation'
+                    const isPayment = c.key === 'payment'
                     const isCancel = c.key === 'cancel'
                     const isNegApply = c.key === 'neg_apply'
                     const isNegCancel = c.key === 'neg_cancel'
@@ -750,6 +773,8 @@ export default function ActivationPage() {
                       && normDate(rec[c.key] as string, year, month) === todayStr
                     const cellBg = isActivation
                       ? (rec.activation === '○' ? 'bg-green-50' : rec.activation === '×' ? 'bg-red-50' : '')
+                      : isPayment
+                      ? (rec.payment === '○' ? 'bg-green-50' : rec.payment === '×' ? 'bg-red-50' : '')
                       : (isCancel || isNegApply || isNegCancel)
                       ? (rec[c.key] === '○' ? 'bg-red-50' : rec[c.key] === '×' ? 'bg-amber-50' : '')
                       : isDoneField
@@ -761,6 +786,10 @@ export default function ActivationPage() {
                         {isActivation ? (
                           <button onClick={() => toggleActivation(rec)} className="text-lg leading-none">
                             {textEmoji(rec.activation)}
+                          </button>
+                        ) : isPayment ? (
+                          <button onClick={() => togglePayment(rec)} className="text-lg leading-none">
+                            {textEmoji(rec.payment ?? '')}
                           </button>
                         ) : isCancelReason ? (
                           <button
@@ -850,7 +879,7 @@ export default function ActivationPage() {
         <div className="bg-white rounded-2xl shadow-sm ring-1 ring-gray-100 p-4 mt-4">
           <p className="text-xs font-semibold text-gray-500 mb-3">{editingId === 'new' ? '新規追加' : '編集'}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel', 'activation', 'cancel_reason'].includes(c.key)).map((c) => {
+            {cols.filter(c => !['cancel', 'neg_apply', 'neg_cancel', 'activation', 'payment', 'cancel_reason'].includes(c.key)).map((c) => {
               const isDateField = ['date', 'fm', 'week_after', 'day_before_construction', 'construction_date', 'day_before_delivery', 'delivery_date', 'week_after_delivery', 'cancel_date'].includes(c.key)
               const isNumberField = c.key === 'committed_fee'
               const isUndecided = isDateField && form[c.key] === '未定'
