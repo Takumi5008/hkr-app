@@ -34,6 +34,7 @@ const managerNavItems = [
   { href: '/team-report', label: 'チームレポート', icon: BarChart },
   { href: '/admin/dashboard', label: '管理ダッシュボード', icon: LayoutDashboard },
   { href: '/admin/cases', label: '案件確認', icon: AlertCircle },
+  { href: '/admin/activation-stats', label: '回線別HKR', icon: BarChart2 },
   { href: '/admin/engagement', label: '利用定着', icon: Activity },
   { href: '/admin', label: '管理', icon: Settings },
 ]
