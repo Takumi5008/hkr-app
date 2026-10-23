@@ -105,22 +105,6 @@ const MEMBER_SECTIONS: Section[] = [
     ],
   },
   {
-    title: 'スケジュール',
-    icon: '🗓️',
-    color: 'bg-cyan-50 border-cyan-200',
-    items: [
-      { label: '予定を登録', desc: '日付・タイトル・開始/終了時刻・メモを入力して個人の予定を登録できます。' },
-    ],
-  },
-  {
-    title: 'メモ',
-    icon: '📝',
-    color: 'bg-yellow-50 border-yellow-200',
-    items: [
-      { label: '自由にメモ', desc: 'タイトルと本文を入力して保存します。業務メモや覚書などに活用してください。' },
-    ],
-  },
-  {
     title: '月次振り返り',
     icon: '📋',
     color: 'bg-teal-50 border-teal-200',
