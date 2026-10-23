@@ -113,7 +113,7 @@ export default function ManagerHelpPage() {
             '管理ページ → 「シフト管理」タブ',
             '月を切り替えて確認したい月を選ぶ',
             '「提出済み〇/〇人」で提出状況を確認',
-            '締切を設定する場合は「提出締切の設定」で日時を入力して保存',
+            '締切は自動で前月20日 23:59。変える場合のみ「提出締切の設定」で日時を入力して保存（「既定に戻す」で元に戻る）',
           ]} />
           <div className="mt-3 bg-white rounded-xl p-4 border border-white/80 shadow-sm">
             <p className="text-xs font-bold text-gray-800 mb-2">シフトの修正方法（管理者のみ）</p>
@@ -143,7 +143,7 @@ export default function ManagerHelpPage() {
             '管理ページ → 「MTG管理」タブ',
             '月を切り替えて確認したい月を選ぶ',
             '出欠一覧で各メンバーの状況を確認',
-            '締切を設定する場合は「提出締切の設定」で日時を入力して保存',
+            '締切は自動で前月20日 23:59。変える場合のみ「提出締切の設定」で日時を入力して保存（「既定に戻す」で元に戻る）',
           ]} />
           <div className="mt-3 bg-white rounded-xl p-4 border border-white/80 shadow-sm">
             <p className="text-xs font-bold text-gray-800 mb-2">出欠の修正方法（管理者のみ）</p>

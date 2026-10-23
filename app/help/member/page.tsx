@@ -55,17 +55,18 @@ export default function MemberHelpPage() {
             'メールアドレスとパスワードを入力する',
             '「ログイン」ボタンをタップ',
           ]} />
-          <Tip>iPhoneの場合はSafariで開き、共有ボタン→「ホーム画面に追加」でアイコンから起動できます。</Tip>
+          <Tip>設定ページで端末を登録すると、次回から「指紋でログイン」「顔認証でログイン」でパスワードなしでログインできます。</Tip>
+          <Tip>ログイン状態は日付が変わる（0時）と切れます。iPhoneの場合はSafariで開き、共有ボタン→「ホーム画面に追加」でアイコンから起動できます。</Tip>
         </Section>
 
         <Section num="02" title="ダッシュボード" color="blue">
           <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            ログイン後に最初に表示される画面です。今月のHKR実績・目標進捗・タスクの状況を一目で確認できます。
+            ログイン後に最初に表示される画面です。今月のHKR実績・目標進捗・今日やることを一目で確認できます。
           </p>
           <InfoCards items={[
             { label: '月間実績', desc: '今月のキャンセル・開通数を表示' },
             { label: '進捗状況', desc: '目標に対する達成率をグラフで確認' },
-            { label: 'タスク', desc: '本日のタスクや期限が近いものを表示' },
+            { label: '今日やること', desc: '開通表確認・行動表記入など当日やるべきことを表示' },
           ]} />
           <Screenshot src="/screenshots/dashboard.png" caption="ダッシュボード画面" />
         </Section>
@@ -105,11 +106,11 @@ export default function MemberHelpPage() {
 
         <Section num="05" title="開通表" color="amber">
           <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            So-net・WiMAX後送り・WiMAX直せちの開通フォロー管理表です。各フォロー日に⭕️をつけることで対応済みにできます。
+            回線ごとの開通フォロー管理表です。各フォロー日に⭕️をつけることで対応済みにできます。解除・開通・支払い登録はボタンをタップするたびに 🔘→⭕→❌ と切り替わります。
           </p>
           <Steps steps={[
             'サイドバーの「開通表」をタップ',
-            '回線種別（So-net / WiMAX後送り / WiMAX直せち）のタブを選ぶ',
+            '回線種別（So-net / WiMAX後送り / WiMAX直せち / @nifty光 / SB光 / SBAir直せち / SBAir後送り）のタブを選ぶ',
             '該当のお客様の行を確認する',
             'フォロー対応が完了したら「⭕️」ボタンをタップ',
             '「一覧」タブで全回線を日付順に確認できる',
@@ -130,7 +131,7 @@ export default function MemberHelpPage() {
 
         <Section num="06" title="シフト入力" color="emerald">
           <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            翌月のシフト（稼働日）を入力して提出します。管理者が設定した締切日までに提出してください。
+            翌月のシフト（稼働日）を入力して提出します。締切は毎月20日 23:59（翌月分）です。
           </p>
           <Steps steps={[
             'サイドバーの「シフト入力」をタップ',
@@ -144,7 +145,7 @@ export default function MemberHelpPage() {
 
         <Section num="07" title="MTG出欠" color="rose">
           <p className="text-gray-600 text-sm leading-relaxed mb-3">
-            毎週金曜のMTGの出欠を入力します。管理者が設定した締切日までに入力してください。
+            毎週金曜のMTGの出欠を入力します。締切は毎月20日 23:59（翌月分）です。
           </p>
           <Steps steps={[
             'サイドバーの「MTG出欠」をタップ',
