@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, Keyboard, GraduationCap, Activity, BarChart, AlertCircle } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Keyboard, GraduationCap, Activity, BarChart, AlertCircle } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -11,7 +11,6 @@ import ActivationBadge from '@/components/ActivationBadge'
 const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
-  { href: '/sugoroku', label: '開通双六', icon: Gamepad2 },
   { href: '/typing', label: '開通タイピング', icon: Keyboard },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
@@ -58,7 +57,11 @@ export default function Sidebar({ name, role }: SidebarProps) {
     try {
       const saved = localStorage.getItem(NAV_ORDER_KEY)
       if (saved) {
-        const parsed: string[] = JSON.parse(saved)
+        let parsed: string[] = JSON.parse(saved)
+        // 開通双六を削除し、その位置を開通タイピングに置き換えた（並び替え済みの人も同じ位置に出す）
+        if (parsed.includes('/sugoroku')) {
+          parsed = parsed.filter((h) => h !== '/typing').map((h) => (h === '/sugoroku' ? '/typing' : h))
+        }
         const allHrefs = navItems.map((i) => i.href)
         const merged = [
           ...parsed.filter((h) => allHrefs.includes(h)),
