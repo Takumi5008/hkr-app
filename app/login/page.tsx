@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { User, Lock, Eye, EyeOff, ArrowRight, ChevronRight, Fingerprint, ScanFace } from 'lucide-react'
 import { startAuthentication, browserSupportsWebAuthn } from '@simplewebauthn/browser'
+import { signalMarkSvg } from '@/lib/brandIcon'
+
+const SIGNAL_MARK_SRC = `data:image/svg+xml,${encodeURIComponent(signalMarkSvg())}`
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -73,7 +76,7 @@ export default function LoginPage() {
   }
 
   const inputStyle = {
-    background: 'rgba(8,16,34,0.7)',
+    backgroundColor: 'rgba(8,16,34,0.7)',
     border: '1px solid rgba(148,163,184,0.25)',
   }
 
@@ -89,20 +92,22 @@ export default function LoginPage() {
         {/* ヒーロー（都市とキャッチコピー） */}
         <div className="relative" style={{ containerType: 'inline-size' }}>
           <Image
-            src="/login-hero.webp"
+            src="/login-hero-v2.webp"
             alt="つなぐ。広げる。つくる。Wi-Fiの力で、人と暮らしの可能性を広げる。"
             width={887}
             height={730}
             priority
             className="block w-full h-auto"
           />
-          {/* ロゴ下の部署名（画像の「Dot.A」の下に重ねる。位置は画像幅に対する%） */}
-          <span
-            className="absolute text-slate-300 font-medium tracking-[0.12em] leading-none whitespace-nowrap"
-            style={{ left: '14.7%', top: '12.1%', fontSize: 'clamp(10.5px, 2.6cqw, 15px)' }}
-          >
-            IP事業部
-          </span>
+          {/* ロゴ（ブランドアイコン「シグナル」＋ Dot.A / IP事業部）。サイズは画像幅に追従 */}
+          <div className="absolute flex items-center" style={{ left: '6.5%', top: '4.5%', gap: '2.2cqw' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={SIGNAL_MARK_SRC} alt="" aria-hidden style={{ width: '10cqw', height: 'auto' }} />
+            <div className="leading-none">
+              <p className="font-bold text-white tracking-wide" style={{ fontSize: 'clamp(18px, 5.6cqw, 30px)' }}>Dot.A</p>
+              <p className="text-slate-300 font-medium tracking-[0.18em] mt-[0.35em]" style={{ fontSize: 'clamp(10.5px, 2.6cqw, 15px)' }}>IP事業部</p>
+            </div>
+          </div>
           <div className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-b from-transparent to-[#050b1a] pointer-events-none" />
         </div>
 
@@ -218,7 +223,7 @@ export default function LoginPage() {
                     onClick={handleBiometricLogin}
                     disabled={bioLoading || loading}
                     className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl text-sm font-semibold text-white hover:bg-white/5 disabled:opacity-50 transition-colors"
-                    style={{ background: 'rgba(8,16,34,0.6)', border: '1px solid rgba(148,163,184,0.25)' }}
+                    style={{ backgroundColor: 'rgba(8,16,34,0.6)', border: '1px solid rgba(148,163,184,0.25)' }}
                   >
                     <Icon size={34} strokeWidth={1.6} className="text-sky-400" />
                     {label}

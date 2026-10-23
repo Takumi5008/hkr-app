@@ -4,8 +4,8 @@
   "description": "HKR・シフト管理システム",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#312e81",
-  "theme_color": "#4338ca",
+  "background_color": "#050b1a",
+  "theme_color": "#0b1530",
   "orientation": "portrait",
   "icons": [
     {
