@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { dbQuery, dbRun } from '@/lib/db'
+import { dbRun } from '@/lib/db'
+import { getDeadlineAt } from '@/lib/deadlines'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -8,8 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
-  const rows = await dbQuery('SELECT * FROM mtg_month_deadlines WHERE year = $1 AND month = $2', [year, month])
-  return NextResponse.json({ deadlineAt: rows[0]?.deadline_at ?? null })
+  return NextResponse.json({ deadlineAt: await getDeadlineAt('mtg', year, month) })
 }
 
 export async function POST(req: NextRequest) {

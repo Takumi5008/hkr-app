@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQueryOne, dbQuery } from '@/lib/db'
+import { getDeadlineAt, deadlineToDate, nextMonthJst } from '@/lib/deadlines'
 
-function deadlineToDate(deadlineAt: string): Date {
-  return new Date(deadlineAt + ':00+09:00')
-}
 
 export async function GET() {
   const session = await getSession()
@@ -12,18 +10,14 @@ export async function GET() {
 
   const now = new Date()
   const in60min = new Date(now.getTime() + 60 * 60 * 1000)
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
-  const year = jst.getUTCFullYear()
-  const month = jst.getUTCMonth() + 1
+  // 締切は対象月の前月にあるため、今月中に締切を迎える「翌月分」をチェックする
+  const { year, month } = nextMonthJst(now)
 
   const result: { type: 'shift' | 'mtg'; minutesLeft: number; label: string }[] = []
 
   // シフト締切チェック
-  const shiftDl = await dbQueryOne<{ deadline_at: string }>(
-    `SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2`, [year, month]
-  )
-  if (shiftDl) {
-    const deadline = deadlineToDate(shiftDl.deadline_at)
+  {
+    const deadline = deadlineToDate(await getDeadlineAt('shift', year, month))
     if (deadline > now && deadline <= in60min) {
       // 自分が未提出かチェック
       const submitted = await dbQueryOne(
@@ -38,11 +32,8 @@ export async function GET() {
   }
 
   // MTG締切チェック
-  const mtgDl = await dbQueryOne<{ deadline_at: string }>(
-    `SELECT deadline_at FROM mtg_month_deadlines WHERE year = $1 AND month = $2`, [year, month]
-  )
-  if (mtgDl) {
-    const deadline = deadlineToDate(mtgDl.deadline_at)
+  {
+    const deadline = deadlineToDate(await getDeadlineAt('mtg', year, month))
     if (deadline > now && deadline <= in60min) {
       // この月の金曜日に1つでも未提出があるかチェック
       const daysInMonth = new Date(year, month, 0).getDate()

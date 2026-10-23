@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
 import { dbQuery, dbRun } from '@/lib/db'
 import { getSession } from '@/lib/session'
+import { getDeadlineAt, deadlineToDate, nextMonthJst } from '@/lib/deadlines'
 
 // deadline_at は JST の datetime-local 文字列 "YYYY-MM-DDTHH:MM"
-function deadlineToDate(deadlineAt: string): Date {
-  return new Date(deadlineAt + ':00+09:00')
-}
 
 function jstNow(): Date {
   return new Date()
@@ -54,6 +52,11 @@ export async function GET(req: NextRequest) {
         await dbRun(`DELETE FROM push_subscriptions WHERE user_id = $1`, [userId])
       }
     }
+
+    // 翌月分の締切（既定：今月20日 23:59）が未登録なら登録しておく
+    const target = nextMonthJst(now)
+    await getDeadlineAt('shift', target.year, target.month)
+    await getDeadlineAt('mtg', target.year, target.month)
 
     // ===== シフト締切チェック =====
     const shiftDeadlines = await dbQuery<{ id: number; year: number; month: number; deadline_at: string }>(

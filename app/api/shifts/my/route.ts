@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQueryOne, dbRun } from '@/lib/db'
 import { addPointTransaction } from '@/lib/points'
+import { isDeadlinePassed } from '@/lib/deadlines'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -24,8 +25,7 @@ export async function POST(req: NextRequest) {
   const { year, month, workDates, submitted, weekendReasons } = await req.json()
   if (!year || !month || !Array.isArray(workDates)) return NextResponse.json({ error: '不正なリクエストです' }, { status: 400 })
   if (session.role !== 'manager' && session.role !== 'admin') {
-    const deadline = await dbQueryOne('SELECT * FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
-    if (deadline?.deadline_at && new Date(deadline.deadline_at) < new Date()) {
+    if (await isDeadlinePassed('shift', year, month)) {
       return NextResponse.json({ error: '提出期限が終了しています' }, { status: 403 })
     }
   }

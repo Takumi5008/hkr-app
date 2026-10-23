@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbQueryOne, dbRun } from '@/lib/db'
 import { addPointTransaction } from '@/lib/points'
+import { isDeadlinePassed } from '@/lib/deadlines'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -27,11 +28,7 @@ export async function POST(req: NextRequest) {
 
   // 期限チェック（メンバーのみ）
   if (session.role !== 'manager' && session.role !== 'admin') {
-    const deadline = await dbQueryOne(
-      'SELECT deadline_at FROM mtg_month_deadlines WHERE year = $1 AND month = $2',
-      [year, month]
-    )
-    if (deadline?.deadline_at && new Date(deadline.deadline_at) < new Date()) {
+    if (await isDeadlinePassed('mtg', year, month)) {
       return NextResponse.json({ error: '提出期限が終了しています' }, { status: 403 })
     }
   }

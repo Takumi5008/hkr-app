@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { dbQueryOne, dbRun } from '@/lib/db'
+import { dbRun } from '@/lib/db'
+import { getDeadlineAt } from '@/lib/deadlines'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
@@ -9,8 +10,7 @@ export async function GET(req: NextRequest) {
   const year = parseInt(searchParams.get('year') ?? '')
   const month = parseInt(searchParams.get('month') ?? '')
   if (!year || !month) return NextResponse.json({ deadlineAt: null })
-  const row = await dbQueryOne('SELECT * FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
-  return NextResponse.json({ deadlineAt: row?.deadline_at ?? null })
+  return NextResponse.json({ deadlineAt: await getDeadlineAt('shift', year, month) })
 }
 
 export async function POST(req: NextRequest) {

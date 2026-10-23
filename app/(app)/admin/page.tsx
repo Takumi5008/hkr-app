@@ -154,13 +154,14 @@ export default function AdminPage() {
   }
 
   async function handleDeleteDeadline() {
-    if (!await confirm('シフト締切を削除しますか？')) return
+    if (!await confirm('シフト締切を既定（前月20日 23:59）に戻しますか？')) return
     await fetch('/api/deadlines', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ year, month }),
     })
-    setDeadlineAt('')
+    const dl = await fetch(`/api/deadlines?year=${year}&month=${month}`).then((r) => r.json()).catch(() => ({}))
+    setDeadlineAt(dl?.deadlineAt ?? '')
   }
 
   async function handleSaveMtgDeadline() {
@@ -175,13 +176,14 @@ export default function AdminPage() {
   }
 
   async function handleDeleteMtgDeadline() {
-    if (!await confirm('MTG締切を削除しますか？')) return
+    if (!await confirm('MTG締切を既定（前月20日 23:59）に戻しますか？')) return
     await fetch('/api/mtg/deadlines', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ year: mtgYear, month: mtgMonth }),
     })
-    setMtgDeadlineAt('')
+    const dl = await fetch(`/api/mtg/deadlines?year=${mtgYear}&month=${mtgMonth}`).then((r) => r.json()).catch(() => ({}))
+    setMtgDeadlineAt(dl?.deadlineAt ?? '')
   }
 
   async function handleGenerateInvite() {
@@ -537,10 +539,11 @@ export default function AdminPage() {
               </button>
               {deadlineAt && (
                 <button onClick={handleDeleteDeadline} className="px-4 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                  締切を削除
+                  既定に戻す
                 </button>
               )}
             </div>
+            <p className="text-xs text-gray-400 mt-2">既定は前月20日 23:59。月ごとに変更したい場合のみ上書きしてください。</p>
           </div>
           )}
           {myRole === 'shift_viewer' && deadlineAt && (
@@ -712,10 +715,11 @@ export default function AdminPage() {
               </button>
               {mtgDeadlineAt && (
                 <button onClick={handleDeleteMtgDeadline} className="px-4 py-2 border border-gray-200 text-gray-500 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                  締切を削除
+                  既定に戻す
                 </button>
               )}
             </div>
+            <p className="text-xs text-gray-400 mt-2">既定は前月20日 23:59。月ごとに変更したい場合のみ上書きしてください。</p>
           </div>
 
           {/* MTG出欠一覧 */}

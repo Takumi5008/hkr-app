@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { dbQuery, dbRun } from '@/lib/db'
 import { toInt } from '@/lib/parse'
+import { getDeadlineAt, isDeadlinePassed, isPast } from '@/lib/deadlines'
 
 function extractWorkDays(workDatesJson: string): number[] {
   const raw = JSON.parse(workDatesJson ?? '[]')
@@ -30,10 +31,10 @@ export async function GET(req: NextRequest) {
 
   const dateLike = `${year}-${String(month).padStart(2, '0')}-%`
 
-  const [progress, shift, deadline, activityRow] = await Promise.all([
+  const [progress, shift, deadlineAt, activityRow] = await Promise.all([
     dbQuery('SELECT * FROM monthly_progress WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
     dbQuery('SELECT work_dates FROM shifts WHERE user_id = $1 AND year = $2 AND month = $3', [targetUserId, year, month]),
-    dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month]),
+    getDeadlineAt('shift', year, month),
     dbQuery('SELECT COALESCE(SUM(cancel), 0)::int AS total FROM daily_activity WHERE user_id = $1 AND date LIKE $2', [targetUserId, dateLike]),
   ])
 
@@ -42,8 +43,7 @@ export async function GET(req: NextRequest) {
   const savedDays = progress[0] ? extractWorkDays(progress[0].work_dates) : []
   const workDates = shiftDays.length > 0 ? shiftDays : savedDays
 
-  const deadlineAt = deadline[0]?.deadline_at ?? null
-  const deadlinePassed = deadlineAt ? new Date(deadlineAt) < new Date() : false
+  const deadlinePassed = isPast(deadlineAt)
   const actualCancel: number = activityRow[0]?.total ?? 0
 
   return NextResponse.json({
@@ -69,9 +69,7 @@ export async function POST(req: NextRequest) {
 
   // 締切チェック（マネージャー・管理者は除外）
   if (!isAdmin) {
-    const deadline = await dbQuery('SELECT deadline_at FROM shift_deadlines WHERE year = $1 AND month = $2', [year, month])
-    const deadlineAt = deadline[0]?.deadline_at
-    if (deadlineAt && new Date(deadlineAt) < new Date()) {
+    if (await isDeadlinePassed('shift', year, month)) {
       // 稼働日の変更は拒否、目標・実績のみ更新可
       await dbRun(
         `INSERT INTO monthly_progress (user_id, year, month, cancel_target, actual_cancel, work_dates)
