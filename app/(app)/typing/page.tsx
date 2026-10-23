@@ -10,7 +10,8 @@ const GAME_SECONDS = 60
 
 type Phase = 'ready' | 'countdown' | 'playing' | 'result'
 type RankRow = { user_id: number; name: string; avatar: string | null; best: number; plays: number }
-type Stats = { weekStart: string; ranking: RankRow[]; myUserId: number; myBest: number | null; myWeekBest: number | null }
+type Stats = { weekStart: string; weekly: RankRow[]; allTime: RankRow[]; myUserId: number; myBest: number | null; myWeekBest: number | null }
+type RankTab = 'weekly' | 'allTime'
 
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr]
@@ -38,6 +39,7 @@ export default function TypingPage() {
   const [view, setView] = useState({ text: '', kanaDone: '', kanaRest: '', typed: '', rest: '' })
   const [stats, setStats] = useState<Stats | null>(null)
   const [saving, setSaving] = useState(false)
+  const [rankTab, setRankTab] = useState<RankTab>('weekly')
 
   const inputRef = useRef<HTMLInputElement>(null)
   const queueRef = useRef<typeof TYPING_WORDS>([])
@@ -171,14 +173,16 @@ export default function TypingPage() {
 
   const total = correct + miss
   const accuracy = total > 0 ? Math.round((correct / total) * 1000) / 10 : 0
-  const myRank = stats?.ranking.findIndex((r) => r.user_id === stats.myUserId) ?? -1
+  const myWeeklyRank = stats?.weekly.findIndex((r) => r.user_id === stats.myUserId) ?? -1
+  const myAllTimeRank = stats?.allTime.findIndex((r) => r.user_id === stats.myUserId) ?? -1
+  const ranking = stats ? stats[rankTab] : []
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-5">
       <div className="bg-gradient-to-r from-sky-600 to-blue-600 rounded-2xl px-6 py-5 shadow-md text-white">
         <p className="text-xs font-semibold uppercase tracking-widest text-sky-200 mb-1">Mini Game</p>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Keyboard size={24} />開通タイピング</h1>
-        <p className="text-sm text-sky-100 mt-0.5">{GAME_SECONDS}秒で何文字打てるか挑戦！ 今週のランキングで競おう</p>
+        <p className="text-sm text-sky-100 mt-0.5">{GAME_SECONDS}秒で何文字打てるか挑戦！ 週次・累計ランキングで競おう</p>
       </div>
 
       {/* 入力受付用（画面外。スマホではタップでキーボードを出す） */}
@@ -258,8 +262,11 @@ export default function TypingPage() {
             </div>
             {saving ? (
               <p className="text-xs text-gray-400 mb-4">記録中...</p>
-            ) : stats && myRank >= 0 ? (
-              <p className="text-sm text-gray-600 mb-4">今週のランキング <span className="font-bold text-blue-600">{myRank + 1}位</span></p>
+            ) : stats && (myWeeklyRank >= 0 || myAllTimeRank >= 0) ? (
+              <p className="text-sm text-gray-600 mb-4 flex justify-center gap-4">
+                {myWeeklyRank >= 0 && <span>週次 <span className="font-bold text-blue-600">{myWeeklyRank + 1}位</span></span>}
+                {myAllTimeRank >= 0 && <span>累計 <span className="font-bold text-blue-600">{myAllTimeRank + 1}位</span></span>}
+              </p>
             ) : null}
             <button onClick={start} className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow hover:bg-blue-700 transition">
               <RotateCcw size={16} />もう一度
@@ -282,20 +289,27 @@ export default function TypingPage() {
         </div>
       )}
 
-      {/* 今週のランキング */}
+      {/* ランキング（週次・累計） */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <Trophy size={16} className="text-amber-500" />
-          <h2 className="text-sm font-bold text-gray-700">今週のランキング</h2>
-          <span className="text-xs text-gray-400 ml-auto">毎週月曜リセット</span>
+          <h2 className="text-sm font-bold text-gray-700">ランキング</h2>
+          <div className="ml-auto flex gap-1 bg-gray-200/70 rounded-lg p-0.5">
+            {(['weekly', 'allTime'] as const).map((t) => (
+              <button key={t} onClick={() => setRankTab(t)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition ${rankTab === t ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t === 'weekly' ? '週次' : '累計'}
+              </button>
+            ))}
+          </div>
         </div>
         {!stats ? (
           <p className="text-sm text-gray-400 text-center py-8">読み込み中...</p>
-        ) : stats.ranking.length === 0 ? (
+        ) : ranking.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">まだ記録がありません。一番乗りしよう！</p>
         ) : (
           <ol className="divide-y divide-gray-50">
-            {stats.ranking.map((r, i) => (
+            {ranking.map((r, i) => (
               <li key={r.user_id} className={`flex items-center gap-3 px-4 py-2.5 ${r.user_id === stats.myUserId ? 'bg-blue-50/60' : ''}`}>
                 <span className={`w-6 text-center font-bold tabular-nums ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-orange-400' : 'text-gray-400'}`}>{i + 1}</span>
                 <UserAvatar name={r.name} avatar={r.avatar} size="sm" />

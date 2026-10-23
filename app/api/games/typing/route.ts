@@ -15,22 +15,27 @@ function weekStartUtc(now: Date = new Date()): string {
   return new Date(mondayJst - JST).toISOString().slice(0, 19) + 'Z'
 }
 
-// 今週のランキング（各メンバーのベストスコア）と自分の記録
+// 週次（月曜0時〜）・累計（全期間）のランキング（各メンバーのベストスコア）と自分の記録
 export async function GET() {
   const session = await getSession()
   if (!session.userId) return NextResponse.json({ error: '未認証' }, { status: 401 })
 
   const since = weekStartUtc()
-  const [ranking, myBest, myWeekBest] = await Promise.all([
+  // 期間内の各メンバーのベストスコア（同点は先に出した人が上）
+  const rankingSince = (from: string | null) =>
     dbQuery<{ user_id: number; name: string; avatar: string | null; best: number; plays: number }>(
       `SELECT u.id AS user_id, u.name, u.avatar, MAX(t.score)::int AS best, COUNT(*)::int AS plays
        FROM typing_scores t JOIN users u ON u.id = t.user_id
-       WHERE t.played_at >= $1
+       ${from ? 'WHERE t.played_at >= $1' : ''}
        GROUP BY u.id, u.name, u.avatar
        ORDER BY best DESC, MIN(t.played_at) ASC
        LIMIT 20`,
-      [since]
-    ),
+      from ? [from] : []
+    )
+
+  const [weekly, allTime, myBest, myWeekBest] = await Promise.all([
+    rankingSince(since),
+    rankingSince(null),
     dbQueryOne<{ best: number | null }>('SELECT MAX(score)::int AS best FROM typing_scores WHERE user_id = $1', [session.userId]),
     dbQueryOne<{ best: number | null }>(
       'SELECT MAX(score)::int AS best FROM typing_scores WHERE user_id = $1 AND played_at >= $2',
@@ -40,7 +45,8 @@ export async function GET() {
 
   return NextResponse.json({
     weekStart: since,
-    ranking,
+    weekly,
+    allTime,
     myUserId: session.userId,
     myBest: myBest?.best ?? null,
     myWeekBest: myWeekBest?.best ?? null,
