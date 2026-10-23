@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 32
+const DB_VERSION = 33
 let initialized = false
 
 async function initDb() {
@@ -544,6 +544,19 @@ async function initDb() {
     )
   `)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user ON webauthn_credentials(user_id)`)
+
+  // v33: ミニゲーム「開通タイピング」のスコア
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS typing_scores (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      score      INTEGER NOT NULL,
+      miss       INTEGER NOT NULL DEFAULT 0,
+      words      INTEGER NOT NULL DEFAULT 0,
+      played_at  TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_typing_scores_played ON typing_scores(played_at)`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }
