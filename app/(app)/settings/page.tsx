@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { CheckCircle, ShieldAlert, Camera, Trash2 } from 'lucide-react'
 import UserAvatar from '@/components/UserAvatar'
 import AccountCard from '@/components/AccountCard'
+import BiometricSettings from '@/components/BiometricSettings'
 import ActivationBadge from '@/components/ActivationBadge'
 import { calcHKR, HKR_TARGET } from '@/lib/hkr'
 
@@ -276,6 +277,9 @@ function SettingsContent() {
           </button>
         </form>
       </div>
+
+      {/* 指紋・顔認証ログイン */}
+      <BiometricSettings />
 
       {/* パスワード変更 */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">

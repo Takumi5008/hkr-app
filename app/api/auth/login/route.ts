@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { dbQueryOne, dbRun } from '@/lib/db'
-import { getSession } from '@/lib/session'
+import { startSession } from '@/lib/session'
 import { awardBadges } from '@/lib/badges'
 import { updateLoginStreak } from '@/lib/streak'
 
@@ -39,12 +39,7 @@ export async function POST(req: NextRequest) {
     user.role = 'manager'
   }
 
-  const session = await getSession()
-  session.userId = user.id
-  session.name = user.name
-  session.email = user.email
-  session.role = user.role
-  await session.save()
+  await startSession({ userId: user.id, name: user.name, email: user.email, role: user.role })
 
   try { await updateLoginStreak(user.id) } catch {}
   try { await awardBadges(user.id) } catch {}

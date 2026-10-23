@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 31
+const DB_VERSION = 32
 let initialized = false
 
 async function initDb() {
@@ -529,6 +529,21 @@ async function initDb() {
 
   // v31: 開通表に支払い登録確認（○/×/空）を追加
   await pool.query(`ALTER TABLE activation_records ADD COLUMN IF NOT EXISTS payment TEXT NOT NULL DEFAULT ''`)
+
+  // v32: 生体認証（パスキー / WebAuthn）ログイン用の認証情報
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS webauthn_credentials (
+      id           TEXT PRIMARY KEY,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      public_key   TEXT NOT NULL,
+      counter      BIGINT NOT NULL DEFAULT 0,
+      transports   TEXT NOT NULL DEFAULT '',
+      device_name  TEXT NOT NULL DEFAULT '',
+      created_at   TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+      last_used_at TEXT NOT NULL DEFAULT ''
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user ON webauthn_credentials(user_id)`)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

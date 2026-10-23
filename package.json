@@ -10,6 +10,8 @@
     "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.3",
     "@types/pg": "^8.20.0",
     "@types/web-push": "^3.6.4",
     "@vercel/blob": "^2.3.3",
