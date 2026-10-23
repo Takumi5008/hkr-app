@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, CheckSquare, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, GraduationCap, Activity, BarChart, AlertCircle } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Gamepad2, Keyboard, GraduationCap, Activity, BarChart, AlertCircle } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/challenge', label: 'チャレンジ', icon: Trophy },
   { href: '/sugoroku', label: '開通双六', icon: Gamepad2 },
+  { href: '/typing', label: '開通タイピング', icon: Keyboard },
   { href: '/input', label: 'HKR入力', icon: PenLine },
   { href: '/progress', label: '個人進捗', icon: BarChart2 },
   { href: '/status', label: '個人ステータス', icon: Activity },
@@ -19,7 +20,6 @@ const navItems = [
   { href: '/activation', label: '開通表', icon: Zap },
   { href: '/trends', label: 'マイ推移', icon: TrendingUp },
   { href: '/attendance', label: '出欠管理', icon: Calendar },
-  { href: '/tasks', label: 'タスク管理', icon: CheckSquare },
   { href: '/knowledge', label: '知識向上', icon: GraduationCap },
   { href: '/howto', label: '使い方', icon: BookOpen },
 ]

@@ -158,19 +158,11 @@ export default function MemberHelpPage() {
 
         <Section num="08" title="その他機能" color="purple">
           <InfoCards items={[
-            { label: 'タスク管理', desc: 'やることリストを管理。期日設定や完了チェックができます' },
-            { label: 'スケジュール', desc: '個人の予定を登録・管理できます' },
-            { label: 'メモ', desc: '自由に書けるメモ帳。業務メモなどに活用できます' },
             { label: 'マイ推移', desc: '自分のHKR実績の月別推移グラフを確認できます' },
             { label: '個人進捗', desc: '今月の目標に対する進捗状況を確認できます' },
           ]} />
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Screenshot src="/screenshots/tasks.png" caption="タスク管理" />
             <Screenshot src="/screenshots/trends.png" caption="マイ推移" />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Screenshot src="/screenshots/schedule.png" caption="スケジュール" />
-            <Screenshot src="/screenshots/memo.png" caption="メモ" />
           </div>
         </Section>
 
