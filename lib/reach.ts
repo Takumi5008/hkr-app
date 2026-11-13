@@ -51,7 +51,10 @@ export const gradeFor = (reachMonth: number | null, reachDays: number | null): R
 export const reachDaysOf = (m: ReachMember, today: string): number | null =>
   reachMonthOf(m.monthly) === null ? null : elapsedDays(m, m.endDate ?? today)
 
-export const gradeOf = (m: ReachMember, today: string): ReachGrade => gradeFor(reachMonthOf(m.monthly), reachDaysOf(m, today))
+const GRADES: readonly string[] = ['S', 'A', 'B', 'C']
+// 評価を手動で指定していればそれを優先し、なければ到達日数から自動で決める
+export const gradeOf = (m: ReachMember, today: string): ReachGrade =>
+  GRADES.includes(m.grade) ? (m.grade as ReachGrade) : gradeFor(reachMonthOf(m.monthly), reachDaysOf(m, today))
 
 // "1.5.0,6.5" や "4、7 7" など、ドット・カンマ・読点・空白区切りの解除数を配列にする
 export function parseMonthly(text: string): number[] | null {

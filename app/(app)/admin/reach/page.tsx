@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import TableScrollContainer from '@/components/TableScrollContainer'
 import {
   REACH_TARGET, buildCurve, predict, statusOf, sum, effectivePlannedEnd, elapsedDays, pausedDays,
-  gradeOf, type ReachGrade,
+  gradeOf, reachDaysOf, type ReachGrade,
   type ReachMember, type ReachStatus, type ReachPrediction,
 } from '@/lib/reach'
 
@@ -279,7 +279,7 @@ export default function ReachPage() {
               <table className="text-xs border-collapse w-full">
                 <thead>
                   <tr className="bg-gray-50 text-gray-600">
-                    {['名前', '状態', '初稼働日', '終了日', '月数', '月別解除数（1ヶ月目〜）', '累計', '残', '評価', 'メモ', ''].map((h, i) => (
+                    {['名前', '状態', '初稼働日', '終了日', '月数', '月別解除数（1ヶ月目〜）', '累計', '残', '到達日数', '評価', 'メモ', ''].map((h, i) => (
                       <th key={i} className="border border-gray-100 px-3 py-2.5 font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -289,7 +289,7 @@ export default function ReachPage() {
                     const rows = listed.filter(m => m.startDate.startsWith(y))
                     if (rows.length === 0) return null
                     return [
-                      <tr key={`y${y}`}><td colSpan={11} className="border border-gray-100 px-3 py-1.5 bg-teal-50/60 text-teal-700 font-bold">{y}年スタート（{rows.length}人）</td></tr>,
+                      <tr key={`y${y}`}><td colSpan={12} className="border border-gray-100 px-3 py-1.5 bg-teal-50/60 text-teal-700 font-bold">{y}年スタート（{rows.length}人）</td></tr>,
                       ...rows.map(m => {
                         const st = statusOf(m)
                         const total = sum(m.monthly)
@@ -305,6 +305,9 @@ export default function ReachPage() {
                             <td className="border border-gray-100 px-3 py-2 text-gray-600 font-mono tracking-tight min-w-48">{m.monthly.join('・')}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center font-bold text-gray-800">{total}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center text-gray-600">{total >= REACH_TARGET ? '-' : REACH_TARGET - total}</td>
+                            <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap">
+                              {st === 'reached' ? <span className="font-semibold text-gray-800">{reachDaysOf(m, today)}日</span> : <span className="text-gray-300">-</span>}
+                            </td>
                             <td className="border border-gray-100 px-3 py-2 text-center">
                               {st === 'reached' || st === 'dropped'
                                 ? <GradeBadge g={gradeOf(m, today)} />
@@ -367,6 +370,12 @@ export default function ReachPage() {
               </Field>
             </div>
             <p className="text-[10px] text-gray-400 -mt-1">休止期間は経過日数に数えず、その日数分だけ終了予定日・到達予定日を延ばします。</p>
+            <Field label="評価" hint="自動＝到達日数から判定（S:4ヶ月以内 A:365日以内 B:365日超 C:未達）">
+              <select value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })} className={inputCls}>
+                <option value="">自動</option>
+                {(['S', 'A', 'B', 'C'] as const).map(g => <option key={g} value={g}>{g}（手動で指定）</option>)}
+              </select>
+            </Field>
             <Field label="メモ">
               <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} className={inputCls} />
             </Field>

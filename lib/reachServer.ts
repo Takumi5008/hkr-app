@@ -50,7 +50,8 @@ export function validateReachInput(body: any): { values: unknown[] } | { error: 
   if (endDate && endDate < body.startDate) return { error: '終了日が初稼働日より前です' }
   const monthly = parseMonthly(String(body.monthly ?? ''))
   if (!monthly) return { error: '月別解除数は「2.5.8」のように数字を区切って入力してください' }
-  const grade = typeof body.grade === 'string' ? body.grade.trim().slice(0, 5) : ''
+  const grade = typeof body.grade === 'string' ? body.grade.trim() : ''
+  if (!['', 'S', 'A', 'B', 'C'].includes(grade)) return { error: '評価は S / A / B / C か自動を選んでください' }
   const pauseStart = body.pauseStart ? body.pauseStart : null
   const resumeDate = body.resumeDate ? body.resumeDate : null
   if (pauseStart !== null && !isDate(pauseStart)) return { error: '休止開始日が不正です' }
