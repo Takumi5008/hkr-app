@@ -5,8 +5,22 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import TableScrollContainer from '@/components/TableScrollContainer'
 import {
   REACH_TARGET, buildCurve, predict, statusOf, sum, effectivePlannedEnd, elapsedDays, pausedDays,
+  reachMonthOf, gradeFor, type ReachGrade,
   type ReachMember, type ReachStatus, type ReachPrediction,
 } from '@/lib/reach'
+
+const GRADE_STYLE: Record<ReachGrade, string> = {
+  S: 'bg-fuchsia-50 text-fuchsia-700',
+  A: 'bg-emerald-50 text-emerald-700',
+  B: 'bg-sky-50 text-sky-700',
+  C: 'bg-gray-100 text-gray-500',
+}
+const GradeBadge = ({ g, prospect = false }: { g: ReachGrade; prospect?: boolean }) => (
+  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${GRADE_STYLE[g]} ${prospect ? 'opacity-70' : ''}`}>{g}{prospect ? '見込み' : ''}</span>
+)
+const ChallengerBadge = () => (
+  <span className="ml-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded whitespace-nowrap">チャレンジャー</span>
+)
 
 const STATUS_LABEL: Record<ReachStatus, string> = { reached: '到達', dropped: '離脱', paused: '休止', active: '挑戦中' }
 const STATUS_STYLE: Record<ReachStatus, string> = {
@@ -76,6 +90,8 @@ export default function ReachPage() {
 
   const finished = members.filter(m => statusOf(m) === 'reached' || statusOf(m) === 'dropped')
   const pausedCount = members.filter(m => statusOf(m) === 'paused').length
+  const gradeCount = { S: 0, A: 0, B: 0, C: 0 }
+  finished.forEach(m => { gradeCount[gradeFor(reachMonthOf(m.monthly))]++ })
   const reachRate = finished.length > 0 ? Math.round((reachers.length / finished.length) * 1000) / 10 : null
   const selected = active.find(m => m.id === selectedId) ?? null
   const years = [...new Set(members.map(m => m.startDate.slice(0, 4)))].sort()
@@ -127,11 +143,12 @@ export default function ReachPage() {
       ) : (
         <>
           {/* サマリー */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <SummaryCard label="到達者" value={`${reachers.length}人`} />
             <SummaryCard label="離脱" value={`${finished.length - reachers.length}人`} />
             <SummaryCard label="挑戦中" value={`${active.length}人`} sub={pausedCount > 0 ? `ほか休止 ${pausedCount}人（予測対象外）` : undefined} />
             <SummaryCard label="到達率" value={reachRate === null ? '-' : `${reachRate}%`} sub="終了した人のうち" />
+            <SummaryCard label="評価（終了した人）" value={(['S', 'A', 'B', 'C'] as const).map(g => `${g}${gradeCount[g]}`).join(' ')} sub="S:4ヶ月 A:8ヶ月 B:12ヶ月以内に到達 C:未達" />
             <SummaryCard
               label="到達までの月数"
               value={curve.monthsToReach ? `${curve.monthsToReach.avg.toFixed(1)}ヶ月` : '-'}
@@ -145,14 +162,14 @@ export default function ReachPage() {
               <h2 className="font-bold text-gray-800">挑戦中メンバーの到達予測</h2>
               <p className="text-xs text-gray-400 mt-1 leading-relaxed">
                 「経過日数」は休んだ日数を除いた日数、「終了予定日」は休んだ日数分を延長した日付です。「あと」は{REACH_TARGET}までの残り解除数、「必要ペース」は終了予定日までに届くための月平均です。到達予定日は、到達者{curve.reachers}人の月別平均解除数に、本人のペース（同じ月数時点の到達者平均との比）を掛けて先の月を予測しています。
-                「到達者比」は同じ月数時点の累計で、到達者の何%を上回っているかです。経過2ヶ月以下は参考値です。行を押すと推移グラフを表示します。
+                「今のペースなら」は1ヶ月目からの累計の推移が一番近い過去の到達者、「見込み評価」は到達予定から出した評価（S:4ヶ月 A:8ヶ月 B:12ヶ月以内 C:未達）です。「到達者比」は同じ月数時点の累計で、到達者の何%を上回っているかです。経過2ヶ月以下は参考値です。行を押すと推移グラフを表示します。
               </p>
             </div>
             <TableScrollContainer>
               <table className="text-xs border-collapse w-full">
                 <thead>
                   <tr className="bg-gray-50 text-gray-600">
-                    {['名前', '初稼働日', '経過日数', '累計', 'あと', '到達予定日', '終了予定日', '判定', '必要ペース', 'ペース', '到達者比'].map(h => (
+                    {['名前', '初稼働日', '経過日数', '累計', 'あと', '到達予定日', '終了予定日', '判定', '必要ペース', '見込み評価', '今のペースなら', 'ペース', '到達者比'].map(h => (
                       <th key={h} className="border border-gray-100 px-3 py-2.5 font-semibold whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -165,7 +182,7 @@ export default function ReachPage() {
                         className={`cursor-pointer transition ${selectedId === m.id ? 'bg-teal-50' : 'odd:bg-white even:bg-gray-50/30 hover:bg-teal-50/50'}`}>
                         <td className="border border-gray-100 px-3 py-2 font-medium text-gray-800 whitespace-nowrap">
                           {m.name}
-                          {m.challenger && <span className="ml-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">チャレンジャー</span>}
+                          <ChallengerBadge />
                         </td>
                         <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">{fmtDate(m.startDate)}</td>
                         <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">{elapsedDays(m, today)}日<span className="text-gray-400 text-[10px] block">{p.months}ヶ月分</span></td>
@@ -186,6 +203,13 @@ export default function ReachPage() {
                         <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap"><Verdict m={m} p={p} today={today} /></td>
                         <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">
                           {p.neededPerMonth === null ? '-' : `月${p.neededPerMonth}`}
+                        </td>
+                        <td className="border border-gray-100 px-3 py-2 text-center"><GradeBadge g={gradeFor(p.reachMonth)} prospect /></td>
+                        <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap">
+                          {p.similar
+                            ? <><span className="font-semibold text-gray-800">{p.similar.name}</span><span className="text-gray-400"> 相当</span>
+                                <span className="text-gray-400 text-[10px] block">{p.similar.reachMonth}ヶ月で到達・{p.similar.grade}評価</span></>
+                            : '-'}
                         </td>
                         <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap">
                           <span className={`font-bold ${p.paceRatio >= 1 ? 'text-emerald-600' : p.paceRatio >= 0.8 ? 'text-amber-600' : 'text-rose-600'}`}>
@@ -271,7 +295,7 @@ export default function ReachPage() {
                         const total = sum(m.monthly)
                         return (
                           <tr key={m.id} className="odd:bg-white even:bg-gray-50/30">
-                            <td className="border border-gray-100 px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{m.name}</td>
+                            <td className="border border-gray-100 px-3 py-2 font-medium text-gray-800 whitespace-nowrap">{m.name}{(st === 'active' || st === 'paused') && <ChallengerBadge />}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${STATUS_STYLE[st]}`}>{STATUS_LABEL[st]}</span></td>
                             <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">{fmtDate(m.startDate)}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">
@@ -281,7 +305,11 @@ export default function ReachPage() {
                             <td className="border border-gray-100 px-3 py-2 text-gray-600 font-mono tracking-tight min-w-48">{m.monthly.join('・')}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center font-bold text-gray-800">{total}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center text-gray-600">{total >= REACH_TARGET ? '-' : REACH_TARGET - total}</td>
-                            <td className="border border-gray-100 px-3 py-2 text-center text-gray-600">{m.grade || '-'}</td>
+                            <td className="border border-gray-100 px-3 py-2 text-center">
+                              {st === 'reached' || st === 'dropped'
+                                ? <GradeBadge g={gradeFor(reachMonthOf(m.monthly))} />
+                                : st === 'active' ? <GradeBadge g={gradeFor(predictions.get(m.id)?.reachMonth ?? null)} prospect /> : '-'}
+                            </td>
                             <td className="border border-gray-100 px-3 py-2 text-gray-500 min-w-40">{m.note}</td>
                             <td className="border border-gray-100 px-2 py-2 text-center">
                               <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition" aria-label={`${m.name}を編集`}>
@@ -325,15 +353,6 @@ export default function ReachPage() {
               <Field label="終了日" hint="到達・離脱したら入力">
                 <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} className={inputCls} />
               </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="評価">
-                <input value={form.grade} onChange={e => setForm({ ...form, grade: e.target.value })} placeholder="A / C など" className={inputCls} />
-              </Field>
-              <label className="flex items-center gap-2 text-sm text-gray-700 pt-6">
-                <input type="checkbox" checked={form.challenger} onChange={e => setForm({ ...form, challenger: e.target.checked })} className="w-4 h-4 accent-teal-600" />
-                チャレンジャー
-              </label>
             </div>
             <label className="flex items-center gap-2 text-sm text-gray-700">
               <input type="checkbox" checked={form.paused} onChange={e => setForm({ ...form, paused: e.target.checked })} className="w-4 h-4 accent-amber-500" />

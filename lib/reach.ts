@@ -27,6 +27,21 @@ export const statusOf = (m: Pick<ReachMember, 'endDate' | 'monthly' | 'paused'>)
 
 export const sum = (a: number[]) => a.reduce((s, n) => s + n, 0)
 
+// 累計が78に届いた月（nヶ月目）。届いていなければ null
+export function reachMonthOf(monthly: number[]): number | null {
+  let cum = 0
+  for (let i = 0; i < monthly.length; i++) {
+    cum += monthly[i]
+    if (cum >= REACH_TARGET) return i + 1
+  }
+  return null
+}
+
+// 評価：4ヶ月以内に到達=S、8ヶ月以内=A、12ヶ月以内=B、12ヶ月以内に未達=C
+export type ReachGrade = 'S' | 'A' | 'B' | 'C'
+export const gradeFor = (reachMonth: number | null): ReachGrade =>
+  reachMonth === null || reachMonth > 12 ? 'C' : reachMonth <= 4 ? 'S' : reachMonth <= 8 ? 'A' : 'B'
+
 // "1.5.0,6.5" や "4、7 7" など、ドット・カンマ・読点・空白区切りの解除数を配列にする
 export function parseMonthly(text: string): number[] | null {
   const half = text.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
@@ -114,6 +129,7 @@ export interface ReachPrediction {
   remaining: number         // 残り
   paceRatio: number         // 到達者平均に対するペース（1.0 = 平均並み）
   aheadOfReachers: number   // 同じ月数時点の累計で上回っている到達者の割合（0〜1）
+  similar: { name: string; reachMonth: number; grade: ReachGrade } | null // 今のペースに一番近い過去の到達者
   reachMonth: number | null // 到達見込みの月（nヶ月目）。36ヶ月以内に届かなければ null
   reachDate: string | null  // 到達見込み日（到達月の中で、78に届く位置を日割りで求めた日）
   withinPlan: boolean | null // 終了予定日までに届く見込みか
@@ -135,6 +151,25 @@ export function predict(m: ReachMember, curve: ReachCurve, reachers: ReachMember
   // 同じ月数時点で、自分の累計が上回っている到達者の割合
   const cmp = reachers.map(r => sum(r.monthly.slice(0, k)))
   const aheadOfReachers = cmp.length > 0 ? cmp.filter(c => total > c).length / cmp.length : 0
+
+  // 1ヶ月目〜今月までの累計の推移が一番近い到達者（累計の差の二乗平均が最小）
+  let similar: ReachPrediction['similar'] = null
+  if (k > 0) {
+    let best = Infinity
+    for (const r of reachers) {
+      let a = 0, b = 0, d = 0
+      for (let i = 0; i < k; i++) {
+        a += m.monthly[i]
+        b += r.monthly[i] ?? 0
+        d += (a - b) ** 2
+      }
+      if (d < best) {
+        best = d
+        const rm = reachMonthOf(r.monthly)!
+        similar = { name: r.name, reachMonth: rm, grade: gradeFor(rm) }
+      }
+    }
+  }
 
   const projection: number[] = []
   let cum = 0
@@ -170,6 +205,7 @@ export function predict(m: ReachMember, curve: ReachCurve, reachers: ReachMember
     remaining: Math.max(0, REACH_TARGET - total),
     paceRatio: Math.round(paceRatio * 100) / 100,
     aheadOfReachers,
+    similar,
     reachMonth,
     reachDate,
     withinPlan: plannedEnd ? (reachDate !== null && reachDate <= plannedEnd) : null,
