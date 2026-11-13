@@ -8,7 +8,7 @@ const pool = new Pool({
     : false,
 })
 
-const DB_VERSION = 33
+const DB_VERSION = 34
 let initialized = false
 
 async function initDb() {
@@ -557,6 +557,25 @@ async function initDb() {
     )
   `)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_typing_scores_played ON typing_scores(played_at)`)
+
+  // v34: 78解除到達管理（マネージャー専用）。メンバーの個人データはコードに含めず、画面か取り込みスクリプトで登録する
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reach_members (
+      id          SERIAL PRIMARY KEY,
+      name        TEXT NOT NULL,
+      start_date  TEXT NOT NULL,
+      end_date    TEXT,
+      planned_end TEXT,
+      monthly     TEXT NOT NULL DEFAULT '',
+      challenger  BOOLEAN NOT NULL DEFAULT FALSE,
+      paused      BOOLEAN NOT NULL DEFAULT FALSE,
+      pause_start TEXT,
+      resume_date TEXT,
+      grade       TEXT NOT NULL DEFAULT '',
+      note        TEXT NOT NULL DEFAULT '',
+      updated_at  TEXT NOT NULL DEFAULT TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )
+  `)
 
   await pool.query(`INSERT INTO db_meta (version) VALUES ($1) ON CONFLICT DO NOTHING`, [DB_VERSION])
 }

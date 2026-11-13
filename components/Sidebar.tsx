@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Keyboard, GraduationCap, Activity, BarChart, AlertCircle } from 'lucide-react'
+import { LayoutDashboard, PenLine, TrendingUp, Users, Settings, LogOut, Menu, X, Calendar, BarChart2, Award, Table2, Zap, Bell, BellOff, Trophy, BookOpen, Keyboard, GraduationCap, Activity, BarChart, AlertCircle, Target } from 'lucide-react'
 import WifiAppIcon from '@/components/WifiAppIcon'
 import { useState, useEffect, useRef } from 'react'
 import UserAvatar from '@/components/UserAvatar'
@@ -30,6 +30,7 @@ const managerNavItems = [
   { href: '/admin/dashboard', label: '管理ダッシュボード', icon: LayoutDashboard },
   { href: '/admin/cases', label: '案件確認', icon: AlertCircle },
   { href: '/admin/activation-stats', label: '回線別HKR', icon: BarChart2 },
+  { href: '/admin/reach', label: '78到達管理', icon: Target, managerOnly: true },
   { href: '/admin/engagement', label: '利用定着', icon: Activity },
   { href: '/admin', label: '管理', icon: Settings },
 ]
@@ -243,7 +244,7 @@ export default function Sidebar({ name, role }: SidebarProps) {
             <div className="pt-4 pb-1 px-3">
               <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">管理者</p>
             </div>
-            {managerNavItems.map(({ href, label, icon: Icon }) => (
+            {managerNavItems.filter(item => !('managerOnly' in item) || role === 'manager' || role === 'admin').map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
