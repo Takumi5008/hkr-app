@@ -64,6 +64,8 @@ export default function ReachPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [rowDeleteId, setRowDeleteId] = useState<number | null>(null)
+  const [rowDeleting, setRowDeleting] = useState(false)
   const [today] = useState(todayJst)
 
   const load = () =>
@@ -128,6 +130,15 @@ export default function ReachPage() {
     if (!res.ok) { setError('削除に失敗しました'); return }
     setForm(null)
     load()
+  }
+
+  // 一覧の行から削除（確認つき）
+  const removeRow = async (id: number) => {
+    setRowDeleting(true)
+    const res = await fetch(`/api/admin/reach/${id}`, { method: 'DELETE' })
+    setRowDeleting(false)
+    setRowDeleteId(null)
+    if (res.ok) load()
   }
 
   return (
@@ -314,10 +325,25 @@ export default function ReachPage() {
                                 : st === 'active' ? <GradeBadge g={predictions.get(m.id)?.grade ?? 'C'} prospect /> : '-'}
                             </td>
                             <td className="border border-gray-100 px-3 py-2 text-gray-500 min-w-40">{m.note}</td>
-                            <td className="border border-gray-100 px-2 py-2 text-center">
-                              <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition" aria-label={`${m.name}を編集`}>
-                                <Pencil size={14} />
-                              </button>
+                            <td className="border border-gray-100 px-2 py-2 text-center whitespace-nowrap">
+                              {rowDeleteId === m.id ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <button onClick={() => removeRow(m.id)} disabled={rowDeleting}
+                                    className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold disabled:opacity-50">
+                                    {rowDeleting ? '削除中...' : '削除する'}
+                                  </button>
+                                  <button onClick={() => setRowDeleteId(null)} className="px-2 py-1 rounded-lg text-[11px] text-gray-500 hover:bg-gray-100">やめる</button>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-0.5">
+                                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition" aria-label={`${m.name}を編集`}>
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button onClick={() => setRowDeleteId(m.id)} className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition" aria-label={`${m.name}を削除`}>
+                                    <Trash2 size={14} />
+                                  </button>
+                                </span>
+                              )}
                             </td>
                           </tr>
                         )
