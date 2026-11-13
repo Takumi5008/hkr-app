@@ -37,10 +37,21 @@ export function reachMonthOf(monthly: number[]): number | null {
   return null
 }
 
-// 評価：4ヶ月以内に到達=S、8ヶ月以内=A、12ヶ月以内=B、12ヶ月以内に未達=C
+// 評価：4ヶ月以内に到達=S、365日以内に到達=A、365日を超えて到達=B、未達=C
+// （日数は初稼働日から到達日まで。休止期間は含めない）
 export type ReachGrade = 'S' | 'A' | 'B' | 'C'
-export const gradeFor = (reachMonth: number | null): ReachGrade =>
-  reachMonth === null || reachMonth > 12 ? 'C' : reachMonth <= 4 ? 'S' : reachMonth <= 8 ? 'A' : 'B'
+export const GRADE_DAYS = 365
+export const gradeFor = (reachMonth: number | null, reachDays: number | null): ReachGrade => {
+  if (reachMonth === null || reachDays === null) return 'C'
+  if (reachMonth <= 4) return 'S'
+  return reachDays <= GRADE_DAYS ? 'A' : 'B'
+}
+
+// 到達者の到達日数（終了日=到達日。未入力なら今日まで）
+export const reachDaysOf = (m: ReachMember, today: string): number | null =>
+  reachMonthOf(m.monthly) === null ? null : elapsedDays(m, m.endDate ?? today)
+
+export const gradeOf = (m: ReachMember, today: string): ReachGrade => gradeFor(reachMonthOf(m.monthly), reachDaysOf(m, today))
 
 // "1.5.0,6.5" や "4、7 7" など、ドット・カンマ・読点・空白区切りの解除数を配列にする
 export function parseMonthly(text: string): number[] | null {
@@ -129,7 +140,8 @@ export interface ReachPrediction {
   remaining: number         // 残り
   paceRatio: number         // 到達者平均に対するペース（1.0 = 平均並み）
   aheadOfReachers: number   // 同じ月数時点の累計で上回っている到達者の割合（0〜1）
-  similar: { name: string; reachMonth: number; grade: ReachGrade } | null // 今のペースに一番近い過去の到達者
+  similar: { name: string; reachDays: number; grade: ReachGrade } | null // 今のペースに一番近い過去の到達者
+  grade: ReachGrade         // 見込み評価（到達予定日から）
   reachMonth: number | null // 到達見込みの月（nヶ月目）。36ヶ月以内に届かなければ null
   reachDate: string | null  // 到達見込み日（到達月の中で、78に届く位置を日割りで求めた日）
   withinPlan: boolean | null // 終了予定日までに届く見込みか
@@ -165,8 +177,7 @@ export function predict(m: ReachMember, curve: ReachCurve, reachers: ReachMember
       }
       if (d < best) {
         best = d
-        const rm = reachMonthOf(r.monthly)!
-        similar = { name: r.name, reachMonth: rm, grade: gradeFor(rm) }
+        similar = { name: r.name, reachDays: reachDaysOf(r, today)!, grade: gradeOf(r, today) }
       }
     }
   }
@@ -206,6 +217,7 @@ export function predict(m: ReachMember, curve: ReachCurve, reachers: ReachMember
     paceRatio: Math.round(paceRatio * 100) / 100,
     aheadOfReachers,
     similar,
+    grade: gradeFor(reachMonth, reachDate ? elapsedDays(m, reachDate) : null),
     reachMonth,
     reachDate,
     withinPlan: plannedEnd ? (reachDate !== null && reachDate <= plannedEnd) : null,

@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react'
 import TableScrollContainer from '@/components/TableScrollContainer'
 import {
   REACH_TARGET, buildCurve, predict, statusOf, sum, effectivePlannedEnd, elapsedDays, pausedDays,
-  reachMonthOf, gradeFor, type ReachGrade,
+  gradeOf, type ReachGrade,
   type ReachMember, type ReachStatus, type ReachPrediction,
 } from '@/lib/reach'
 
@@ -91,7 +91,7 @@ export default function ReachPage() {
   const finished = members.filter(m => statusOf(m) === 'reached' || statusOf(m) === 'dropped')
   const pausedCount = members.filter(m => statusOf(m) === 'paused').length
   const gradeCount = { S: 0, A: 0, B: 0, C: 0 }
-  finished.forEach(m => { gradeCount[gradeFor(reachMonthOf(m.monthly))]++ })
+  finished.forEach(m => { gradeCount[gradeOf(m, today)]++ })
   const reachRate = finished.length > 0 ? Math.round((reachers.length / finished.length) * 1000) / 10 : null
   const selected = active.find(m => m.id === selectedId) ?? null
   const years = [...new Set(members.map(m => m.startDate.slice(0, 4)))].sort()
@@ -148,7 +148,7 @@ export default function ReachPage() {
             <SummaryCard label="離脱" value={`${finished.length - reachers.length}人`} />
             <SummaryCard label="挑戦中" value={`${active.length}人`} sub={pausedCount > 0 ? `ほか休止 ${pausedCount}人（予測対象外）` : undefined} />
             <SummaryCard label="到達率" value={reachRate === null ? '-' : `${reachRate}%`} sub="終了した人のうち" />
-            <SummaryCard label="評価（終了した人）" value={(['S', 'A', 'B', 'C'] as const).map(g => `${g}${gradeCount[g]}`).join(' ')} sub="S:4ヶ月 A:8ヶ月 B:12ヶ月以内に到達 C:未達" />
+            <SummaryCard label="評価（終了した人）" value={(['S', 'A', 'B', 'C'] as const).map(g => `${g}${gradeCount[g]}`).join(' ')} sub="S:4ヶ月以内 A:365日以内 B:365日超で到達 C:未達" />
             <SummaryCard
               label="到達までの月数"
               value={curve.monthsToReach ? `${curve.monthsToReach.avg.toFixed(1)}ヶ月` : '-'}
@@ -162,7 +162,7 @@ export default function ReachPage() {
               <h2 className="font-bold text-gray-800">挑戦中メンバーの到達予測</h2>
               <p className="text-xs text-gray-400 mt-1 leading-relaxed">
                 「経過日数」は休んだ日数を除いた日数、「終了予定日」は休んだ日数分を延長した日付です。「あと」は{REACH_TARGET}までの残り解除数、「必要ペース」は終了予定日までに届くための月平均です。到達予定日は、到達者{curve.reachers}人の月別平均解除数に、本人のペース（同じ月数時点の到達者平均との比）を掛けて先の月を予測しています。
-                「今のペースなら」は1ヶ月目からの累計の推移が一番近い過去の到達者、「見込み評価」は到達予定から出した評価（S:4ヶ月 A:8ヶ月 B:12ヶ月以内 C:未達）です。「到達者比」は同じ月数時点の累計で、到達者の何%を上回っているかです。経過2ヶ月以下は参考値です。行を押すと推移グラフを表示します。
+                「今のペースなら」は1ヶ月目からの累計の推移が一番近い過去の到達者、「見込み評価」は到達予定から出した評価（S:4ヶ月以内 A:365日以内 B:365日超で到達 C:未達。日数は休止期間を除く）です。「到達者比」は同じ月数時点の累計で、到達者の何%を上回っているかです。経過2ヶ月以下は参考値です。行を押すと推移グラフを表示します。
               </p>
             </div>
             <TableScrollContainer>
@@ -204,11 +204,11 @@ export default function ReachPage() {
                         <td className="border border-gray-100 px-3 py-2 text-center text-gray-600 whitespace-nowrap">
                           {p.neededPerMonth === null ? '-' : `月${p.neededPerMonth}`}
                         </td>
-                        <td className="border border-gray-100 px-3 py-2 text-center"><GradeBadge g={gradeFor(p.reachMonth)} prospect /></td>
+                        <td className="border border-gray-100 px-3 py-2 text-center"><GradeBadge g={p.grade} prospect /></td>
                         <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap">
                           {p.similar
                             ? <><span className="font-semibold text-gray-800">{p.similar.name}</span><span className="text-gray-400"> 相当</span>
-                                <span className="text-gray-400 text-[10px] block">{p.similar.reachMonth}ヶ月で到達・{p.similar.grade}評価</span></>
+                                <span className="text-gray-400 text-[10px] block">{p.similar.reachDays}日で到達・{p.similar.grade}評価</span></>
                             : '-'}
                         </td>
                         <td className="border border-gray-100 px-3 py-2 text-center whitespace-nowrap">
@@ -307,8 +307,8 @@ export default function ReachPage() {
                             <td className="border border-gray-100 px-3 py-2 text-center text-gray-600">{total >= REACH_TARGET ? '-' : REACH_TARGET - total}</td>
                             <td className="border border-gray-100 px-3 py-2 text-center">
                               {st === 'reached' || st === 'dropped'
-                                ? <GradeBadge g={gradeFor(reachMonthOf(m.monthly))} />
-                                : st === 'active' ? <GradeBadge g={gradeFor(predictions.get(m.id)?.reachMonth ?? null)} prospect /> : '-'}
+                                ? <GradeBadge g={gradeOf(m, today)} />
+                                : st === 'active' ? <GradeBadge g={predictions.get(m.id)?.grade ?? 'C'} prospect /> : '-'}
                             </td>
                             <td className="border border-gray-100 px-3 py-2 text-gray-500 min-w-40">{m.note}</td>
                             <td className="border border-gray-100 px-2 py-2 text-center">
